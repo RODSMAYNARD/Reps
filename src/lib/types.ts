@@ -33,6 +33,7 @@ export type Workout = {
   visibility: 'everyone' | 'followers' | 'private';
   entries: SavedEntry[];
   routineId?: string | null;
+  location?: string | null;
 };
 
 export type RoutineExercise = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };

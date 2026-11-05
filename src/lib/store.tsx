@@ -57,7 +57,7 @@ type Store = {
   pauseToggle: () => void;
   setElapsed: (sec: number) => void;
   discardActive: () => void;
-  finishActive: (meta: { title: string; description: string; visibility: Workout['visibility']; date: string; durationSec: number }) => Promise<Workout | null>;
+  finishActive: (meta: { title: string; description: string; visibility: Workout['visibility']; date: string; durationSec: number; location?: string | null }) => Promise<Workout | null>;
   // descanso
   startRest: (sec: number) => void;
   adjustRest: (delta: number) => void;
@@ -150,7 +150,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const meta = w.meta ?? {};
       return {
         id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
-        routineId: meta.routineId ?? null, entries: order.map((id) => ({ exerciseId: id, notes: meta.notes?.[id] ?? '', restSec: meta.rest?.[id] ?? 0, superset: meta.superset?.[id] ?? null, sets: by.get(id)! })),
+        routineId: meta.routineId ?? null, location: meta.location ?? null, entries: order.map((id) => ({ exerciseId: id, notes: meta.notes?.[id] ?? '', restSec: meta.rest?.[id] ?? 0, superset: meta.superset?.[id] ?? null, sets: by.get(id)! })),
       } as Workout;
     }));
 
@@ -310,6 +310,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
         superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
         routineId: a.fromRoutineId ?? null,
+        location: meta.location || null,
       };
       const w = await supabase.from('workouts').insert({ id: a.id, performed_at: meta.date, title: meta.title || 'Workout', description: meta.description, duration_sec: meta.durationSec, visibility: meta.visibility, meta: meta2 });
       if (w.error) { fail(w.error.message); return null; }
@@ -317,7 +318,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const rows = entries.flatMap((e) => e.sets.map((s) => ({ workout_id: a.id, exercise_id: e.exerciseId, position: pos++, reps: s.reps ?? 0, weight: s.kg ?? 0, set_type: s.type })));
       const s = await supabase.from('workout_sets').insert(rows);
       if (s.error) { await supabase.from('workouts').delete().eq('id', a.id); fail(s.error.message); return null; }
-      const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null };
+      const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null, location: meta.location || null };
       setWorkouts((l) => [saved, ...l]);
       setActive(() => null);
       setRest(null);
