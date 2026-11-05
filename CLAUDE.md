@@ -63,6 +63,10 @@
 ## Só interface (sem backend real)
 Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, tema escuro (preferência salva, tema ainda não aplicado), importação de dados.
 
+## Workout Settings (`settings/workout*`, botão "Settings" no treino ativo)
+- Preferências em `store.wprefs` (AsyncStorage `reps:wprefs:<uid>`). Funcionam: descanso padrão (novos exercícios), valores anteriores (qualquer treino / mesma rotina; o treino guarda `routineId` em `meta`), calculadora de aquecimento (menu ⋮ do exercício; fórmula e arredondamentos), manter tela ligada (`expo-keep-awake`), calculadora de anilhas (ícone ao lado de KG em exercícios de barra), aviso de recorde pessoal ao marcar a série.
+- Só interface (toggle salvo, sem efeito ainda): Sounds, RPE Tracking, Smart Superset Scrolling, Inline Timer.
+
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR

@@ -15,6 +15,7 @@ export default function Settings() {
         <ListRow icon="person-outline" label="Account" detail={session?.user.email ?? ''} onPress={go('/profile/edit')} />
         <ListRow icon="trophy-outline" label="Reps Pro" onPress={go('/settings/pro')} testID="open-pro" />
         <ListRow icon="speedometer-outline" label="Units" onPress={go('/settings/units')} testID="open-units" />
+        <ListRow icon="barbell-outline" label="Workout Settings" onPress={go('/settings/workout')} testID="open-workout-settings" />
         <ListRow icon="link-outline" label="Integrations" onPress={go('/settings/integrations')} />
         <ListRow icon="moon-outline" label="Theme" onPress={go('/settings/theme')} />
         <ListRow icon="share-outline" label="Export & Import Data" onPress={go('/settings/export')} />

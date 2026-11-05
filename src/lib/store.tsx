@@ -3,9 +3,10 @@ import type { Session } from '@supabase/supabase-js';
 import { randomUUID } from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
+import { records } from './stats';
 import { supabase } from './supabase';
 import {
-  ActiveEntry, ActiveSet, ActiveWorkout, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, Units, Workout,
+  ActiveEntry, ActiveSet, ActiveWorkout, DEFAULT_WPREFS, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, Units, Workout, WorkoutPrefs,
 } from './types';
 
 export const DEFAULT_UNITS: Units = { weight: 'kg', distance: 'km', body: 'cm' };
@@ -28,6 +29,9 @@ type Store = {
   ensureExercises: (ids: string[]) => Promise<string[]>;
   findExercise: (id: string) => Exercise | undefined;
   realExerciseId: (id: string) => string;
+  wprefs: WorkoutPrefs;
+  setWprefs: (patch: Partial<WorkoutPrefs>) => void;
+  previousSets: (exerciseId: string) => SetRow[];
   // auth
   signIn: (e: string, p: string) => Promise<string | null>;
   signUp: (e: string, p: string) => Promise<string | null>;
@@ -89,12 +93,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const activeRef = useRef<ActiveWorkout | null>(null);
   const exRef = useRef<Exercise[]>([]);
   useEffect(() => { exRef.current = exercises; }, [exercises]);
+  const [wprefs, setWprefsState] = useState<WorkoutPrefs>(DEFAULT_WPREFS);
+  const prefsRef = useRef<WorkoutPrefs>(DEFAULT_WPREFS);
   const wkRef = useRef<Workout[]>([]);
   useEffect(() => { wkRef.current = workouts; }, [workouts]);
   // Sets da última vez que o exercício foi feito (aceita id real ou cat:<id>)
-  const lastSetsOf = useCallback((exerciseId: string): SetRow[] => {
+  const lastSetsOf = useCallback((exerciseId: string, routineId?: string | null): SetRow[] => {
     const real = exerciseId.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === exerciseId.slice(4))?.id ?? exerciseId : exerciseId;
+    const sameRoutine = prefsRef.current.prevMode === 'routine' && !!routineId;
     for (const w of wkRef.current) {
+      if (sameRoutine && w.routineId !== routineId) continue;
       const en = w.entries.find((e) => e.exerciseId === real);
       if (en && en.sets.length) return en.sets;
     }
@@ -142,7 +150,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const meta = w.meta ?? {};
       return {
         id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
-        entries: order.map((id) => ({ exerciseId: id, notes: meta.notes?.[id] ?? '', restSec: meta.rest?.[id] ?? 0, superset: meta.superset?.[id] ?? null, sets: by.get(id)! })),
+        routineId: meta.routineId ?? null, entries: order.map((id) => ({ exerciseId: id, notes: meta.notes?.[id] ?? '', restSec: meta.rest?.[id] ?? 0, superset: meta.superset?.[id] ?? null, sets: by.get(id)! })),
       } as Workout;
     }));
 
@@ -151,6 +159,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const ms = await supabase.from('measurements').select('id,measured_on,values,photo_uri').order('measured_on', { ascending: false });
     if (!ms.error) setMeasurements(ms.data.map((m: any) => ({ id: m.id, date: m.measured_on, values: m.values, photoUri: m.photo_uri })));
 
+    const wp = await AsyncStorage.getItem(`reps:wprefs:${uid}`);
+    prefsRef.current = { ...DEFAULT_WPREFS, ...(wp ? JSON.parse(wp) : {}) };
+    setWprefsState(prefsRef.current);
     const raw = await AsyncStorage.getItem(`reps:active:${uid}`);
     activeRef.current = raw ? JSON.parse(raw) : null;
     setActiveState(activeRef.current);
@@ -203,6 +214,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
     ensureExercises: ensure,
     findExercise: (id) => lookup.get(id),
+    wprefs,
+    setWprefs: (patch) => { prefsRef.current = { ...prefsRef.current, ...patch }; setWprefsState(prefsRef.current); if (userId) AsyncStorage.setItem(`reps:wprefs:${userId}`, JSON.stringify(prefsRef.current)).catch(() => {}); },
+    previousSets: (id) => lastSetsOf(id, activeRef.current?.fromRoutineId),
     realExerciseId: (id) => (id.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === id.slice(4))?.id ?? id : id),
     signIn: async (email, password) => (await supabase.auth.signInWithPassword({ email, password })).error?.message ?? null,
     signUp: async (email, password) => {
@@ -242,7 +256,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         uid: randomUUID(), exerciseId: e.exerciseId, notes: e.notes ?? '', restSec: e.restSec ?? 0, superset: e.superset ?? null,
         sets: (e.sets.length ? e.sets : ([{ type: 'normal', kg: null, reps: null }] as SetRow[])).map((s, j): ActiveSet => {
           // campos vazios/zerados vêm preenchidos com o que foi feito da última vez
-          const last = lastSetsOf(e.exerciseId);
+          const last = lastSetsOf(e.exerciseId, opts?.routine?.id);
           const p = last.length ? last[Math.min(j, last.length - 1)] : null;
           return p && !s.kg ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, done: false } : { ...s, done: false };
         }),
@@ -253,8 +267,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
     setActiveTitle: (t) => setActive((a) => ({ ...a, title: t })),
     addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => {
-      const last = lastSetsOf(id);
-      return { uid: randomUUID(), exerciseId: id, notes: '', restSec: 0, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
+      const last = lastSetsOf(id, activeRef.current?.fromRoutineId);
+      return { uid: randomUUID(), exerciseId: id, notes: '', restSec: prefsRef.current.defaultRestSec, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
     })] })),
     removeEntry: (i) => setActive((a) => ({ ...a, entries: a.entries.filter((_, k) => k !== i) })),
     moveEntry: (from, to) => setActive((a) => { const list = [...a.entries]; const [it] = list.splice(from, 1); list.splice(to, 0, it); return { ...a, entries: list }; }),
@@ -268,6 +282,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!cur) return;
       const willBeDone = !cur.sets[j].done;
       setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, done: willBeDone } : s)) } : e)) }));
+      if (willBeDone && prefsRef.current.livePR) {
+        const st0 = cur.sets[j];
+        const rec = records(wkRef.current, (cur.exerciseId.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === cur.exerciseId.slice(4))?.id ?? cur.exerciseId : cur.exerciseId));
+        if ((st0.kg ?? 0) > 0 && st0.type !== 'warmup' && rec.heaviest > 0 && (st0.kg ?? 0) > rec.heaviest) showToast('New personal record!');
+      }
       if (willBeDone && cur.restSec > 0) setRest({ endsAt: Date.now() + cur.restSec * 1000, total: cur.restSec });
     },
     pauseToggle: () => setActive((a) => a.pausedAt
@@ -290,6 +309,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
         rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
         superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
+        routineId: a.fromRoutineId ?? null,
       };
       const w = await supabase.from('workouts').insert({ id: a.id, performed_at: meta.date, title: meta.title || 'Workout', description: meta.description, duration_sec: meta.durationSec, visibility: meta.visibility, meta: meta2 });
       if (w.error) { fail(w.error.message); return null; }
@@ -297,7 +317,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const rows = entries.flatMap((e) => e.sets.map((s) => ({ workout_id: a.id, exercise_id: e.exerciseId, position: pos++, reps: s.reps ?? 0, weight: s.kg ?? 0, set_type: s.type })));
       const s = await supabase.from('workout_sets').insert(rows);
       if (s.error) { await supabase.from('workouts').delete().eq('id', a.id); fail(s.error.message); return null; }
-      const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries };
+      const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null };
       setWorkouts((l) => [saved, ...l]);
       setActive(() => null);
       setRest(null);
@@ -348,7 +368,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
       if (e) fail(e.message);
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf]);
+  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

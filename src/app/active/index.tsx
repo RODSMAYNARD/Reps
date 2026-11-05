@@ -1,7 +1,8 @@
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,19 +15,13 @@ import { setPickHandler } from '../../lib/picker';
 import { setVolume } from '../../lib/stats';
 import { elapsedSec, useNow, useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
-import { ActiveEntry, ActiveSet, Exercise, Workout } from '../../lib/types';
+import { ActiveEntry, ActiveSet, Exercise, Units } from '../../lib/types';
 
 const REST_OPTIONS = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 
-function previousOf(workouts: Workout[], exerciseId: string, j: number) {
-  const w = workouts.find((x) => x.entries.some((e) => e.exerciseId === exerciseId));
-  const s = w?.entries.find((e) => e.exerciseId === exerciseId)?.sets[j];
-  return s ?? null;
-}
-
 export default function ActiveWorkoutScreen() {
   const st = useStore();
-  const { active, workouts, profile, rest } = st;
+  const { active, profile, rest } = st;
   const now = useNow(1000, true);
   const [setSheet, setSetSheet] = useState<{ i: number; j: number } | null>(null);
   const [restSheet, setRestSheet] = useState<number | null>(null);
@@ -39,6 +34,13 @@ export default function ActiveWorkoutScreen() {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [reordering, setReordering] = useState(false);
   const [hiddenSheet, setHiddenSheet] = useState(false);
+  const [plate, setPlate] = useState<number | null>(null);
+  const keepAwake = st.wprefs.keepAwake && !!active;
+  useEffect(() => {
+    if (!keepAwake) return;
+    activateKeepAwakeAsync('reps-workout').catch(() => {});
+    return () => { deactivateKeepAwake('reps-workout').catch(() => {}); };
+  }, [keepAwake]);
   const u = profile.units;
   const insets = useSafeAreaInsets();
 
@@ -59,6 +61,16 @@ export default function ActiveWorkoutScreen() {
   const pending = shown.reduce((t, x) => t + x.e.sets.filter((s) => !s.done).length, 0);
 
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
+  const addWarmups = (i: number) => {
+    const e = active.entries[i];
+    const work = e.sets.filter((x) => x.type !== 'warmup');
+    const base = Math.max(0, ...work.map((x) => x.kg ?? 0));
+    if (!base) return st.showToast('Enter a working weight first.');
+    const eq = exOf(e.exerciseId)?.equipment ?? '';
+    const inc = /dumbbell/i.test(eq) ? st.wprefs.dumbbellRounding : st.wprefs.plateRounding;
+    const rows = st.wprefs.warmupFormula.map((r) => ({ type: 'warmup' as const, kg: Math.max(inc, Math.round((base * r.pct) / 100 / inc) * inc), reps: r.reps, done: false }));
+    st.patchEntry(i, { sets: [...rows, ...e.sets.filter((x) => x.type !== 'warmup' || x.done || (x.kg ?? 0) > 0)] });
+  };
   const goSave = () => router.push('/active/save');
   const finish = () => (doneSets.length === 0 ? st.showToast('Complete at least one set.') : pending > 0 ? setIncomplete(true) : goSave());
   const restLeft = rest ? Math.max(0, Math.round((rest.endsAt - now) / 1000)) : 0;
@@ -110,6 +122,8 @@ export default function ActiveWorkoutScreen() {
           const kind = ex?.kind ?? 'weight_reps';
           const uid = uidOf(e, i);
           const isCollapsed = !!collapsed[uid];
+          const prevSets = st.previousSets(e.exerciseId);
+          const isBarbell = /barbell/i.test(ex?.equipment ?? '');
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
             <View key={uid} style={{ paddingTop: 16 }} testID="entry">
@@ -130,13 +144,15 @@ export default function ActiveWorkoutScreen() {
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
                 <Text style={[h.c, { width: 44 }]}>SET</Text>
                 <Text style={[h.c, { flex: 1.3 }]}>PREVIOUS</Text>
-                {kind === 'weight_reps' && <Text style={[h.c, { flex: 1 }]}>{u.weight.toUpperCase()}</Text>}
+                {kind === 'weight_reps' && (isBarbell && st.wprefs.plateCalc
+                  ? <Pressable onPress={() => setPlate(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="plate-calc" hitSlop={8}><Ionicons name="calculator-outline" size={14} color={colors.primary} /><Text style={h.c}>{u.weight.toUpperCase()}</Text></Pressable>
+                  : <Text style={[h.c, { flex: 1 }]}>{u.weight.toUpperCase()}</Text>)}
                 <Text style={[h.c, { flex: 1 }]}>{kind === 'duration' ? 'SEC' : 'REPS'}</Text>
                 <Text style={[h.c, { width: 44 }]}>✓</Text>
               </View>
               {e.sets.map((s, j) => {
                 const lb = label(e, s, j);
-                const prev = previousOf(workouts, st.realExerciseId(e.exerciseId), j);
+                const prev = prevSets[j] ?? null;
                 return (
                   <View key={j} testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : j % 2 === 1 ? colors.surface : colors.bg }}>
                     <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 44, alignItems: 'center', paddingVertical: 10 }} testID="set-type"><Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text></Pressable>
@@ -172,7 +188,10 @@ export default function ActiveWorkoutScreen() {
         )}
         <View style={{ padding: 16, gap: 10, marginTop: 16 }}>
           <Btn title="Add Exercise" icon="add" onPress={() => pickFor((ids) => st.addEntries(ids))} testID="add-exercise" />
-          <Btn title="Cancel Workout" variant="ghost" onPress={() => setCancelAsk(true)} style={{ borderWidth: 0 }} />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Btn title="Settings" variant="secondary" style={{ flex: 1 }} onPress={() => router.push('/settings/workout')} testID="workout-settings-btn" />
+            <Btn title="Discard Workout" variant="secondary" style={{ flex: 1 }} textStyle={{ color: colors.danger }} onPress={() => setCancelAsk(true)} testID="discard-btn" />
+          </View>
         </View>
       </ScrollView>}
 
@@ -187,6 +206,8 @@ export default function ActiveWorkoutScreen() {
           </View>
         </View>
       )}
+
+      <PlateSheet key={plate ?? 'x'} visible={plate !== null} onClose={() => setPlate(null)} kg={plate !== null ? active.entries[plate]?.sets.at(-1)?.kg ?? 0 : 0} u={u} />
 
       {/* set type */}
       <Sheet visible={!!setSheet} onClose={() => setSetSheet(null)} title="Set Type">
@@ -219,6 +240,7 @@ export default function ActiveWorkoutScreen() {
           const id = (Math.max(0, ...active.entries.map((x) => x.superset ?? 0)) + 1);
           st.patchEntry(i, { superset: id }); if (active.entries[i + 1]) st.patchEntry(i + 1, { superset: id });
         }} />
+        {st.wprefs.warmupCalc && <ListRow icon="flame-outline" label="Add warm-up sets" testID="add-warmup" onPress={() => { const i = menu!; setMenu(null); addWarmups(i); }} />}
         <ListRow icon="information-circle-outline" label="View Exercise" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
         <ListRow icon="eye-off-outline" label="Hide for this workout" testID="hide-exercise" onPress={() => { st.patchEntry(menu!, { hidden: true }); setMenu(null); st.showToast('Hidden for this workout. Nothing was deleted.'); }} />
         <ListRow icon="swap-vertical" label="Reorder exercises" onPress={() => { setMenu(null); setReordering(true); }} />
@@ -270,3 +292,33 @@ function NumberSheetInline({ minutes, onChange }: { minutes: number; onChange: (
 void NumberSheet;
 
 const h = { c: { color: colors.muted, fontSize: 12, textAlign: 'center' as const } };
+
+const PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
+const PLATES_LB = [45, 35, 25, 10, 5, 2.5];
+function PlateSheet({ visible, onClose, kg, u }: { visible: boolean; onClose: () => void; kg: number; u: Units }) {
+  const [txt, setTxt] = useState<number | null>(null);
+  const shown = txt ?? Math.round(toDisplayWeight(kg, u) * 10) / 10;
+  const bar = u.weight === 'kg' ? 20 : 45;
+  const plates = u.weight === 'kg' ? PLATES_KG : PLATES_LB;
+  let side = Math.max(0, (shown - bar) / 2);
+  const used: number[] = [];
+  for (const p of plates) while (side + 1e-9 >= p) { used.push(p); side -= p; }
+  return (
+    <Sheet visible={visible} onClose={onClose} title="Plate Calculator">
+      <View style={{ gap: 12, paddingBottom: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ color: colors.muted }}>Target weight ({u.weight})</Text>
+          <View style={{ width: 110, backgroundColor: colors.surface, borderRadius: radius.sm }}><NumInput decimal value={shown} onChange={(v) => setTxt(v)} /></View>
+        </View>
+        <Text style={{ color: colors.muted }}>Bar: {bar} {u.weight}</Text>
+        {shown < bar ? <Text style={{ color: colors.danger }}>The target is lighter than the bar.</Text> : (
+          <View style={{ gap: 6 }}>
+            <Text style={{ color: colors.text, fontWeight: '700' }}>Each side</Text>
+            <Text style={{ color: colors.text, fontSize: 20 }}>{used.length ? used.join(' + ') : 'Just the bar'}</Text>
+            {side > 0.01 && <Text style={{ color: colors.warn }}>{Math.round(side * 100) / 100} {u.weight} per side can&apos;t be made with standard plates.</Text>}
+          </View>
+        )}
+      </View>
+    </Sheet>
+  );
+}

@@ -32,9 +32,22 @@ export type Workout = {
   durationSec: number;
   visibility: 'everyone' | 'followers' | 'private';
   entries: SavedEntry[];
+  routineId?: string | null;
 };
 
 export type RoutineExercise = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
 export type Routine = { id: string; title: string; notes: string; exercises: RoutineExercise[] };
 
 export type Measurement = { id: string; date: string; values: Record<string, number>; photoUri: string | null };
+
+export type WarmupRow = { pct: number; reps: number };
+export type WorkoutPrefs = {
+  sounds: boolean; defaultRestSec: number; prevMode: 'any' | 'routine';
+  warmupCalc: boolean; warmupFormula: WarmupRow[]; plateRounding: number; dumbbellRounding: number;
+  keepAwake: boolean; plateCalc: boolean; rpe: boolean; smartSuperset: boolean; inlineTimer: boolean; livePR: boolean;
+};
+export const DEFAULT_WARMUP: WarmupRow[] = [{ pct: 40, reps: 5 }, { pct: 60, reps: 5 }, { pct: 80, reps: 3 }];
+export const DEFAULT_WPREFS: WorkoutPrefs = {
+  sounds: true, defaultRestSec: 90, prevMode: 'any', warmupCalc: false, warmupFormula: DEFAULT_WARMUP, plateRounding: 5, dumbbellRounding: 1,
+  keepAwake: false, plateCalc: true, rpe: false, smartSuperset: false, inlineTimer: true, livePR: true,
+};

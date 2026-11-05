@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleProp, StyleSheet, Switch, Text,
-  TextInput, TextInputProps, View, ViewStyle,
+  TextInput, TextInputProps, TextStyle, View, ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius } from '../lib/theme';
@@ -61,8 +61,8 @@ export function IconButton({ name, onPress, color = colors.text, size = 24, test
   );
 }
 
-export function Btn({ title, onPress, variant = 'primary', disabled, loading, icon, style, testID }: {
-  title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline'; disabled?: boolean; loading?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>; testID?: string;
+export function Btn({ title, onPress, variant = 'primary', disabled, loading, icon, style, testID, textStyle }: {
+  textStyle?: StyleProp<TextStyle>; title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline'; disabled?: boolean; loading?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>; testID?: string;
 }) {
   const bg = variant === 'primary' ? colors.primary : variant === 'secondary' ? colors.surface : variant === 'danger' ? colors.danger : 'transparent';
   const fg = variant === 'primary' || variant === 'danger' ? colors.onPrimary : variant === 'ghost' ? colors.primary : colors.text;
@@ -75,7 +75,7 @@ export function Btn({ title, onPress, variant = 'primary', disabled, loading, ic
       {loading ? <ActivityIndicator color={fg} /> : (
         <>
           {icon && <Ionicons name={icon} size={18} color={fg} />}
-          <Text style={{ color: fg, fontWeight: '600', fontSize: 16 }}>{title}</Text>
+          <Text style={[{ color: fg, fontWeight: '600', fontSize: 16 }, textStyle]}>{title}</Text>
         </>
       )}
     </Pressable>
