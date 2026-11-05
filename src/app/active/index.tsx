@@ -26,7 +26,7 @@ function previousOf(workouts: Workout[], exerciseId: string, j: number) {
 
 export default function ActiveWorkoutScreen() {
   const st = useStore();
-  const { active, exercises, workouts, profile, rest } = st;
+  const { active, workouts, profile, rest } = st;
   const now = useNow(1000, true);
   const [setSheet, setSetSheet] = useState<{ i: number; j: number } | null>(null);
   const [restSheet, setRestSheet] = useState<number | null>(null);
@@ -47,7 +47,7 @@ export default function ActiveWorkoutScreen() {
       <Screen><Header left="down" title="Log Workout" /><Empty text="No workout in progress." action={<Btn title="Back" onPress={() => router.back()} />} /></Screen>
     );
 
-  const exOf = (id: string): Exercise | undefined => exercises.find((e) => e.id === id);
+  const exOf = (id: string): Exercise | undefined => st.findExercise(id);
   const elapsed = elapsedSec(active, now);
   const shown = active.entries.map((e, i) => ({ e, i })).filter((x) => !x.e.hidden);
   const hiddenList = active.entries.map((e, i) => ({ e, i })).filter((x) => x.e.hidden);
@@ -136,7 +136,7 @@ export default function ActiveWorkoutScreen() {
               </View>
               {e.sets.map((s, j) => {
                 const lb = label(e, s, j);
-                const prev = previousOf(workouts, e.exerciseId, j);
+                const prev = previousOf(workouts, st.realExerciseId(e.exerciseId), j);
                 return (
                   <View key={j} testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : j % 2 === 1 ? colors.surface : colors.bg }}>
                     <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 44, alignItems: 'center', paddingVertical: 10 }} testID="set-type"><Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text></Pressable>

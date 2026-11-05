@@ -26,6 +26,8 @@ type Store = {
   active: ActiveWorkout | null; rest: RestTimer;
   allExercises: Exercise[];
   ensureExercises: (ids: string[]) => Promise<string[]>;
+  findExercise: (id: string) => Exercise | undefined;
+  realExerciseId: (id: string) => string;
   // auth
   signIn: (e: string, p: string) => Promise<string | null>;
   signUp: (e: string, p: string) => Promise<string | null>;
@@ -159,15 +161,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (userId) load(userId, session?.user.email ?? 'user').finally(() => setReady(true));
   }, [userId, session?.user.email, load]);
 
-  const allExercises = useMemo<Exercise[]>(() => {
-    const byCat = new Map(exercises.filter((e) => e.catalogId).map((e) => [e.catalogId!, e]));
-    const fromCatalog = CATALOG.map((c) => byCat.get(c.id) ?? catToExercise(c));
-    return [...fromCatalog, ...exercises.filter((e) => !e.catalogId)];
-  }, [exercises]);
-
-  const value = useMemo<Store>(() => ({
-    ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
-    ensureExercises: async (ids) => {
+  const ensure = useCallback(async (ids: string[]): Promise<string[]> => {
       const have = new Map(exRef.current.filter((e) => e.catalogId).map((e) => [e.catalogId!, e.id]));
       const missing = [...new Set(ids.filter((id) => id.startsWith('cat:')).map((id) => id.slice(4)).filter((cid) => !have.has(cid)))];
       if (missing.length) {
@@ -180,7 +174,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setExercises(exRef.current);
       }
       return ids.map((id) => (id.startsWith('cat:') ? have.get(id.slice(4)) ?? id : id));
-    },
+  }, [fail]);
+
+  const allExercises = useMemo<Exercise[]>(() => {
+    const byCat = new Map(exercises.filter((e) => e.catalogId).map((e) => [e.catalogId!, e]));
+    const fromCatalog = CATALOG.map((c) => byCat.get(c.id) ?? catToExercise(c));
+    return [...fromCatalog, ...exercises.filter((e) => !e.catalogId)];
+  }, [exercises]);
+
+  const lookup = useMemo(() => {
+    const m = new Map<string, Exercise>();
+    allExercises.forEach((e) => { m.set(e.id, e); if (e.catalogId) m.set(`cat:${e.catalogId}`, e); });
+    return m;
+  }, [allExercises]);
+
+  const value = useMemo<Store>(() => ({
+    ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
+    ensureExercises: ensure,
+    findExercise: (id) => lookup.get(id),
+    realExerciseId: (id) => (id.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === id.slice(4))?.id ?? id : id),
     signIn: async (email, password) => (await supabase.auth.signInWithPassword({ email, password })).error?.message ?? null,
     signUp: async (email, password) => {
       const { data, error: e } = await supabase.auth.signUp({ email, password });
@@ -252,6 +264,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, ...s }) => s) }))
         .filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }
+      const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
+      const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((id, k) => [id, realIds[k]]));
+      entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
       const meta2 = {
         notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
         rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
@@ -281,7 +296,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     saveRoutine: async (r) => {
-      const row = { title: r.title.trim() || 'Routine', notes: r.notes, exercises: r.exercises as RoutineExercise[] };
+      const uniq = [...new Set(r.exercises.map((e) => e.exerciseId))];
+      const realIds = await ensure(uniq);
+      const idMap = new Map(uniq.map((id, k) => [id, realIds[k]]));
+      const row = { title: r.title.trim() || 'Routine', notes: r.notes, exercises: r.exercises.map((e) => ({ ...e, exerciseId: idMap.get(e.exerciseId) ?? e.exerciseId })) as RoutineExercise[] };
       const q = r.id ? supabase.from('routines').update(row).eq('id', r.id) : supabase.from('routines').insert(row);
       const { data, error: e } = await q.select('id,title,notes,exercises').single();
       if (e) { fail(e.message); return null; }
@@ -311,7 +329,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
       if (e) fail(e.message);
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises]);
+  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

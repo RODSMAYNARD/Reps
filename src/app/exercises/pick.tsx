@@ -12,16 +12,15 @@ import { colors } from '../../lib/theme';
 
 export default function PickExercise() {
   const { single } = useLocalSearchParams<{ single?: string }>();
-  const { allExercises, ensureExercises } = useStore();
+  const { allExercises } = useStore();
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('all');
   const [equip, setEquip] = useState('all');
-  const [busy, setBusy] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const dq = useDeferredValue(q);
   const list = useMemo(() => searchExercises(allExercises, dq, muscle, equip), [allExercises, dq, muscle, equip]);
   const toggle = (id: string) => (single ? setSel([id]) : setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]));
-  const done = async () => { setBusy(true); const real = await ensureExercises(sel); setBusy(false); resolvePick(real); router.back(); };
+  const done = () => { resolvePick(sel); router.back(); };
   return (
     <Screen>
       <Header left="cancel" title="Add exercise" right={<HeaderAction label="Create" onPress={() => router.push('/exercises/create')} />} />
@@ -49,7 +48,7 @@ export default function PickExercise() {
           </Pressable>
         )}
       />
-      <View style={{ padding: 16 }}><Btn title={sel.length ? `Add ${sel.length} exercise(s)` : 'Select exercises'} disabled={!sel.length} loading={busy} testID="pick-confirm" onPress={done} /></View>
+      <View style={{ padding: 16 }}><Btn title={sel.length ? `Add ${sel.length} exercise(s)` : 'Select exercises'} disabled={!sel.length} testID="pick-confirm" onPress={done} /></View>
     </Screen>
   );
 }

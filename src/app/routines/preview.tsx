@@ -11,17 +11,14 @@ import { RoutineExercise } from '../../lib/types';
 
 export default function RoutinePreview() {
   const { src, id, idx } = useLocalSearchParams<{ src: string; id: string; idx: string }>();
-  const { ensureExercises, saveRoutine, routines, startWorkout, active, showToast } = useStore();
+  const { saveRoutine, routines, startWorkout, active, showToast } = useStore();
   const tpl = (src === 'program' ? PROGRAMS.find((p) => p.id === id)?.routines : CATEGORY_ROUTINES[id])?.[Number(idx)];
   const [more, setMore] = useState(false);
   const [menu, setMenu] = useState(false);
   const exs = (tpl?.exercises ?? []).flatMap((n) => CAT_BY_EN.get(n) ?? []);
-  const toRoutineExercises = async (): Promise<RoutineExercise[]> => {
-    const ids = await ensureExercises(exs.map(catKey));
-    return ids.map((id, i) => ({ exerciseId: id, notes: '', restSec: exs[i].k === 'duration' ? 0 : 90, sets: [1, 2, 3].map(() => ({ type: 'normal' as const, kg: null, reps: exs[i].k === 'duration' ? 30 : 10 })) }));
-  };
+  const toRoutineExercises = (): RoutineExercise[] => exs.map((c) => ({ exerciseId: catKey(c), notes: '', restSec: c.k === 'duration' ? 0 : 90, sets: [1, 2, 3].map(() => ({ type: 'normal' as const, kg: null, reps: c.k === 'duration' ? 30 : 10 })) }));
   const saved = routines.some((r) => r.title === tpl?.title);
-  const save = async () => { if (!tpl) return; const r = await saveRoutine({ title: tpl.title, notes: tpl.notes, exercises: await toRoutineExercises() }); if (r) showToast('Routine saved to your library'); };
+  const save = async () => { if (!tpl) return; const r = await saveRoutine({ title: tpl.title, notes: tpl.notes, exercises: toRoutineExercises() }); if (r) showToast('Routine saved to your library'); };
   return (
     <Screen>
       <Header title={tpl?.title ?? 'Routine'} right={<IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} />} />
@@ -39,7 +36,7 @@ export default function RoutinePreview() {
         ))}
       </ScrollView>
       <Sheet visible={menu} onClose={() => setMenu(false)}>
-        <ListRow icon="play-outline" label="Start now (without saving)" last onPress={async () => { setMenu(false); if (active) return showToast('Finish or discard your current workout first.'); startWorkout({ routine: { id: '', title: tpl?.title ?? 'Workout', notes: '', exercises: await toRoutineExercises() } }); router.push('/active'); }} />
+        <ListRow icon="play-outline" label="Start now (without saving)" last onPress={() => { setMenu(false); if (active) return showToast('Finish or discard your current workout first.'); startWorkout({ routine: { id: '', title: tpl?.title ?? 'Workout', notes: '', exercises: toRoutineExercises() } }); router.push('/active'); }} />
       </Sheet>
     </Screen>
   );

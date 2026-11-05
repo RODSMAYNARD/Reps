@@ -15,12 +15,12 @@ const HOWTO = ['Set up with a neutral posture and a braced core.', 'Move with co
 
 export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { allExercises: exercises, workouts, profile, removeExercise } = useStore();
+  const { findExercise, workouts, profile, removeExercise } = useStore();
   const [tab, setTab] = useState('summary');
   const [metric, setMetric] = useState('heaviest');
   const [menu, setMenu] = useState(false);
   const [del, setDel] = useState(false);
-  const ex = exercises.find((e) => e.id === id);
+  const ex = findExercise(id);
   if (!ex) return <Screen><Header title="Exercise" /></Screen>;
   const cat = ex.catalogId ? CAT_BY_ID.get(ex.catalogId) : undefined;
   const u = profile.units;

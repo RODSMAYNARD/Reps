@@ -48,8 +48,11 @@
 - Reps em exercícios de duração = segundos
 - Fotos (progresso/treino) ficam só no aparelho (sem Storage ainda)
 
-## Desempenho dos exercícios
-- Catálogo (texto) e miniaturas 96x96 (`assets/thumbs`, `src/data/thumbs.ts`) ficam DENTRO do app: listas não fazem requisição de rede. O único dado remoto de exercício é o GIF do detalhe (URL assinada do bucket privado `exercise-media`, 1 requisição ao abrir). Ao usar um exercício do catálogo, 1 insert em lote cria a linha do usuário (`ensureExercises`). Miniaturas e GIFs © Gym visual: SÓ TESTE, remover antes do lançamento.
+## Desempenho dos exercícios (arquitetura)
+- Catálogo (texto) e miniaturas 96x96 (`assets/thumbs`, `src/data/thumbs.ts`) ficam DENTRO do app: listas e seletor não fazem rede.
+- **Escolher um exercício do catálogo é 100% local** (id `cat:<id>` no treino/rotina em andamento). A linha na tabela `exercises` só é criada ao SALVAR o treino ou a rotina (`ensureExercises` dentro de `finishActive`/`saveRoutine`). Telas usam `findExercise(id)` e `realExerciseId(id)` do store para achar o exercício (aceita id real ou `cat:`).
+- Único dado remoto de exercício: o GIF do detalhe (URL assinada do bucket privado `exercise-media`, 1 requisição ao abrir). Miniaturas e GIFs © Gym visual: SÓ TESTE, remover antes do lançamento.
+- Medido: adicionar exercício ~50-80 ms; salvar treino ~2 s.
 
 ## Layout seguro (Android/iOS)
 - `Screen` (ui.tsx) respeita a barra de navegação/home indicator embaixo por padrão (`edges=['top','bottom']`); telas das abas usam só `['top']` porque a tab bar já cuida do rodapé. Barras fixas no rodapé (ex.: timer de descanso) somam `useSafeAreaInsets().bottom`. Formulários usam `KeyboardAvoidingView behavior="padding"` nas duas plataformas. A skill 'Rod's Keyboard' do dono não está acessível a esta sessão.

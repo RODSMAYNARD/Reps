@@ -17,7 +17,7 @@ function Group<T extends string | number>({ title, items, value, onChange }: { t
 }
 
 export default function GeneratePlan() {
-  const { allExercises: exercises, ensureExercises, saveRoutine, showToast } = useStore();
+  const { allExercises: exercises, findExercise, saveRoutine, showToast } = useStore();
   const [goal, setGoal] = useState<Goal>('hypertrophy');
   const [days, setDays] = useState(3);
   const [level, setLevel] = useState<Level>('beginner');
@@ -25,16 +25,13 @@ export default function GeneratePlan() {
   const [seed, setSeed] = useState(1);
   const [plan, setPlan] = useState<{ name: string; routines: PlannedRoutine[] } | null>(null);
   const [busy, setBusy] = useState(false);
-  const nameOf = (id: string) => exercises.find((e) => e.id === id)?.name ?? '—';
+  const nameOf = (id: string) => findExercise(id)?.name ?? '—';
 
   const make = (s: number) => { setSeed(s); setPlan(generatePlan({ goal, days, level, gear, seed: s }, exercises, (e) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.en : undefined))); };
   const save = async () => {
     if (!plan) return;
     setBusy(true);
-    const all = [...new Set(plan.routines.flatMap((r) => r.exercises.map((e) => e.exerciseId)))];
-    const real = await ensureExercises(all);
-    const map = new Map(all.map((id, i) => [id, real[i]]));
-    for (const r of plan.routines) await saveRoutine({ title: `${plan.name} · ${r.title}`, notes: r.notes, exercises: r.exercises.map((e) => ({ ...e, exerciseId: map.get(e.exerciseId) ?? e.exerciseId })) });
+    for (const r of plan.routines) await saveRoutine({ title: `${plan.name} · ${r.title}`, notes: r.notes, exercises: r.exercises });
     setBusy(false);
     showToast(`Plan saved: ${plan.routines.length} routines`);
     router.back();

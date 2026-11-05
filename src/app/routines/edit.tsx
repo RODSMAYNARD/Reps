@@ -15,7 +15,7 @@ const RESTS = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 
 export default function EditRoutine() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { routines, exercises, profile, saveRoutine, showToast } = useStore();
+  const { routines, findExercise, profile, saveRoutine, showToast } = useStore();
   const existing = routines.find((r) => r.id === id);
   const [title, setTitle] = useState(existing?.title ?? '');
   const [items, setItems] = useState<RoutineExercise[]>(existing?.exercises ?? []);
@@ -24,7 +24,7 @@ export default function EditRoutine() {
   const [restSheet, setRestSheet] = useState<number | null>(null);
   const [cancelAsk, setCancelAsk] = useState(false);
   const u = profile.units;
-  const nameOf = (eid: string) => exercises.find((e) => e.id === eid);
+  const nameOf = (eid: string) => findExercise(eid);
   const patchSet = (i: number, j: number, p: Partial<SetRow>) => setItems((l) => l.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, ...p } : s)) } : e)));
   const valid = title.trim().length > 0 && items.length > 0;
   const add = () => { setPickHandler((ids) => setItems((l) => [...l, ...ids.map((eid): RoutineExercise => ({ exerciseId: eid, notes: '', restSec: 90, sets: [{ type: 'normal', kg: null, reps: null }] }))])); router.push('/exercises/pick'); };
