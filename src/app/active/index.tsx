@@ -12,7 +12,7 @@ import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, 
 import { SET_TYPES } from '../../lib/constants';
 import { fmtClock, fmtDuration, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
 import { setPickHandler } from '../../lib/picker';
-import { setVolume } from '../../lib/stats';
+import { records, setVolume } from '../../lib/stats';
 import { elapsedSec, useNow, useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { ActiveEntry, ActiveSet, Exercise, Units } from '../../lib/types';
@@ -35,6 +35,7 @@ export default function ActiveWorkoutScreen() {
   const [reordering, setReordering] = useState(false);
   const [hiddenSheet, setHiddenSheet] = useState(false);
   const [plate, setPlate] = useState<number | null>(null);
+  const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
   const keepAwake = st.wprefs.keepAwake && !!active;
   useEffect(() => {
     if (!keepAwake) return;
@@ -97,7 +98,7 @@ export default function ActiveWorkoutScreen() {
           <View style={{ padding: 16 }}><Btn title="Done" onPress={() => setReordering(false)} testID="reorder-done" /></View>
         </View>
       )}
-      {!reordering && <ScrollView contentContainerStyle={{ paddingBottom: rest ? 180 : 40 }} keyboardShouldPersistTaps="handled">
+      {!reordering && <ScrollView contentContainerStyle={{ paddingBottom: rest ? 120 : 40 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable onPress={() => setDurSheet(true)} testID="duration"><Text style={{ color: colors.muted, fontSize: 13 }}>Duration</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDuration(elapsed)}</Text></Pressable>
           <Stat label="Volume" value={fmtVolume(volume, u)} />
@@ -123,6 +124,7 @@ export default function ActiveWorkoutScreen() {
           const uid = uidOf(e, i);
           const isCollapsed = !!collapsed[uid];
           const prevSets = st.previousSets(e.exerciseId);
+          const heaviest = records(st.workouts, st.realExerciseId(e.exerciseId)).heaviest;
           const isBarbell = /barbell/i.test(ex?.equipment ?? '');
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
@@ -137,10 +139,20 @@ export default function ActiveWorkoutScreen() {
                 <IconButton name="ellipsis-vertical" onPress={() => setMenu(i)} testID="entry-menu" />
               </Pressable>
               {isCollapsed ? <View style={{ height: 8, borderBottomWidth: 1, borderBottomColor: colors.surface }} /> : <>
-              <TextInput value={e.notes} onChangeText={(t) => st.patchEntry(i, { notes: t })} placeholder="Add notes here..." placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 10, color: colors.text }} />
-              <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 10 }}>
-                <Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Rest Timer: {fmtRest(e.restSec)}</Text>
-              </Pressable>
+              {e.superset != null && (
+                <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
+                  <View testID="superset-badge" style={{ alignSelf: 'flex-start', backgroundColor: colors.purple, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 8 }}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Superset</Text></View>
+                </View>
+              )}
+              <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 }}>
+                <Pressable onPress={() => setRestSheet(i)} testID="rest-chip" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Ionicons name="timer-outline" size={22} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Rest: {e.restSec ? fmtRest(e.restSec) : 'Off'}</Text>
+                </Pressable>
+                <Pressable onPress={() => setNoteOpen((n) => ({ ...n, [uid]: !n[uid] }))} testID="note-chip" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: e.notes ? colors.primarySoft : colors.surface, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 12 }}>
+                  <Ionicons name="document-text-outline" size={22} color={e.notes ? colors.primary : colors.text} /><Text style={{ color: e.notes ? colors.primary : colors.text, fontSize: 17 }}>Note</Text>
+                </Pressable>
+              </View>
+              {(noteOpen[uid] || !!e.notes) && <TextInput value={e.notes} onChangeText={(t) => st.patchEntry(i, { notes: t })} placeholder="Add notes here..." placeholderTextColor={colors.faint} multiline style={{ marginHorizontal: 16, marginBottom: 6, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10, color: colors.text, fontSize: 16 }} testID="note-input" />}
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
                 <Text style={[h.c, { width: 44 }]}>SET</Text>
                 <Text style={[h.c, { flex: 1.3 }]}>PREVIOUS</Text>
@@ -155,20 +167,24 @@ export default function ActiveWorkoutScreen() {
                 const prev = prevSets[j] ?? null;
                 return (
                   <View key={j} testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : j % 2 === 1 ? colors.surface : colors.bg }}>
-                    <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 44, alignItems: 'center', paddingVertical: 10 }} testID="set-type"><Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text></Pressable>
+                    <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 44, alignItems: 'center', paddingVertical: 6 }} testID="set-type">
+                      <View style={{ width: 42, height: 42, borderRadius: 10, backgroundColor: s.done ? colors.bg : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
+                        {isPR(s, heaviest) ? <Ionicons name="ribbon" size={24} color="#F5C400" /> : <Text style={{ color: lb.color, fontWeight: '700', fontSize: 17 }}>{lb.text}</Text>}
+                      </View>
+                    </Pressable>
                     <Pressable
                       style={{ flex: 1.3, alignItems: 'center' }}
                       onPress={() => prev && st.patchSet(i, j, { kg: prev.kg, reps: prev.reps })}>
                       <Text style={{ color: colors.faint, fontSize: 14 }}>{prev ? (kind === 'weight_reps' ? `${Math.round(toDisplayWeight(prev.kg ?? 0, u) * 10) / 10}${u.weight} × ${prev.reps}` : String(prev.reps)) : '-'}</Text>
                     </Pressable>
                     {kind === 'weight_reps' && (
-                      <View style={{ flex: 1 }}>
-                        <NumInput decimal testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u) })} />
+                      <View style={{ flex: 1, paddingHorizontal: 6 }}>
+                        <NumInput decimal style={inputStyle(s.done)} testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u) })} />
                       </View>
                     )}
-                    <View style={{ flex: 1 }}><NumInput testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v })} /></View>
+                    <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v })} /></View>
                     <Pressable onPress={() => st.toggleSet(i, j)} testID="check" style={{ width: 44, alignItems: 'center' }}>
-                      <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: s.done ? colors.success : colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: s.done ? colors.success : colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="checkmark" size={20} color={s.done ? '#fff' : colors.faint} />
                       </View>
                     </Pressable>
@@ -196,13 +212,13 @@ export default function ActiveWorkoutScreen() {
       </ScrollView>}
 
       {rest && !reordering && (
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, padding: 16, paddingBottom: 16 + insets.bottom, gap: 10 }}>
-          <View style={{ height: 4, backgroundColor: colors.surfaceAlt, borderRadius: 2 }}><View style={{ height: 4, borderRadius: 2, backgroundColor: colors.primary, width: `${Math.min(100, (restLeft / rest.total) * 100)}%` }} /></View>
-          <Text style={{ fontSize: 44, fontWeight: '300', textAlign: 'center', color: colors.text }} testID="rest-clock">{fmtClock(restLeft)}</Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Btn title="-15" variant="secondary" style={{ flex: 1 }} onPress={() => st.adjustRest(-15)} />
-            <Btn title="+15" variant="secondary" style={{ flex: 1 }} onPress={() => st.adjustRest(15)} />
-            <Btn title="Skip" style={{ flex: 1 }} onPress={st.skipRest} testID="rest-skip" />
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: insets.bottom }}>
+          <View style={{ height: 4, backgroundColor: colors.surfaceAlt }}><View style={{ height: 4, backgroundColor: colors.primary, width: `${Math.min(100, (restLeft / rest.total) * 100)}%` }} /></View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 }}>
+            <Btn title="-15" variant="secondary" style={{ minWidth: 64 }} onPress={() => st.adjustRest(-15)} />
+            <Text style={{ flex: 1, fontSize: 40, fontWeight: '400', textAlign: 'center', color: colors.text }} testID="rest-clock">{fmtClock(restLeft)}</Text>
+            <Btn title="+15" variant="secondary" style={{ minWidth: 64 }} onPress={() => st.adjustRest(15)} />
+            <Btn title="Skip" style={{ minWidth: 80 }} onPress={st.skipRest} testID="rest-skip" />
           </View>
         </View>
       )}
@@ -290,6 +306,9 @@ function NumberSheetInline({ minutes, onChange }: { minutes: number; onChange: (
   );
 }
 void NumberSheet;
+
+const isPR = (s: ActiveSet, heaviest: number) => s.done && s.type === 'normal' && heaviest > 0 && (s.kg ?? 0) > heaviest;
+const inputStyle = (done: boolean) => ({ borderWidth: done ? 0 : 1, borderColor: colors.border, borderRadius: 10, paddingVertical: 10, fontWeight: done ? ('700' as const) : ('400' as const), fontSize: 17 });
 
 const h = { c: { color: colors.muted, fontSize: 12, textAlign: 'center' as const } };
 
