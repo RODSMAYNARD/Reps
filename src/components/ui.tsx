@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Switch, Text,
+  ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleProp, StyleSheet, Switch, Text,
   TextInput, TextInputProps, View, ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,7 @@ import { colors, radius } from '../lib/theme';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export function Screen({ children, edges = ['top'], style }: { children: React.ReactNode; edges?: ('top' | 'bottom')[]; style?: StyleProp<ViewStyle> }) {
+export function Screen({ children, edges = ['top', 'bottom'], style }: { children: React.ReactNode; edges?: ('top' | 'bottom')[]; style?: StyleProp<ViewStyle> }) {
   return (
     <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
       {children}
@@ -243,7 +243,7 @@ export function Sheet({ visible, onClose, title, children, left }: { visible: bo
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={{ flex: 1, backgroundColor: colors.overlay }} onPress={onClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView behavior="padding">
         <View style={[s.sheet, { paddingBottom: insets.bottom + 12 }]}>
           <View style={{ alignItems: 'center', paddingTop: 8 }}><View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} /></View>
           {!!title && (

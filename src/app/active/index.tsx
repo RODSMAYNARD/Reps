@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
 import { NumberSheet, range } from '../../components/pickers';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
@@ -39,6 +40,7 @@ export default function ActiveWorkoutScreen() {
   const [reordering, setReordering] = useState(false);
   const [hiddenSheet, setHiddenSheet] = useState(false);
   const u = profile.units;
+  const insets = useSafeAreaInsets();
 
   if (!active)
     return (
@@ -175,7 +177,7 @@ export default function ActiveWorkoutScreen() {
       </ScrollView>}
 
       {rest && !reordering && (
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, padding: 16, gap: 10 }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, padding: 16, paddingBottom: 16 + insets.bottom, gap: 10 }}>
           <View style={{ height: 4, backgroundColor: colors.surfaceAlt, borderRadius: 2 }}><View style={{ height: 4, borderRadius: 2, backgroundColor: colors.primary, width: `${Math.min(100, (restLeft / rest.total) * 100)}%` }} /></View>
           <Text style={{ fontSize: 44, fontWeight: '300', textAlign: 'center', color: colors.text }} testID="rest-clock">{fmtClock(restLeft)}</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>

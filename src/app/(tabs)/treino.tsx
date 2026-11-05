@@ -21,7 +21,7 @@ export default function Treino() {
   };
 
   return (
-    <Screen>
+    <Screen edges={['top']}>
       <Header title="Workout" left="none" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
         <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Quick Start</Text>

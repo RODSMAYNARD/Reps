@@ -65,7 +65,7 @@ export default function Home() {
   );
 
   return (
-    <Screen>
+    <Screen edges={['top']}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
         <Pressable onPress={() => setMenu(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.sm }}>
           <Text style={{ fontWeight: '500', color: colors.text }}>{feed === 'home' ? 'Home' : 'My Workouts'}</Text>

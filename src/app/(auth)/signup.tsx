@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, Text } from 'react-native';
 import { Btn, Field, Header, Screen } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
@@ -15,7 +15,7 @@ export default function Signup() {
   return (
     <Screen>
       <Header title="Create account" />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 16, gap: 18 }} keyboardShouldPersistTaps="handled">
           <Field label="Email" placeholder="you@email.com" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
           <Field label="Password" placeholder="At least 6 characters" secureTextEntry value={password} onChangeText={setPassword} />

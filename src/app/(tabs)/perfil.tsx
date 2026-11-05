@@ -18,7 +18,7 @@ export default function Perfil() {
   const headline = metric === 'duration' ? fmtDuration(thisWeek.reduce((t, w) => t + w.durationSec, 0)) : metric === 'volume' ? `${Math.round(series.at(-1)?.value ?? 0)} ${profile.units.weight}` : `${Math.round(series.at(-1)?.value ?? 0)} reps`;
   const name = profile.displayName || profile.username;
   return (
-    <Screen>
+    <Screen edges={['top']}>
       <Header left="none" leftNode={<HeaderAction label="Edit Profile" onPress={() => router.push('/profile/edit')} />} title={profile.username}
         right={<>
           <IconButton name="share-outline" onPress={() => Share.share({ message: `Follow @${profile.username} on Reps` })} />
