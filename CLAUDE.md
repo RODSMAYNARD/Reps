@@ -1,33 +1,44 @@
 # Reps — app de treino de academia
 
 ## Stack
-- Expo (React Native) + TypeScript + Expo Router (rotas em `src/app/`)
-- Backend: Supabase, projeto `reps` (ref `rulilgblkiwnmoiggjfd`, região sa-east-1). Login por e-mail/senha
-- Dados: tabelas `exercises`, `workouts`, `workout_sets`, todas com RLS (cada usuário só vê os próprios dados)
-- `src/lib/store.tsx` é a única fonte de dados; o treino em andamento (`draft`) fica no AsyncStorage até finalizar
+- Expo SDK 58 (React Native 0.88) + TypeScript + Expo Router (rotas em `src/app/`)
+- Backend: Supabase, projeto `reps` (ref `rulilgblkiwnmoiggjfd`, sa-east-1). Login e-mail/senha
+- Tabelas (todas com RLS por usuário): `profiles`, `exercises`, `workouts`, `workout_sets`, `routines`, `measurements`, `feedback`
 - `.env` tem só a chave PÚBLICA (publishable). Nunca commitar a service_role key
 
-## Estrutura
-- `src/app/(tabs)/` — telas: Treino, Exercícios, Histórico, Progresso
-- `src/lib/` — tipos, tema e store (única fonte de dados)
-- `src/components/ui.tsx` — Button, Input, Card, Chip, Empty
+## Arquitetura: um fluxo = uma pasta em `src/app/`
+- `(auth)` boas-vindas, cadastro, login, recuperar senha
+- `(onboarding)` unidades → slides → sobre você → paywall
+- `(tabs)` Início (feed), Treino, Perfil
+- `active/` registrar treino (index) e salvar treino (save)
+- `exercises/` biblioteca, detalhe (resumo/histórico/como fazer/ranking), criar, seletor (`pick`)
+- `routines/` explorar, programa, categoria, prévia, detalhe, criar/editar, ajuda
+- `feed/` detalhe do treino, reportar, descobrir, amigos, verificar telefone, notificações
+- `profile/` editar, estatísticas (+detalhes), calendário, medidas, registrar medidas, fotos
+- `settings/` unidades, tema, integrações, exportar, FAQ, guia, contato, sugestão, sobre, coach, Pro
+
+## Código compartilhado
+- `src/lib/store.tsx` — única fonte de dados (Supabase + treino ativo no AsyncStorage)
+- `src/lib/stats.ts` recordes/volume/gráficos · `format.ts` unidades e datas · `constants.ts` exercícios, programas, categorias
+- `src/lib/picker.ts` — canal para o seletor de exercícios devolver o resultado
+- `src/components/ui.tsx` — Header, Btn, ListRow, Sheet, Dialog, gráficos etc.
 
 ## Comandos
-- `npm install` · `npx expo start` (Expo Go no celular) · `npx expo start --web`
+- `npm install` · `npx expo start` (Expo Go) · `npx expo start --web`
 - Antes de concluir qualquer tarefa: `npx tsc --noEmit` e `npx expo lint`
-- Instalar pacotes sempre com `npx expo install <pacote>`
+- Pacotes sempre com `npx expo install <pacote>`
+- Build nas lojas: `npx eas-cli@latest build --profile preview --platform all`
 
 ## Decisões
-- Tema escuro, textos em português do Brasil
-- Treino em andamento fica em `draft` até o usuário finalizar
-- Progresso = maior carga do exercício em cada treino (últimos 12)
+- Layout e fluxos inspirados no Hevy (via Mobbin), com identidade própria: nome Reps, sem logo, ícones nem ilustrações do Hevy
+- Textos em português do Brasil; pesos guardados em kg e convertidos na tela
+- Reps em exercícios de duração = segundos
+- Fotos (progresso/treino) ficam só no aparelho (sem Storage ainda)
 
-## Roadmap
-1. Fichas/rotinas de treino prontas
-2. Timer de descanso
-3. Recordes pessoais e metas
+## Só interface (sem backend real)
+Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, tema escuro (preferência salva, tema ainda não aplicado), importação de dados.
 
 ## Pendências
-- Ativar "Leaked password protection" em Supabase > Authentication > Providers > Email
-- Decidir se o cadastro exige confirmação de e-mail (Supabase > Authentication)
-- Modo offline: hoje o app precisa de internet para carregar e salvar
+- Supabase > Authentication: ativar "Leaked password protection" e decidir confirmação de e-mail
+- Supabase Storage para fotos; Apple/Google sign-in nativos; RevenueCat para o Pro
+- Modo offline: hoje o app precisa de internet
