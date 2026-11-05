@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { track } from '../../lib/analytics';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -152,8 +153,9 @@ export default function ReportShare() {
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => setPage(Math.round(e.nativeEvent.contentOffset.x / width));
   const capture = async () => { const r = refs.current[page]; if (!r) return null; return captureRef(r as Parameters<typeof captureRef>[0], { format: 'png', quality: 1 }); };
-  const doShare = async () => { try { const uri = await capture(); if (uri && (await Sharing.isAvailableAsync())) await Sharing.shareAsync(uri, { mimeType: 'image/png' }); } catch { st.showToast('Could not share the image.'); } };
+  const doShare = async () => { track('report_card_shared', { card: page }); try { const uri = await capture(); if (uri && (await Sharing.isAvailableAsync())) await Sharing.shareAsync(uri, { mimeType: 'image/png' }); } catch { st.showToast('Could not share the image.'); } };
   const doDownload = async () => {
+    track('report_card_downloaded', { card: page });
     try {
       const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) return st.showToast('Permission to save was denied.');

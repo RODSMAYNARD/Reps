@@ -60,7 +60,9 @@
           "icon": "./assets/android-icon-monochrome.png",
           "color": "#0A84FF"
         }
-      ]
+      ],
+      "expo-localization",
+      "@sentry/react-native"
     ],
     "scheme": "reps",
     "owner": "rodsappz4u",

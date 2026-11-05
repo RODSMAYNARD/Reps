@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { track } from '../../lib/analytics';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { BarChart, Btn, Header, Screen, Section, TopTabs } from '../../components/ui';
 import { MUSCLE_GROUPS } from '../../lib/constants';
@@ -33,6 +34,7 @@ export default function MonthlyReport() {
     return d;
   });
   const [metric, setMetric] = useState<Metric>('workouts');
+  useEffect(() => { track('report_viewed', { from_card: !!params.month }); }, [params.month]);
   const y = cursor.getFullYear(), m = cursor.getMonth();
   const prevDate = useMemo(() => new Date(y, m - 1, 1), [y, m]);
   const cur = useMemo(() => inMonth(workouts, y, m), [workouts, y, m]);

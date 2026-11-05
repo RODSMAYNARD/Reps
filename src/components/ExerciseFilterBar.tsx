@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { track } from '../lib/analytics';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { EQUIPMENT_FILTERS, MUSCLE_FILTERS, filterExercises } from '../lib/catalog';
@@ -37,7 +38,7 @@ export function ExerciseFilterBar({ list, q, muscles, equipment, onChange }: { l
   const show = (w: 'muscle' | 'equip') => { setDm(muscles); setDe(equipment); setOpen(w); };
   const count = filterExercises(list, q, dm, de).length;
   const toggle = (arr: string[], set: (v: string[]) => void) => (id: string) => set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
-  const apply = () => { onChange(dm, de); setOpen(null); };
+  const apply = () => { track('exercise_filters_applied', { muscles: dm.length, equipment: de.length, results: count }); onChange(dm, de); setOpen(null); };
   const clear = () => { if (open === 'muscle') setDm([]); else setDe([]); };
   return (
     <>

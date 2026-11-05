@@ -2,7 +2,9 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Telemetry } from '../components/Telemetry';
 import { WorkoutNotifier } from '../components/WorkoutNotifier';
+import { wrapRoot } from '../lib/monitoring';
 import { StoreProvider, useStore } from '../lib/store';
 import { colors } from '../lib/theme';
 
@@ -46,14 +48,17 @@ function Routes() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <SafeAreaProvider>
       <StoreProvider>
         <StatusBar style="dark" />
         <Routes />
         <WorkoutNotifier />
+        <Telemetry />
       </StoreProvider>
     </SafeAreaProvider>
   );
 }
+
+export default wrapRoot(RootLayout);

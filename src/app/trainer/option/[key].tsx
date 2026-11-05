@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -42,6 +43,7 @@ export default function TrainerOption() {
     const next = { ...draft };
     if (k === 'frequency' && !SPLITS.find((x) => x.id === next.split)!.days.includes(next.frequency)) next.split = bestSplit(next.frequency);
     apply(next, RESTART.has(k));
+    track('trainer_updated', { option: k });
     st.showToast('Program updated');
     router.back();
   };

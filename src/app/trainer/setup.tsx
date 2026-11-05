@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { track } from '../../lib/analytics';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Btn, Header, Pill, Screen } from '../../components/ui';
@@ -28,6 +29,7 @@ export default function TrainerSetup() {
     const enOf = (e: Exercise) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.en : undefined);
     const name = `${st.profile.displayName || st.profile.username}'s Personalized Program`;
     st.saveTrainer(generateProgram(s, st.allExercises, enOf, 1, name));
+    track('trainer_created', { split: s.split, goal: s.goal, days: s.frequency, level: s.level, duration: s.duration, preset: s.preset, focus: s.focus });
     setBusy(false);
     router.replace('/trainer');
   };

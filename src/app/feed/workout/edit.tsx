@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -38,7 +39,7 @@ export default function EditWorkout() {
     setBusy(true);
     const ok = await st.updateWorkout(w.id, { title: title.trim(), description: desc, date, visibility: vis, location: place.trim() || null, durationSec: Math.max(0, (minutes ?? 0) * 60), entries });
     setBusy(false);
-    if (ok) { st.showToast('Workout updated'); router.back(); }
+    if (ok) { track('workout_edited'); st.showToast('Workout updated'); router.back(); }
   };
   const days = Array.from({ length: 15 }, (_, d) => { const x = new Date(); x.setDate(x.getDate() - d); return x; });
   const t0 = new Date(w.date);

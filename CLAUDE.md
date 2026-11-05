@@ -90,6 +90,14 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 ## Menu ⋯ do treino salvo (`src/components/WorkoutMenu.tsx`)
 - Início e detalhe usam o mesmo menu: Share Workout, Save as Routine, Copy Workout, Edit Workout (`feed/workout/edit`, grava via `store.updateWorkout`: título, descrição, data, local, visibilidade, duração, séries/peso/reps) e Delete Workout (com confirmação). No detalhe entra também "Report workout".
 
+## Análise, erros e assinaturas (PostHog + Sentry + RevenueCat)
+- `src/lib/analytics.ts` (PostHog: `track`, `identifyUser`, tela automática por rota em `components/Telemetry.tsx`), `src/lib/monitoring.ts` (Sentry), `src/lib/purchases.ts` (RevenueCat, `usePro`, `buy`, `restore`). Chaves PÚBLICAS no `.env`: `EXPO_PUBLIC_POSTHOG_KEY/HOST`, `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_RC_IOS_KEY`, `EXPO_PUBLIC_RC_ANDROID_KEY`. Vazio = desligado (modo prévia, sem erro). Mesmo id de usuário (Supabase, sem e-mail) nos três.
+- Eventos: login/sign_up, onboarding_completed, workout_started/finished/discarded/edited/deleted, set_completed, workout_menu_action, trainer_*, report_viewed/card_shared/card_downloaded, exercise_filters_applied, paywall_viewed/plan_selected/dismissed, exit_offer_viewed/accepted/declined, purchase_started/completed/cancelled/failed, restore_clicked. Funil de onboarding = eventos `$screen`.
+- Preços de EXEMPLO (decisão do dono): EUA mensal $4.99 sem teste; anual 20% off ($47.90) com 7 dias grátis; BRL mensal R$19 e anual R$182,40; oferta de saída (ao fechar o X do paywall, 1x por abertura) = anual com mais 30% off ($33.53 / R$127,68) com 7 dias grátis. Preço real vem da loja via RevenueCat (as lojas usam faixas de preço: arredondar na criação dos produtos).
+- Falta configurar nas lojas/RevenueCat: produtos `reps_pro_monthly`, `reps_pro_annual` (intro offer 7 dias), `reps_pro_annual_offer` (idem); entitlement `pro`; offering `default` ($rc_monthly + $rc_annual) e offering `exit_offer` ($rc_annual = reps_pro_annual_offer).
+- Sentry: `SENTRY_DISABLE_AUTO_UPLOAD=true` nos perfis do `eas.json` até existir `SENTRY_AUTH_TOKEN` + org/projeto no plugin (sem isso o stack trace fica minificado). Exige build novo (pacotes nativos).
+- Falta: política de privacidade, apagar conta, consentimento (UE), gravação de sessão (pacote nativo extra do PostHog).
+
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR

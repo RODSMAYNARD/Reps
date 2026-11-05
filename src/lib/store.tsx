@@ -3,6 +3,8 @@ import type { Session } from '@supabase/supabase-js';
 import { randomUUID } from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
+import { track } from './analytics';
+import { reportError } from './monitoring';
 import { records } from './stats';
 import { CYCLE_WEEKS, generateProgram, suggestSets } from './trainer';
 import { supabase } from './supabase';
@@ -257,14 +259,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setWprefs: (patch) => { prefsRef.current = { ...prefsRef.current, ...patch }; setWprefsState(prefsRef.current); if (userId) AsyncStorage.setItem(`reps:wprefs:${userId}`, JSON.stringify(prefsRef.current)).catch(() => {}); },
     previousSets: (id) => lastSetsOf(id, activeRef.current?.fromRoutineId),
     realExerciseId: (id) => (id.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === id.slice(4))?.id ?? id : id),
-    signIn: async (email, password) => (await supabase.auth.signInWithPassword({ email, password })).error?.message ?? null,
+    signIn: async (email, password) => {
+      const m = (await supabase.auth.signInWithPassword({ email, password })).error?.message ?? null;
+      track(m ? 'login_failed' : 'login_completed');
+      return m;
+    },
     signUp: async (email, password) => {
       const { data, error: e } = await supabase.auth.signUp({ email, password });
-      if (e) return e.message;
+      if (e) { track('sign_up_failed'); return e.message; }
+      track('sign_up_completed', { needs_confirmation: !data.session });
       return data.session ? null : 'Account created. Confirm the email we sent and then sign in.';
     },
     resetPassword: async (email) => (await supabase.auth.resetPasswordForEmail(email)).error?.message ?? null,
-    signOut: async () => void (await supabase.auth.signOut()),
+    signOut: async () => { track('logout'); await supabase.auth.signOut(); },
 
     saveProfile: async (patch) => {
       const next = { ...profile, ...patch };
@@ -300,6 +307,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           return p && !s.kg ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, done: false } : { ...s, done: false };
         }),
       }));
+      track('workout_started', { source: opts?.trainerUid ? 'trainer' : opts?.routine ? 'routine' : opts?.entries ? 'copy' : 'empty', exercises: entries.length });
       activeRef.current = { id: randomUUID(), title: opts?.title ?? opts?.routine?.title ?? 'Workout', startedAt: new Date().toISOString(), pausedAt: null, pausedMs: 0, entries, fromRoutineId: opts?.routine?.id ?? null, fromTrainer: opts?.trainerUid ?? null };
       setActiveState(activeRef.current);
       if (userId) AsyncStorage.setItem(`reps:active:${userId}`, JSON.stringify(activeRef.current)).catch(() => {});
@@ -313,12 +321,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         exerciseId: e.exerciseId, notes: '', restSec: e.restSec, superset: null,
         sets: (suggestSets(lastSetsOf(e.exerciseId), e, lookup.get(e.exerciseId)?.equipment ?? '') ?? Array.from({ length: e.sets }, () => ({ kg: null, reps: e.repMax }))).map((x) => ({ type: 'normal' as const, kg: x.kg, reps: x.reps })),
       }));
+      track('trainer_workout_started', { kind: w.kind, exercises: w.exercises.length });
       value_startWorkout({ entries, title: w.title, trainerUid: tuid });
     },
     skipTrainerWorkout: (tuid) => {
       const p = trainerRef.current;
       if (!p) return;
       const i = p.workouts.findIndex((x) => x.uid === tuid);
+      track('trainer_workout_skipped');
       persistTrainer({ ...p, nextUid: p.workouts[(i + 1) % p.workouts.length].uid });
     },
     setActiveTitle: (t) => setActive((a) => ({ ...a, title: t })),
@@ -343,13 +353,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const rec = records(wkRef.current, (cur.exerciseId.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === cur.exerciseId.slice(4))?.id ?? cur.exerciseId : cur.exerciseId));
         if ((st0.kg ?? 0) > 0 && st0.type !== 'warmup' && rec.heaviest > 0 && (st0.kg ?? 0) > rec.heaviest) showToast('New personal record!');
       }
+      if (willBeDone) track('set_completed', { type: cur.sets[j].type, has_weight: (cur.sets[j].kg ?? 0) > 0 });
       if (willBeDone && cur.restSec > 0) setRest({ endsAt: Date.now() + cur.restSec * 1000, total: cur.restSec });
     },
     pauseToggle: () => setActive((a) => a.pausedAt
       ? { ...a, pausedMs: a.pausedMs + (Date.now() - new Date(a.pausedAt).getTime()), pausedAt: null }
       : { ...a, pausedAt: new Date().toISOString() }),
     setElapsed: (sec) => setActive((a) => ({ ...a, pausedMs: 0, pausedAt: a.pausedAt ? new Date().toISOString() : null, startedAt: new Date(Date.now() - sec * 1000).toISOString() })),
-    discardActive: () => { setActive(() => null); setRest(null); },
+    discardActive: () => { track('workout_discarded'); setActive(() => null); setRest(null); },
     finishActive: async (meta) => {
       const a = activeRef.current;
       if (!a) return null;
@@ -370,13 +381,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         trainer: a.fromTrainer ? true : undefined,
       };
       const w = await supabase.from('workouts').insert({ id: a.id, performed_at: meta.date, title: meta.title || 'Workout', description: meta.description, duration_sec: meta.durationSec, visibility: meta.visibility, meta: meta2 });
-      if (w.error) { fail(w.error.message); return null; }
+      if (w.error) { reportError(w.error, { where: 'save-workout' }); fail(w.error.message); return null; }
       let pos = 0;
       const rows = entries.flatMap((e) => e.sets.map((s) => ({ workout_id: a.id, exercise_id: e.exerciseId, position: pos++, reps: s.reps ?? 0, weight: s.kg ?? 0, set_type: s.type })));
       const s = await supabase.from('workout_sets').insert(rows);
       if (s.error) { await supabase.from('workouts').delete().eq('id', a.id); fail(s.error.message); return null; }
       const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null, location: meta.location || null };
       if (a.fromTrainer) { saved.fromTrainer = true; advanceTrainer(a.fromTrainer); }
+      track('workout_finished', {
+        source: a.fromTrainer ? 'trainer' : a.fromRoutineId ? 'routine' : 'empty', duration_min: Math.round(meta.durationSec / 60),
+        exercises: entries.length, sets: entries.reduce((t, e) => t + e.sets.length, 0), visibility: meta.visibility, has_location: !!meta.location,
+        workouts_total: wkRef.current.length + 1,
+      });
       setWorkouts((l) => [saved, ...l]);
       setActive(() => null);
       setRest(null);
