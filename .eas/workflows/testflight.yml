@@ -1,0 +1,20 @@
+name: Send latest iOS build to TestFlight
+
+jobs:
+  get_build:
+    name: Get latest iOS store build
+    type: get-build
+    params:
+      platform: ios
+      profile: production
+      distribution: store
+      wait_for_in_progress: true
+
+  testflight:
+    name: Upload to TestFlight
+    type: testflight
+    needs: [get_build]
+    params:
+      build_id: ${{ needs.get_build.outputs.build_id }}
+      profile: production
+      changelog: Reps test build
