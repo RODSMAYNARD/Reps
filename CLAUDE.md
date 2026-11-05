@@ -50,7 +50,7 @@
 Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, tema escuro (preferência salva, tema ainda não aplicado), importação de dados.
 
 ## Pendências
-- URGENTE: remover a policy temporária de upload anônimo do bucket: `drop policy "TEMP exercise media upload (anon)" on storage.objects;` (e apagar `probe/ping.jpg`)
+- Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR
 - Mídia dos exercícios: exige licença própria da Gym visual (https://gymvisual.com/) ou outra fonte livre
 - Conferir amostras das traduções (feitas por IA) e corrigir termos
