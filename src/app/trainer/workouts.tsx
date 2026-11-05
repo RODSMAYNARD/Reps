@@ -4,7 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { Badge, ExerciseLines } from '../../components/TrainerParts';
 import { Header, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { useStore } from '../../lib/store';
-import { VOLUME_MAX, VOLUME_MIN, weeklySets } from '../../lib/trainer';
+import { VOLUME_MAX, VOLUME_MIN, volumeMin, weeklySets } from '../../lib/trainer';
 import { colors, radius } from '../../lib/theme';
 import { TrainerWorkout } from '../../lib/types';
 
@@ -23,7 +23,7 @@ export default function ProgramWorkouts() {
             <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Text style={{ width: 84, color: colors.text }} numberOfLines={1}>{m}</Text>
               <View style={{ flex: 1, height: 10, borderRadius: 5, backgroundColor: colors.surfaceAlt }}>
-                <View style={{ width: `${Math.min(100, (n / 24) * 100)}%`, height: 10, borderRadius: 5, backgroundColor: n < VOLUME_MIN ? colors.warn : n > VOLUME_MAX ? colors.danger : colors.success }} />
+                <View style={{ width: `${Math.min(100, (n / 24) * 100)}%`, height: 10, borderRadius: 5, backgroundColor: n < volumeMin(m) ? colors.warn : n > VOLUME_MAX ? colors.danger : colors.success }} />
               </View>
               <Text style={{ width: 28, textAlign: 'right', color: colors.muted }}>{n}</Text>
             </View>
