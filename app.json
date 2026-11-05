@@ -45,7 +45,15 @@
           "backgroundColor": "#0B0B0F"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Reps needs permission to save your share images to Photos.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
     ],
     "scheme": "reps",
     "owner": "rodsappz4u",
