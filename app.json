@@ -27,6 +27,11 @@
       "expo-router"
     ],
     "scheme": "reps",
-    "owner": "rodsappz4u"
+    "owner": "rodsappz4u",
+    "extra": {
+      "eas": {
+        "projectId": "47b8c625-e5c0-42a9-aa1b-52bc7fe35a6e"
+      }
+    }
   }
 }
