@@ -3,6 +3,11 @@
 ## Dono do projeto
 - Rodrigo Maynard — rodrigo.maynard@gmail.com (usar em contatos, commits e contas de teste reais)
 
+## Contas (já pagas e conectadas — NÃO perguntar de novo)
+- Expo: conta `rodsappz4u` (https://expo.dev/accounts/rodsappz4u), conector Expo MCP ligado; Apple Developer já paga
+- O conector Expo só lê e dispara builds de projetos existentes: o projeto `@rodsappz4u/reps` precisa existir e estar ligado ao GitHub `RODSMAYNARD/Reps`
+- Supabase (projeto `reps`), GitHub e Expo já estão autorizados pelo dono
+
 ## Stack
 - Expo SDK 58 (React Native 0.88) + TypeScript + Expo Router (rotas em `src/app/`)
 - Backend: Supabase, projeto `reps` (ref `rulilgblkiwnmoiggjfd`, sa-east-1). Login e-mail/senha
