@@ -107,6 +107,50 @@ export function kindsFor(split: TrainerSplit, days: number): Kind[] {
 
 const rng = (seed: number) => { let s = seed || 1; return () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296); };
 
+/** Séries semanais por músculo no programa (uma passada por todos os treinos = 1 semana). */
+export function weeklySets(workouts: TrainerWorkout[], find: (id: string) => Exercise | undefined) {
+  const m = new Map<string, number>();
+  workouts.forEach((w) => w.exercises.forEach((e) => { const x = find(e.exerciseId); if (x && x.muscle !== 'Cardio') m.set(x.muscle, (m.get(x.muscle) ?? 0) + e.sets); }));
+  return m;
+}
+export const VOLUME_MIN = 10, VOLUME_MAX = 20;
+const MAIN_MUSCLES = ['Chest', 'Back', 'Shoulders', 'Quads', 'Hamstrings', 'Biceps', 'Triceps'];
+
+/** Ajusta o volume: músculos principais abaixo de 10 séries/semana ganham séries (máx. 5 por exercício); acima de 20 perdem. */
+function balanceVolume(workouts: TrainerWorkout[], find: (id: string) => Exercise | undefined) {
+  const totals = weeklySets(workouts, find);
+  for (const mu of MAIN_MUSCLES) {
+    const list = workouts.flatMap((w) => w.exercises).filter((e) => find(e.exerciseId)?.muscle === mu);
+    if (!list.length) continue;
+    let guard = 0;
+    while ((totals.get(mu) ?? 0) < VOLUME_MIN && guard++ < 30) {
+      const e = list.filter((x) => x.sets < 5).sort((a, b) => a.sets - b.sets)[0];
+      if (!e) break;
+      e.sets += 1; totals.set(mu, (totals.get(mu) ?? 0) + 1);
+    }
+    guard = 0;
+    while ((totals.get(mu) ?? 0) > VOLUME_MAX && guard++ < 30) {
+      const e = list.filter((x) => x.sets > 2).sort((a, b) => b.sets - a.sets)[0];
+      if (!e) break;
+      e.sets -= 1; totals.set(mu, (totals.get(mu) ?? 0) - 1);
+    }
+  }
+}
+
+/** Progressão dupla: sobe a carga quando todas as séries bateram o topo da faixa; senão tenta +1 rep. */
+export function suggestSets(last: { type: string; kg: number | null; reps: number | null }[], e: { sets: number; repMin: number; repMax: number; kind: string }, equipment: string) {
+  const work = last.filter((x) => x.type !== 'warmup');
+  if (!work.length || e.kind === 'duration') return null;
+  const top = Math.max(...work.map((x) => x.kg ?? 0));
+  const inc = equipment === 'Dumbbell' || equipment === 'Kettlebell' ? 2 : equipment === 'Body weight' ? 0 : 2.5;
+  const allTop = work.every((x) => (x.reps ?? 0) >= e.repMax);
+  return Array.from({ length: e.sets }, (_, j) => {
+    const p = work[Math.min(j, work.length - 1)];
+    if (allTop) return { kg: top > 0 ? top + inc : null, reps: top > 0 ? e.repMin : e.repMax };
+    return { kg: p.kg, reps: Math.min(e.repMax, Math.max(e.repMin, (p.reps ?? e.repMin) + 1)) };
+  });
+}
+
 export function programSummary(s: TrainerSettings) {
   const focus = s.focus ? ` with a special focus on the ${s.focus}` : '';
   return `This is a ${s.frequency}-day ${splitLabel(s.split)} program that targets all your muscle groups${focus}, designed for ${s.goal === 'strength' ? 'strength gain' : s.goal === 'hypertrophy' ? 'muscle growth' : 'fat loss'}.`;
@@ -163,5 +207,6 @@ export function generateProgram(s: TrainerSettings, exercises: Exercise[], enOf:
     }
     return { uid: randomUUID(), kind: k, title: `${LABEL[k]}${letter}`, notes: DESC[k], exercises: exs };
   });
+  balanceVolume(workouts, (id) => exercises.find((e) => e.id === id));
   return { id: prev?.id ?? randomUUID(), name, startedAt: prev && cycle > 1 ? new Date().toISOString() : new Date().toISOString(), cycle, seed, completed: 0, settings: s, workouts, nextUid: workouts[0]?.uid ?? '' };
 }

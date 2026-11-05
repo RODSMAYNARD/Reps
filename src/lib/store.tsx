@@ -4,7 +4,7 @@ import { randomUUID } from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { records } from './stats';
-import { CYCLE_WEEKS, generateProgram } from './trainer';
+import { CYCLE_WEEKS, generateProgram, suggestSets } from './trainer';
 import { supabase } from './supabase';
 import {
   ActiveEntry, ActiveSet, ActiveWorkout, DEFAULT_WPREFS, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, TrainerProgram, Units, Workout, WorkoutPrefs,
@@ -310,7 +310,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!w) return;
       const entries: SavedEntry[] = w.exercises.map((e) => ({
         exerciseId: e.exerciseId, notes: '', restSec: e.restSec, superset: null,
-        sets: Array.from({ length: e.sets }, () => ({ type: 'normal' as const, kg: null, reps: e.repMax })),
+        sets: (suggestSets(lastSetsOf(e.exerciseId), e, lookup.get(e.exerciseId)?.equipment ?? '') ?? Array.from({ length: e.sets }, () => ({ kg: null, reps: e.repMax }))).map((x) => ({ type: 'normal' as const, kg: x.kg, reps: x.reps })),
       }));
       value_startWorkout({ entries, title: w.title, trainerUid: tuid });
     },

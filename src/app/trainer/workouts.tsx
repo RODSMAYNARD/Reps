@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { Badge, ExerciseLines } from '../../components/TrainerParts';
 import { Header, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { useStore } from '../../lib/store';
+import { VOLUME_MAX, VOLUME_MIN, weeklySets } from '../../lib/trainer';
 import { colors, radius } from '../../lib/theme';
 import { TrainerWorkout } from '../../lib/types';
 
@@ -16,6 +17,19 @@ export default function ProgramWorkouts() {
     <Screen>
       <Header title="Program workouts" right={<IconButton name="ellipsis-horizontal" onPress={() => setMenu('program')} testID="program-menu" />} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
+        <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, gap: 8 }} testID="volume-card">
+          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>Weekly sets per muscle</Text>
+          {[...weeklySets(trainer.workouts, st.findExercise)].sort((a, b) => b[1] - a[1]).map(([m, n]) => (
+            <View key={m} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Text style={{ width: 84, color: colors.text }} numberOfLines={1}>{m}</Text>
+              <View style={{ flex: 1, height: 10, borderRadius: 5, backgroundColor: colors.surfaceAlt }}>
+                <View style={{ width: `${Math.min(100, (n / 24) * 100)}%`, height: 10, borderRadius: 5, backgroundColor: n < VOLUME_MIN ? colors.warn : n > VOLUME_MAX ? colors.danger : colors.success }} />
+              </View>
+              <Text style={{ width: 28, textAlign: 'right', color: colors.muted }}>{n}</Text>
+            </View>
+          ))}
+          <Text style={{ color: colors.muted, fontSize: 13 }}>Research points to about {VOLUME_MIN}-{VOLUME_MAX} hard sets per muscle per week for muscle growth. The Trainer balances your plan toward that range and raises the weight when you hit the top of the rep range on every set.</Text>
+        </View>
         {trainer.workouts.map((w) => (
           <View key={w.uid} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, padding: 18, gap: 12 }} testID="program-workout">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
