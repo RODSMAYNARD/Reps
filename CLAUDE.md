@@ -2,8 +2,10 @@
 
 ## Stack
 - Expo (React Native) + TypeScript + Expo Router (rotas em `src/app/`)
-- Dados: AsyncStorage local (`src/lib/store.tsx`), tudo salvo no aparelho
-- Sem backend por enquanto. Próximo passo planejado: Supabase (login + sincronização)
+- Backend: Supabase, projeto `reps` (ref `rulilgblkiwnmoiggjfd`, região sa-east-1). Login por e-mail/senha
+- Dados: tabelas `exercises`, `workouts`, `workout_sets`, todas com RLS (cada usuário só vê os próprios dados)
+- `src/lib/store.tsx` é a única fonte de dados; o treino em andamento (`draft`) fica no AsyncStorage até finalizar
+- `.env` tem só a chave PÚBLICA (publishable). Nunca commitar a service_role key
 
 ## Estrutura
 - `src/app/(tabs)/` — telas: Treino, Exercícios, Histórico, Progresso
@@ -21,7 +23,11 @@
 - Progresso = maior carga do exercício em cada treino (últimos 12)
 
 ## Roadmap
-1. Supabase: login e sincronização
-2. Fichas/rotinas de treino prontas
-3. Timer de descanso
-4. Recordes pessoais e metas
+1. Fichas/rotinas de treino prontas
+2. Timer de descanso
+3. Recordes pessoais e metas
+
+## Pendências
+- Ativar "Leaked password protection" em Supabase > Authentication > Providers > Email
+- Decidir se o cadastro exige confirmação de e-mail (Supabase > Authentication)
+- Modo offline: hoje o app precisa de internet para carregar e salvar

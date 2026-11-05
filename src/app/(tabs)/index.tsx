@@ -10,7 +10,7 @@ const confirm = (msg: string, onOk: () => void) =>
     : Alert.alert(msg, undefined, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Confirmar', onPress: onOk }]);
 
 export default function Treino() {
-  const { exercises, draft, addSet, removeSet, finishWorkout, discardDraft } = useStore();
+  const { exercises, draft, addSet, removeSet, finishWorkout, discardDraft, signOut, error } = useStore();
   const [exId, setExId] = useState<string | null>(null);
   const [reps, setReps] = useState('');
   const [weight, setWeight] = useState('');
@@ -42,6 +42,7 @@ export default function Treino() {
         <Button title="Adicionar série" onPress={add} disabled={!valid} />
       </Card>
 
+      {!!error && <Text style={{ color: colors.danger }}>{error}</Text>}
       <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Treino de hoje</Text>
       {!draft ? (
         <Empty text="Nenhuma série registrada ainda. Escolha um exercício e adicione a primeira." />
@@ -66,6 +67,7 @@ export default function Treino() {
           <Button title="Descartar treino" variant="danger" onPress={() => confirm('Descartar o treino de hoje?', discardDraft)} />
         </>
       )}
+      <Button title="Sair da conta" variant="ghost" onPress={signOut} />
     </ScrollView>
   );
 }
