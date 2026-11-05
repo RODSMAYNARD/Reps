@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { randomUUID } from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_EXERCISES, PROGRAMS } from './constants';
+import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { supabase } from './supabase';
 import {
   ActiveEntry, ActiveSet, ActiveWorkout, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, Units, Workout,
@@ -24,6 +24,8 @@ type Store = {
   ready: boolean; session: Session | null; error: string | null; toast: string | null;
   profile: Profile; exercises: Exercise[]; workouts: Workout[]; routines: Routine[]; measurements: Measurement[];
   active: ActiveWorkout | null; rest: RestTimer;
+  allExercises: Exercise[];
+  ensureExercises: (ids: string[]) => Promise<string[]>;
   // auth
   signIn: (e: string, p: string) => Promise<string | null>;
   signUp: (e: string, p: string) => Promise<string | null>;
@@ -58,7 +60,6 @@ type Store = {
   // rotinas
   saveRoutine: (r: Omit<Routine, 'id'> & { id?: string }) => Promise<Routine | null>;
   deleteRoutine: (id: string) => Promise<void>;
-  importProgram: (programId: string) => Promise<void>;
   // medidas
   saveMeasurement: (m: Omit<Measurement, 'id'> & { id?: string }) => Promise<void>;
   deleteMeasurement: (id: string) => Promise<void>;
@@ -100,15 +101,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   const load = useCallback(async (uid: string, email: string) => {
-    let ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind').order('created_at');
+    const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id').order('created_at');
     if (ex.error) return setError(ex.error.message);
-    if (ex.data.length === 0 && !(await AsyncStorage.getItem(`reps:seeded2:${uid}`))) {
-      await supabase.from('exercises').insert(DEFAULT_EXERCISES);
-      await AsyncStorage.setItem(`reps:seeded2:${uid}`, '1');
-      ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind').order('created_at');
-      if (ex.error) return setError(ex.error.message);
-    }
-    setExercises(ex.data as Exercise[]);
+    setExercises(ex.data.map((r: any) => ({ id: r.id, name: r.name, muscle: r.muscle, equipment: r.equipment, kind: r.kind, catalogId: r.catalog_id })));
 
     const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'atleta';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
@@ -163,8 +158,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (userId) load(userId, session?.user.email ?? 'user').finally(() => setReady(true));
   }, [userId, session?.user.email, load]);
 
+  const allExercises = useMemo<Exercise[]>(() => {
+    const byCat = new Map(exercises.filter((e) => e.catalogId).map((e) => [e.catalogId!, e]));
+    const fromCatalog = CATALOG.map((c) => byCat.get(c.id) ?? catToExercise(c));
+    return [...fromCatalog, ...exercises.filter((e) => !e.catalogId)];
+  }, [exercises]);
+
   const value = useMemo<Store>(() => ({
-    ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast,
+    ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
+    ensureExercises: async (ids) => {
+      const have = new Map(exRef.current.filter((e) => e.catalogId).map((e) => [e.catalogId!, e.id]));
+      const missing = [...new Set(ids.filter((id) => id.startsWith('cat:')).map((id) => id.slice(4)).filter((cid) => !have.has(cid)))];
+      if (missing.length) {
+        const rows = missing.flatMap((cid) => { const c = CAT_BY_ID.get(cid); return c ? [{ name: c.n, muscle: c.m, equipment: c.e, kind: c.k, catalog_id: cid }] : []; });
+        const { data, error: e } = await supabase.from('exercises').insert(rows).select('id,name,muscle,equipment,kind,catalog_id');
+        if (e) { fail(e.message); return ids; }
+        const added: Exercise[] = data.map((r: any) => ({ id: r.id, name: r.name, muscle: r.muscle, equipment: r.equipment, kind: r.kind, catalogId: r.catalog_id }));
+        added.forEach((a) => have.set(a.catalogId!, a.id));
+        exRef.current = [...exRef.current.filter((x) => !added.some((a) => a.id === x.id)), ...added];
+        setExercises(exRef.current);
+      }
+      return ids.map((id) => (id.startsWith('cat:') ? have.get(id.slice(4)) ?? id : id));
+    },
     signIn: async (email, password) => (await supabase.auth.signInWithPassword({ email, password })).error?.message ?? null,
     signUp: async (email, password) => {
       const { data, error: e } = await supabase.auth.signUp({ email, password });
@@ -187,8 +202,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addExercise: async (x) => {
       const { data, error: e } = await supabase.from('exercises').insert({ name: x.name.trim(), muscle: x.muscle, equipment: x.equipment, kind: x.kind }).select('id,name,muscle,equipment,kind').single();
       if (e) { fail(e.message); return null; }
-      setExercises((l) => [...l, data as Exercise]);
-      return data as Exercise;
+      const row = { ...(data as Exercise), catalogId: null };
+      setExercises((l) => [...l, row]);
+      return row;
     },
     removeExercise: async (id) => {
       const { error: e } = await supabase.from('exercises').delete().eq('id', id);
@@ -274,19 +290,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (e) return fail(e.message);
       setRoutines((l) => l.filter((x) => x.id !== id));
     },
-    importProgram: async (programId) => {
-      const p = PROGRAMS.find((x) => x.id === programId);
-      if (!p) return;
-      for (const r of p.routines) {
-        const exs: RoutineExercise[] = r.exercises.flatMap((name) => {
-          const ex = exRef.current.find((x) => x.name === name);
-          return ex ? [{ exerciseId: ex.id, notes: '', restSec: 90, sets: [{ type: 'normal', kg: null, reps: 10 }, { type: 'normal', kg: null, reps: 10 }, { type: 'normal', kg: null, reps: 10 }] } as RoutineExercise] : [];
-        });
-        const { data } = await supabase.from('routines').insert({ title: r.title, notes: r.notes, exercises: exs }).select('id,title,notes,exercises').single();
-        if (data) setRoutines((l) => [data as Routine, ...l]);
-      }
-    },
-
     saveMeasurement: async (m) => {
       const row = { measured_on: m.date, values: m.values, photo_uri: m.photoUri };
       const q = m.id ? supabase.from('measurements').update(row).eq('id', m.id) : supabase.from('measurements').insert(row);
@@ -305,7 +308,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
       if (e) fail(e.message);
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast]);
+  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

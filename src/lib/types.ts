@@ -16,7 +16,7 @@ export type Profile = {
   onboarded: boolean;
 };
 
-export type Exercise = { id: string; name: string; muscle: string; equipment: string; kind: ExerciseKind };
+export type Exercise = { id: string; name: string; muscle: string; equipment: string; kind: ExerciseKind; catalogId?: string | null };
 
 export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null };
 export type ActiveSet = SetRow & { done: boolean };

@@ -1,5 +1,3 @@
-import { Exercise, ExerciseKind } from './types';
-
 export const MUSCLES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Quadríceps', 'Posterior', 'Glúteos', 'Panturrilha', 'Corpo todo', 'Cardio'];
 export const EQUIPMENT = ['Barra', 'Halter', 'Máquina', 'Cabo', 'Peso do corpo', 'Elástico', 'Kettlebell', 'Outro'];
 export const MUSCLE_GROUPS: Record<string, string> = {
@@ -25,34 +23,21 @@ export const SET_TYPES = [
   { type: 'drop', label: 'Drop set', badge: 'D', color: '#0A84FF', help: 'Reduza a carga e continue sem descanso.' },
 ] as const;
 
-const ex = (name: string, muscle: string, equipment: string, kind: ExerciseKind = 'weight_reps') => ({ name, muscle, equipment, kind });
-export const DEFAULT_EXERCISES: Omit<Exercise, 'id'>[] = [
-  ex('Supino reto (Barra)', 'Peito', 'Barra'), ex('Supino inclinado (Halter)', 'Peito', 'Halter'), ex('Crucifixo (Máquina)', 'Peito', 'Máquina'),
-  ex('Flexão de braço', 'Peito', 'Peso do corpo', 'reps'), ex('Agachamento (Barra)', 'Quadríceps', 'Barra'), ex('Leg press (Máquina)', 'Quadríceps', 'Máquina'),
-  ex('Cadeira extensora', 'Quadríceps', 'Máquina'), ex('Mesa flexora', 'Posterior', 'Máquina'), ex('Levantamento terra (Barra)', 'Costas', 'Barra'),
-  ex('Stiff (Barra)', 'Posterior', 'Barra'), ex('Avanço (Halter)', 'Quadríceps', 'Halter'), ex('Elevação pélvica (Barra)', 'Glúteos', 'Barra'),
-  ex('Panturrilha em pé (Máquina)', 'Panturrilha', 'Máquina'), ex('Remada curvada (Barra)', 'Costas', 'Barra'), ex('Puxada frontal (Cabo)', 'Costas', 'Cabo'),
-  ex('Barra fixa', 'Costas', 'Peso do corpo', 'reps'), ex('Remada baixa (Cabo)', 'Costas', 'Cabo'), ex('Desenvolvimento (Halter)', 'Ombros', 'Halter'),
-  ex('Elevação lateral (Halter)', 'Ombros', 'Halter'), ex('Rosca direta (Barra)', 'Bíceps', 'Barra'), ex('Rosca martelo (Halter)', 'Bíceps', 'Halter'),
-  ex('Tríceps corda (Cabo)', 'Tríceps', 'Cabo'), ex('Tríceps testa (Barra)', 'Tríceps', 'Barra'), ex('Mergulho (Paralelas)', 'Tríceps', 'Peso do corpo', 'reps'),
-  ex('Abdominal na máquina', 'Abdômen', 'Máquina'), ex('Prancha', 'Abdômen', 'Peso do corpo', 'duration'), ex('Corrida (Esteira)', 'Cardio', 'Máquina', 'duration'),
-  ex('Bicicleta ergométrica', 'Cardio', 'Máquina', 'duration'),
-];
-
 export type Program = { id: string; title: string; subtitle: string; routines: { title: string; notes: string; exercises: string[] }[] };
+// Os exercícios dos modelos usam o nome em inglês do catálogo (campo `en`), ver src/data/catalog.json.
 export const PROGRAMS: Program[] = [
   { id: 'ppl', title: 'Push Pull Legs', subtitle: '3 rotinas · academia', routines: [
-    { title: 'Push', notes: 'Peito, ombros e tríceps.', exercises: ['Supino reto (Barra)', 'Supino inclinado (Halter)', 'Desenvolvimento (Halter)', 'Elevação lateral (Halter)', 'Tríceps corda (Cabo)'] },
-    { title: 'Pull', notes: 'Costas e bíceps.', exercises: ['Barra fixa', 'Remada curvada (Barra)', 'Puxada frontal (Cabo)', 'Rosca direta (Barra)', 'Rosca martelo (Halter)'] },
-    { title: 'Legs', notes: 'Pernas completas.', exercises: ['Agachamento (Barra)', 'Leg press (Máquina)', 'Stiff (Barra)', 'Mesa flexora', 'Panturrilha em pé (Máquina)'] },
+    { title: 'Push', notes: 'Peito, ombros e tríceps.', exercises: ['barbell bench press', 'dumbbell incline bench press', 'dumbbell standing overhead press', 'dumbbell lateral raise', 'cable pushdown'] },
+    { title: 'Pull', notes: 'Costas e bíceps.', exercises: ['pull-up', 'barbell bent over row', 'cable seated row', 'barbell curl', 'dumbbell hammer curl'] },
+    { title: 'Legs', notes: 'Pernas completas.', exercises: ['barbell full squat', 'lever alternate leg press', 'barbell romanian deadlift', 'lever lying leg curl', 'barbell standing calf raise'] },
   ] },
   { id: 'fullbody', title: 'Full Body 3x', subtitle: '2 rotinas · academia', routines: [
-    { title: 'Full Body A', notes: 'Corpo todo, foco em básicos.', exercises: ['Agachamento (Barra)', 'Supino reto (Barra)', 'Remada curvada (Barra)', 'Prancha'] },
-    { title: 'Full Body B', notes: 'Corpo todo, variação.', exercises: ['Levantamento terra (Barra)', 'Desenvolvimento (Halter)', 'Puxada frontal (Cabo)', 'Abdominal na máquina'] },
+    { title: 'Full Body A', notes: 'Corpo todo, foco em básicos.', exercises: ['barbell full squat', 'barbell bench press', 'barbell bent over row', 'crunch floor'] },
+    { title: 'Full Body B', notes: 'Corpo todo, variação.', exercises: ['barbell deadlift', 'dumbbell standing overhead press', 'chin-up', 'lever leg extension'] },
   ] },
   { id: 'upperlower', title: 'Upper / Lower', subtitle: '2 rotinas · academia', routines: [
-    { title: 'Upper', notes: 'Parte superior.', exercises: ['Supino reto (Barra)', 'Remada baixa (Cabo)', 'Desenvolvimento (Halter)', 'Rosca direta (Barra)', 'Tríceps testa (Barra)'] },
-    { title: 'Lower', notes: 'Parte inferior.', exercises: ['Agachamento (Barra)', 'Elevação pélvica (Barra)', 'Cadeira extensora', 'Mesa flexora'] },
+    { title: 'Upper', notes: 'Parte superior.', exercises: ['barbell bench press', 'lever seated row', 'dumbbell standing overhead press', 'barbell curl', 'cable pushdown'] },
+    { title: 'Lower', notes: 'Parte inferior.', exercises: ['barbell full squat', 'barbell glute bridge', 'lever leg extension', 'lever lying leg curl'] },
   ] },
 ];
 export const CATEGORIES = [
@@ -67,13 +52,13 @@ export const CATEGORIES = [
 
 export type Template = { title: string; notes: string; exercises: string[] };
 export const CATEGORY_ROUTINES: Record<string, Template[]> = {
-  home: [{ title: 'Treino em casa', notes: 'Sem equipamento, pode ser feito em qualquer lugar.', exercises: ['Flexão de braço', 'Mergulho (Paralelas)', 'Prancha'] }],
-  travel: [{ title: 'Treino de viagem', notes: 'Rápido e sem equipamento, ideal para o quarto do hotel.', exercises: ['Flexão de braço', 'Prancha', 'Mergulho (Paralelas)'] }],
-  dumbbell: [{ title: 'Halteres: corpo todo', notes: 'Treino completo usando apenas halteres.', exercises: ['Supino inclinado (Halter)', 'Desenvolvimento (Halter)', 'Avanço (Halter)', 'Rosca martelo (Halter)', 'Elevação lateral (Halter)'] }],
-  band: [],
-  cardio: [{ title: 'Cardio e HIIT', notes: 'Condicionamento cardiovascular.', exercises: ['Corrida (Esteira)', 'Bicicleta ergométrica', 'Prancha'] }],
+  home: [{ title: 'Treino em casa', notes: 'Sem equipamento, pode ser feito em qualquer lugar.', exercises: ['push-up', 'glute bridge march', 'crunch floor', 'mountain climber'] }],
+  travel: [{ title: 'Treino de viagem', notes: 'Rápido e sem equipamento, ideal para o quarto do hotel.', exercises: ['push-up', 'burpee', 'jump squat', 'crunch floor'] }],
+  dumbbell: [{ title: 'Halteres: corpo todo', notes: 'Treino completo usando apenas halteres.', exercises: ['dumbbell bench press', 'dumbbell standing overhead press', 'dumbbell lunge', 'dumbbell hammer curl', 'dumbbell lateral raise'] }],
+  band: [{ title: 'Elástico: corpo todo', notes: 'Treino completo com faixas elásticas.', exercises: ['band bench press', 'band shoulder press', 'band squat', 'band alternating biceps curl', 'resistance band seated straight back row'] }],
+  cardio: [{ title: 'Cardio e HIIT', notes: 'Condicionamento cardiovascular.', exercises: ['jump rope', 'burpee', 'mountain climber', 'stationary bike walk'] }],
   gym: PROGRAMS.flatMap((p) => p.routines),
-  body: [{ title: 'Peso do corpo', notes: 'Força usando só o seu corpo.', exercises: ['Flexão de braço', 'Barra fixa', 'Mergulho (Paralelas)', 'Prancha'] }],
+  body: [{ title: 'Peso do corpo', notes: 'Força usando só o seu corpo.', exercises: ['push-up', 'pull-up', 'chest dip', 'crunch floor'] }],
 };
 
 export const DEMO_ATHLETES = [

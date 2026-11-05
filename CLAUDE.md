@@ -20,6 +20,7 @@
 ## Código compartilhado
 - `src/lib/store.tsx` — única fonte de dados (Supabase + treino ativo no AsyncStorage)
 - `src/lib/stats.ts` recordes/volume/gráficos · `format.ts` unidades e datas · `constants.ts` exercícios, programas, categorias
+- `src/data/catalog.json` + `src/lib/catalog.ts` — catálogo de 1.324 exercícios embutido no app (texto do dataset MIT hasaneyldrm/exercises-dataset, traduzido para pt-BR por IA; SEM imagens/GIFs, que são © Gym visual). Gerado por `scripts/build-catalog.py`. O exercício do catálogo só vira linha em `exercises` (com `catalog_id`) quando é usado (`ensureExercises` no store); no app ele aparece com id `cat:<id>`
 - `src/lib/planner.ts` — gerador de planos (objetivo, dias, nível, equipamento → rotinas) usado em `routines/generate`
 - `src/lib/picker.ts` — canal para o seletor de exercícios devolver o resultado
 - `src/components/ui.tsx` — Header, Btn, ListRow, Sheet, Dialog, gráficos etc.
@@ -40,7 +41,8 @@
 Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, tema escuro (preferência salva, tema ainda não aplicado), importação de dados.
 
 ## Pendências
-- Catálogo real de exercícios: hoje são 28 escritos à mão em `constants.ts`; importar uma base pública para uma tabela `exercise_catalog` no Supabase
+- Mídia dos exercícios: exige licença própria da Gym visual (https://gymvisual.com/) ou outra fonte livre
+- Conferir amostras das traduções (feitas por IA) e corrigir termos
 - Supabase > Authentication: ativar "Leaked password protection" e decidir confirmação de e-mail
 - Supabase Storage para fotos; Apple/Google sign-in nativos; RevenueCat para o Pro
 - Modo offline: hoje o app precisa de internet

@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
+import { CAT_BY_ID } from '../../lib/catalog';
 import { Btn, Card, Dialog, Header, IconButton, LineChart, ListRow, PillRow, Screen, Section, Sheet, TopTabs } from '../../components/ui';
 import { fmtDate, fmtWeight, toDisplayWeight } from '../../lib/format';
 import { exerciseSeries, records } from '../../lib/stats';
@@ -13,13 +14,14 @@ const HOWTO = ['Posicione-se com a postura neutra e o abdômen firme.', 'Execute
 
 export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { exercises, workouts, profile, removeExercise } = useStore();
+  const { allExercises: exercises, workouts, profile, removeExercise } = useStore();
   const [tab, setTab] = useState('summary');
   const [metric, setMetric] = useState('heaviest');
   const [menu, setMenu] = useState(false);
   const [del, setDel] = useState(false);
   const ex = exercises.find((e) => e.id === id);
   if (!ex) return <Screen><Header title="Exercício" /></Screen>;
+  const cat = ex.catalogId ? CAT_BY_ID.get(ex.catalogId) : undefined;
   const u = profile.units;
   const rec = records(workouts, ex.id);
   const series = exerciseSeries(workouts, ex.id, metric as never).map((p) => ({ label: fmtDate(p.date, { day: '2-digit', month: '2-digit' }), value: metric === 'reps' ? p.value : Math.round(toDisplayWeight(p.value, u) * 10) / 10 }));
@@ -73,7 +75,8 @@ export default function ExerciseDetail() {
         {tab === 'how' && (
           <View style={{ padding: 16, gap: 10 }}>
             <Text style={{ color: colors.muted }}>{ex.muscle} · {ex.equipment}</Text>
-            {HOWTO.map((t, i) => <Text key={i} style={{ color: colors.text, fontSize: 16 }}>{i + 1}. {t}</Text>)}
+            {cat && <Text style={{ color: colors.text }}>Alvo: <Text style={{ fontWeight: '600' }}>{cat.t}</Text>{cat.s.length ? `\nSecundários: ${cat.s.join(', ')}` : ''}</Text>}
+            {(cat ? cat.i : HOWTO).map((t, i) => <Text key={i} style={{ color: colors.text, fontSize: 16 }}>{i + 1}. {t}</Text>)}
           </View>
         )}
         {tab === 'rank' && (
@@ -84,7 +87,7 @@ export default function ExerciseDetail() {
         )}
       </ScrollView>
       <Sheet visible={menu} onClose={() => setMenu(false)}>
-        <ListRow icon="trash-outline" label="Excluir exercício" danger last onPress={() => { setMenu(false); setDel(true); }} />
+        {ex.id.startsWith('cat:') ? <ListRow icon="information-circle-outline" label="Exercício do catálogo (não pode ser excluído)" last /> : <ListRow icon="trash-outline" label="Excluir exercício" danger last onPress={() => { setMenu(false); setDel(true); }} />}
       </Sheet>
       <Dialog visible={del} title="Excluir exercício?" message="Ele também será removido dos treinos e rotinas onde aparece." onClose={() => setDel(false)}
         actions={[{ label: 'Cancelar' }, { label: 'Excluir', danger: true, onPress: async () => { setDel(false); await removeExercise(ex.id); router.back(); } }]} />

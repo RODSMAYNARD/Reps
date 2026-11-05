@@ -3,27 +3,35 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Btn, Empty, Header, HeaderAction, PillRow, Screen, SearchBar } from '../../components/ui';
-import { MUSCLES } from '../../lib/constants';
+import { searchExercises } from '../../lib/catalog';
+import { EQUIPMENT, MUSCLES } from '../../lib/constants';
 import { resolvePick } from '../../lib/picker';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
 export default function PickExercise() {
   const { single } = useLocalSearchParams<{ single?: string }>();
-  const { exercises } = useStore();
+  const { allExercises, ensureExercises } = useStore();
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('all');
+  const [equip, setEquip] = useState('all');
+  const [busy, setBusy] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
-  const list = useMemo(() => exercises.filter((e) => (muscle === 'all' || e.muscle === muscle) && e.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)), [exercises, q, muscle]);
+  const list = useMemo(() => searchExercises(allExercises, q, muscle, equip), [allExercises, q, muscle, equip]);
   const toggle = (id: string) => (single ? setSel([id]) : setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]));
-  const done = () => { resolvePick(sel); router.back(); };
+  const done = async () => { setBusy(true); const real = await ensureExercises(sel); setBusy(false); resolvePick(real); router.back(); };
   return (
     <Screen>
       <Header left="cancel" title="Adicionar exercício" right={<HeaderAction label="Criar" onPress={() => router.push('/exercises/create')} />} />
       <SearchBar value={q} onChangeText={setQ} placeholder="Buscar exercício" />
-      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'Todos' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
+      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'Todos os músculos' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
+      <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'Todo equipamento' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
+      <Text style={{ color: colors.muted, paddingHorizontal: 16, paddingBottom: 6, fontSize: 12 }}>{list.length} exercícios</Text>
       <FlatList
         data={list}
+        initialNumToRender={20}
+        windowSize={7}
+        keyboardShouldPersistTaps="handled"
         keyExtractor={(e) => e.id}
         ListEmptyComponent={<Empty text="Nenhum exercício encontrado." action={<Btn title="Criar exercício" variant="secondary" onPress={() => router.push('/exercises/create')} />} />}
         renderItem={({ item }) => (
@@ -31,13 +39,13 @@ export default function PickExercise() {
             <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="barbell-outline" size={22} color={colors.muted} /></View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 16, color: colors.text }}>{item.name}</Text>
-              <Text style={{ color: colors.muted, fontSize: 13 }}>{item.muscle}</Text>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>{item.muscle} · {item.equipment}</Text>
             </View>
             {sel.includes(item.id) && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
           </Pressable>
         )}
       />
-      <View style={{ padding: 16 }}><Btn title={sel.length ? `Adicionar ${sel.length} exercício(s)` : 'Selecione exercícios'} disabled={!sel.length} testID="pick-confirm" onPress={done} /></View>
+      <View style={{ padding: 16 }}><Btn title={sel.length ? `Adicionar ${sel.length} exercício(s)` : 'Selecione exercícios'} disabled={!sel.length} loading={busy} testID="pick-confirm" onPress={done} /></View>
     </Screen>
   );
 }
