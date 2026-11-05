@@ -83,8 +83,8 @@ export function weekStreak(workouts: Workout[]) {
   return n;
 }
 
-export function muscleDistribution(workouts: Workout[], exercises: Exercise[], sinceDays?: number) {
-  const from = sinceDays ? Date.now() - sinceDays * 86400000 : 0;
+export function muscleDistribution(workouts: Workout[], exercises: Exercise[], sinceDays?: number, now = 0) {
+  const from = sinceDays ? (now || new Date().getTime()) - sinceDays * 86400000 : 0;
   const map = new Map<string, number>();
   for (const w of workouts) {
     if (new Date(w.date).getTime() < from) continue;

@@ -84,7 +84,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const userId = session?.user.id ?? null;
   const activeRef = useRef<ActiveWorkout | null>(null);
   const exRef = useRef<Exercise[]>([]);
-  exRef.current = exercises;
+  useEffect(() => { exRef.current = exercises; }, [exercises]);
 
   const showToast = useCallback((t: string) => {
     setToast(t);
@@ -317,7 +317,7 @@ export function useStore() {
 }
 
 export function useNow(intervalMs = 1000, enabled = true) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!enabled) return;
     const id = setInterval(() => setNow(Date.now()), intervalMs);

@@ -24,10 +24,11 @@ export default function SaveWorkout() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [discard, setDiscard] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [nowTs] = useState(() => Date.now());
   if (!active) return null;
   const done = active.entries.flatMap((e) => e.sets.filter((s) => s.done));
   const dur = elapsedSec(active);
-  const when = new Date(Date.now() - daysAgo * 86400000);
+  const when = new Date(nowTs - daysAgo * 86400000);
 
   const save = async () => {
     setBusy(true);
