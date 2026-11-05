@@ -49,7 +49,7 @@ export default function ActiveWorkoutScreen() {
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
   const goSave = () => router.push('/active/save');
   const finish = () => (doneSets.length === 0 ? st.showToast('Conclua ao menos uma série.') : pending > 0 ? setIncomplete(true) : goSave());
-  const restLeft = rest ? Math.max(0, Math.ceil((rest.endsAt - now) / 1000)) : 0;
+  const restLeft = rest ? Math.max(0, Math.round((rest.endsAt - now) / 1000)) : 0;
   if (rest && restLeft <= 0) setTimeout(() => st.skipRest(), 0);
 
   const label = (e: ActiveEntry, s: ActiveSet, j: number) => {

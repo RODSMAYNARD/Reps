@@ -19,9 +19,8 @@ export default function Perfil() {
   const name = profile.displayName || profile.username;
   return (
     <Screen>
-      <Header left="none" title={profile.username}
+      <Header left="none" leftNode={<HeaderAction label="Editar perfil" onPress={() => router.push('/profile/edit')} />} title={profile.username}
         right={<>
-          <HeaderAction label="Editar perfil" onPress={() => router.push('/profile/edit')} />
           <IconButton name="share-outline" onPress={() => Share.share({ message: `Siga @${profile.username} no Reps` })} />
           <IconButton name="settings-outline" onPress={() => router.push('/settings')} testID="open-settings" />
         </>} />

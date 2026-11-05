@@ -110,14 +110,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     setExercises(ex.data as Exercise[]);
 
+    const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'atleta';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
     if (pr.data) {
       const p = pr.data;
-      setProfile({ username: p.username, displayName: p.display_name, bio: p.bio, link: p.link, sex: p.sex, birthYear: p.birth_year, weightKg: p.weight_kg ? Number(p.weight_kg) : null, units: { ...DEFAULT_UNITS, ...p.units }, theme: p.theme, isPrivate: p.is_private, onboarded: p.onboarded });
+      setProfile({ username: p.username || fallbackName, displayName: p.display_name, bio: p.bio, link: p.link, sex: p.sex, birthYear: p.birth_year, weightKg: p.weight_kg ? Number(p.weight_kg) : null, units: { ...DEFAULT_UNITS, ...p.units }, theme: p.theme, isPrivate: p.is_private, onboarded: p.onboarded });
     } else {
-      const username = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20);
-      await supabase.from('profiles').insert({ username });
-      setProfile({ ...EMPTY_PROFILE, username });
+      await supabase.from('profiles').upsert({ user_id: uid, username: fallbackName });
+      setProfile({ ...EMPTY_PROFILE, username: fallbackName });
     }
 
     const wk = await supabase.from('workouts').select('id,performed_at,title,description,duration_sec,visibility,meta,workout_sets(exercise_id,position,reps,weight,set_type)').order('performed_at', { ascending: false });

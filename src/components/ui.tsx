@@ -18,13 +18,14 @@ export function Screen({ children, edges = ['top'], style }: { children: React.R
   );
 }
 
-export function Header({ title, left = 'back', onLeft, right, subtitle }: {
-  title?: React.ReactNode; left?: 'back' | 'cancel' | 'down' | 'none'; onLeft?: () => void; right?: React.ReactNode; subtitle?: string;
+export function Header({ title, left = 'back', onLeft, right, subtitle, leftNode }: {
+  title?: React.ReactNode; left?: 'back' | 'cancel' | 'down' | 'none'; onLeft?: () => void; right?: React.ReactNode; subtitle?: string; leftNode?: React.ReactNode;
 }) {
   const go = onLeft ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
   return (
     <View style={s.header}>
       <View style={{ minWidth: 70, alignItems: 'flex-start' }}>
+        {leftNode}
         {left === 'back' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable>}
         {left === 'down' && <Pressable onPress={go} hitSlop={12}><Ionicons name="chevron-down" size={26} color={colors.text} /></Pressable>}
         {left === 'cancel' && <Pressable onPress={go} hitSlop={12}><Text style={{ color: colors.primary, fontSize: 16 }}>Cancelar</Text></Pressable>}
@@ -297,8 +298,8 @@ export function WheelPicker({ values, selected, onSelect, format = String }: { v
   );
 }
 
-export function BarChart({ data, height = 140, format = (v: number) => String(Math.round(v)), highlightLast }: { data: { label: string; value: number }[]; height?: number; format?: (v: number) => string; highlightLast?: boolean }) {
-  const max = Math.max(1, ...data.map((d) => d.value));
+export function BarChart({ data, height = 140, format = (v: number) => String(Math.round(v * 10) / 10), highlightLast }: { data: { label: string; value: number }[]; height?: number; format?: (v: number) => string; highlightLast?: boolean }) {
+  const max = Math.max(...data.map((d) => d.value)) || 1;
   return (
     <View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height, gap: 5 }}>
