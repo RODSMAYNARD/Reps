@@ -1,6 +1,6 @@
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Empty, Header, IconButton, PillRow, Screen, SearchBar } from '../../components/ui';
 import { searchExercises } from '../../lib/catalog';
@@ -15,7 +15,8 @@ export default function Library() {
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('all');
   const [equip, setEquip] = useState('all');
-  const list = useMemo(() => searchExercises(allExercises, q, muscle, equip), [allExercises, q, muscle, equip]);
+  const dq = useDeferredValue(q);
+  const list = useMemo(() => searchExercises(allExercises, dq, muscle, equip), [allExercises, dq, muscle, equip]);
   return (
     <Screen>
       <Header title="Exercises" right={<IconButton name="add" size={28} onPress={() => router.push('/exercises/create')} testID="create-exercise" />} />
@@ -24,8 +25,10 @@ export default function Library() {
       <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'All equipment' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
       <FlatList
         data={list}
-        initialNumToRender={20}
-        windowSize={7}
+        initialNumToRender={14}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews
         keyExtractor={(e) => e.id}
         ListEmptyComponent={<Empty text="No exercises found." />}
         renderItem={({ item }) => {

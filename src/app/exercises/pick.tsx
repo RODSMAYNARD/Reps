@@ -1,7 +1,7 @@
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { Btn, Empty, Header, HeaderAction, PillRow, Screen, SearchBar } from '../../components/ui';
 import { searchExercises } from '../../lib/catalog';
@@ -18,7 +18,8 @@ export default function PickExercise() {
   const [equip, setEquip] = useState('all');
   const [busy, setBusy] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
-  const list = useMemo(() => searchExercises(allExercises, q, muscle, equip), [allExercises, q, muscle, equip]);
+  const dq = useDeferredValue(q);
+  const list = useMemo(() => searchExercises(allExercises, dq, muscle, equip), [allExercises, dq, muscle, equip]);
   const toggle = (id: string) => (single ? setSel([id]) : setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]));
   const done = async () => { setBusy(true); const real = await ensureExercises(sel); setBusy(false); resolvePick(real); router.back(); };
   return (
@@ -30,8 +31,10 @@ export default function PickExercise() {
       <Text style={{ color: colors.muted, paddingHorizontal: 16, paddingBottom: 6, fontSize: 12 }}>{list.length} exercises</Text>
       <FlatList
         data={list}
-        initialNumToRender={20}
-        windowSize={7}
+        initialNumToRender={14}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews
         keyboardShouldPersistTaps="handled"
         keyExtractor={(e) => e.id}
         ListEmptyComponent={<Empty text="No exercises found." action={<Btn title="Create exercise" variant="secondary" onPress={() => router.push('/exercises/create')} />} />}

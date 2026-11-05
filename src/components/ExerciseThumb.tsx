@@ -1,19 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, View } from 'react-native';
+import { THUMBS } from '../data/thumbs';
 import { useMedia } from '../lib/media';
 import { colors } from '../lib/theme';
 
-/** Round exercise thumbnail (catalog image) with a dumbbell fallback. */
+/** Round exercise thumbnail. Bundled inside the app (instant, offline); dumbbell fallback. */
 export function ExerciseThumb({ catalogId, size = 44 }: { catalogId?: string | null; size?: number }) {
-  const url = useMedia('thumb', catalogId);
+  const src = catalogId ? THUMBS[catalogId] : undefined;
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      {url ? <Image source={{ uri: url }} style={{ width: size, height: size }} /> : <Ionicons name="barbell-outline" size={size / 2} color={colors.muted} />}
+      {src ? <Image source={src} style={{ width: size, height: size }} /> : <Ionicons name="barbell-outline" size={size / 2} color={colors.muted} />}
     </View>
   );
 }
 
-/** Animated demo GIF for the exercise detail screen. */
+/** Animated demo GIF for the exercise detail screen (one signed URL, fetched only when the screen opens). */
 export function ExerciseGif({ catalogId, size = 220 }: { catalogId?: string | null; size?: number }) {
   const url = useMedia('gif', catalogId);
   if (!catalogId) return null;
