@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
-import { Avatar, Dialog, Header, IconButton, ListRow, Screen, Section, Sheet, Stat } from '../../../components/ui';
+import { WorkoutMenu } from '../../../components/WorkoutMenu';
+import { Avatar, Header, IconButton, ListRow, Screen, Section, Stat } from '../../../components/ui';
 import { fmtDateTime, fmtDuration, fmtVolume, fmtWeight } from '../../../lib/format';
 import { muscleDistribution, workoutSets, workoutVolume } from '../../../lib/stats';
 import { useStore } from '../../../lib/store';
@@ -10,18 +11,15 @@ import { colors } from '../../../lib/theme';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { workouts, exercises, profile, startWorkout, active, saveRoutine, deleteWorkout, showToast } = useStore();
+  const { workouts, exercises, profile, showToast } = useStore();
   const w = workouts.find((x) => x.id === id);
   const [menu, setMenu] = useState(false);
   const [more, setMore] = useState(false);
-  const [del, setDel] = useState(false);
   const [liked, setLiked] = useState(false);
   if (!w) return <Screen><Header title="Workout detail" /></Screen>;
   const u = profile.units;
   const dist = muscleDistribution([w], exercises);
   const nameOf = (eid: string) => exercises.find((e) => e.id === eid)?.name ?? 'Removed exercise';
-  const copy = () => { setMenu(false); if (active) return showToast('Finish or discard your current workout first.'); startWorkout({ entries: w.entries, title: w.title }); router.push('/active'); };
-  const asRoutine = async () => { setMenu(false); const r = await saveRoutine({ title: w.title, notes: '', exercises: w.entries.map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, sets: e.sets, superset: e.superset })) }); if (r) showToast('Saved as routine'); };
   return (
     <Screen>
       <Header title="Workout detail" right={<>
@@ -63,13 +61,8 @@ export default function WorkoutDetail() {
           </View>
         ))}
       </ScrollView>
-      <Sheet visible={menu} onClose={() => setMenu(false)}>
-        <ListRow icon="download-outline" label="Save as routine" onPress={asRoutine} />
-        <ListRow icon="copy-outline" label="Copy workout" onPress={copy} />
-        <ListRow icon="alert-circle-outline" label="Report workout" danger onPress={() => { setMenu(false); router.push({ pathname: '/feed/report', params: { id: w.id } }); }} />
-        <ListRow icon="trash-outline" label="Delete workout" danger last onPress={() => { setMenu(false); setDel(true); }} />
-      </Sheet>
-      <Dialog visible={del} title="Delete workout?" message="This can't be undone." onClose={() => setDel(false)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); await deleteWorkout(w.id); router.back(); } }]} />
+      <WorkoutMenu id={menu ? w.id : null} onClose={() => setMenu(false)} onDeleted={() => router.back()}
+        extra={<ListRow icon="alert-circle-outline" label="Report workout" danger onPress={() => { setMenu(false); router.push({ pathname: '/feed/report', params: { id: w.id } }); }} />} />
     </Screen>
   );
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { ActiveBar } from '../../components/ActiveBar';
 import { WorkoutCard } from '../../components/WorkoutCard';
+import { WorkoutMenu } from '../../components/WorkoutMenu';
 import { Avatar, Btn, Dialog, IconButton, Screen, Sheet } from '../../components/ui';
 import { DEMO_ATHLETES as ATHLETES } from '../../lib/constants';
 import { weekStreak } from '../../lib/stats';
@@ -12,7 +13,7 @@ import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 
 export default function Home() {
-  const { workouts, deleteWorkout, startWorkout, showToast, session } = useStore();
+  const { workouts, startWorkout, session } = useStore();
   const [feed, setFeed] = useState<'home' | 'mine'>('home');
   const [menu, setMenu] = useState(false);
   const [watch, setWatch] = useState(true);
@@ -104,10 +105,7 @@ export default function Home() {
         <Btn title="Home" variant={feed === 'home' ? 'primary' : 'secondary'} style={{ marginBottom: 8 }} onPress={() => { setFeed('home'); setMenu(false); }} />
         <Btn title="My Workouts" variant={feed === 'mine' ? 'primary' : 'secondary'} onPress={() => { setFeed('mine'); setMenu(false); }} />
       </Sheet>
-      <Sheet visible={!!target} onClose={() => setTarget(null)}>
-        <Btn title="Open workout" variant="secondary" style={{ marginBottom: 8 }} onPress={() => { const id = target!; setTarget(null); router.push({ pathname: '/feed/workout/[id]', params: { id } }); }} />
-        <Btn title="Delete workout" variant="danger" onPress={() => { deleteWorkout(target!); setTarget(null); showToast('Workout deleted'); }} />
-      </Sheet>
+      <WorkoutMenu id={target} onClose={() => setTarget(null)} />
       <Dialog visible={watchDlg} title="Coming soon" message="Watch integration requires native apps and is coming in a future version." actions={[{ label: 'Ok', primary: true, onPress: () => setWatchDlg(false) }]} />
     </Screen>
   );

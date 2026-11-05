@@ -87,6 +87,9 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - O programa fica SÓ NO APARELHO (AsyncStorage `reps:trainer:<uid>`; não sincroniza com o Supabase ainda). Treino iniciado pelo Trainer leva `fromTrainer` e, ao salvar, avança o próximo treino.
 - Só interface: os ícones de equipamento são genéricos (sem as imagens do Hevy); "Edit" dos pesos dos equipamentos não existe.
 
+## Menu ⋯ do treino salvo (`src/components/WorkoutMenu.tsx`)
+- Início e detalhe usam o mesmo menu: Share Workout, Save as Routine, Copy Workout, Edit Workout (`feed/workout/edit`, grava via `store.updateWorkout`: título, descrição, data, local, visibilidade, duração, séries/peso/reps) e Delete Workout (com confirmação). No detalhe entra também "Report workout".
+
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR

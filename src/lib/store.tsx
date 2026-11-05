@@ -69,6 +69,7 @@ type Store = {
   skipRest: () => void;
   // treinos
   deleteWorkout: (id: string) => Promise<void>;
+  updateWorkout: (id: string, patch: { title: string; description: string; date: string; visibility: Workout['visibility']; location: string | null; durationSec: number; entries: SavedEntry[] }) => Promise<boolean>;
   // rotinas
   saveRoutine: (r: Omit<Routine, 'id'> & { id?: string }) => Promise<Routine | null>;
   deleteRoutine: (id: string) => Promise<void>;
@@ -386,6 +387,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     adjustRest: (d) => setRest((r) => (r ? { endsAt: r.endsAt + d * 1000, total: Math.max(1, r.total + d) } : r)),
     skipRest: () => setRest(null),
 
+    updateWorkout: async (id, patch) => {
+      const old = wkRef.current.find((w) => w.id === id);
+      if (!old) return false;
+      const entries = patch.entries.map((e) => ({ ...e, sets: e.sets.filter((x) => (x.reps ?? 0) > 0 || (x.kg ?? 0) > 0) })).filter((e) => e.sets.length > 0);
+      if (!entries.length) { fail('A workout needs at least one set.'); return false; }
+      const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
+      const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((x, k) => [x, realIds[k]]));
+      entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
+      const meta = {
+        notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
+        rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
+        superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
+        routineId: old.routineId ?? null, location: patch.location || null, trainer: old.fromTrainer ? true : undefined,
+      };
+      const u = await supabase.from('workouts').update({ performed_at: patch.date, title: patch.title || 'Workout', description: patch.description, duration_sec: patch.durationSec, visibility: patch.visibility, meta }).eq('id', id);
+      if (u.error) { fail(u.error.message); return false; }
+      const d = await supabase.from('workout_sets').delete().eq('workout_id', id);
+      if (d.error) { fail(d.error.message); return false; }
+      let pos = 0;
+      const rows = entries.flatMap((e) => e.sets.map((x) => ({ workout_id: id, exercise_id: e.exerciseId, position: pos++, reps: x.reps ?? 0, weight: x.kg ?? 0, set_type: x.type })));
+      const ins = await supabase.from('workout_sets').insert(rows);
+      if (ins.error) { fail(ins.error.message); return false; }
+      setWorkouts((l) => l.map((w) => (w.id === id ? { ...w, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries } : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
+      return true;
+    },
     deleteWorkout: async (id) => {
       const { error: e } = await supabase.from('workouts').delete().eq('id', id);
       if (e) return fail(e.message);
