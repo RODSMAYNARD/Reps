@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -8,7 +9,7 @@ import { colors, radius } from '../../lib/theme';
 import { Routine } from '../../lib/types';
 
 export default function Treino() {
-  const { routines, exercises, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast } = useStore();
+  const { trainer, routines, exercises, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast } = useStore();
   const [menu, setMenu] = useState<Routine | null>(null);
   const [ask, setAsk] = useState<'replace' | null>(null);
   const [pending, setPending] = useState<Routine | null | undefined>(undefined);
@@ -24,6 +25,14 @@ export default function Treino() {
     <Screen edges={['top']}>
       <Header title="Workout" left="none" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+        <Pressable onPress={() => router.push('/trainer')} testID="open-trainer" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.black, padding: 16, borderRadius: radius.md, marginBottom: 6 }}>
+          <Ionicons name="sparkles" size={26} color="#fff" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#fff' }}>Trainer</Text>
+            <Text style={{ color: '#C9CFD8' }}>{trainer ? `Next: ${trainer.workouts.find((w) => w.uid === trainer.nextUid)?.title ?? trainer.workouts[0]?.title}` : 'Your personalized program'}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="#fff" />
+        </Pressable>
         <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Quick Start</Text>
         <Pressable onPress={() => start(null)} testID="start-empty" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, padding: 16, borderRadius: radius.md }}>
           <Text style={{ fontSize: 22, color: colors.text }}>＋</Text><Text style={{ fontSize: 16, color: colors.text }}>Start Empty Workout</Text>

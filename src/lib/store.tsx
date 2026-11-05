@@ -4,9 +4,10 @@ import { randomUUID } from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { records } from './stats';
+import { CYCLE_WEEKS, generateProgram } from './trainer';
 import { supabase } from './supabase';
 import {
-  ActiveEntry, ActiveSet, ActiveWorkout, DEFAULT_WPREFS, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, Units, Workout, WorkoutPrefs,
+  ActiveEntry, ActiveSet, ActiveWorkout, DEFAULT_WPREFS, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, TrainerProgram, Units, Workout, WorkoutPrefs,
 } from './types';
 
 export const DEFAULT_UNITS: Units = { weight: 'kg', distance: 'km', body: 'cm' };
@@ -43,7 +44,11 @@ type Store = {
   addExercise: (x: Omit<Exercise, 'id'>) => Promise<Exercise | null>;
   removeExercise: (id: string) => Promise<void>;
   // treino ativo
-  startWorkout: (opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string }) => void;
+  startWorkout: (opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string; trainerUid?: string }) => void;
+  trainer: TrainerProgram | null;
+  saveTrainer: (p: TrainerProgram | null) => void;
+  startTrainerWorkout: (uid: string) => void;
+  skipTrainerWorkout: (uid: string) => void;
   setActiveTitle: (t: string) => void;
   addEntries: (ids: string[]) => void;
   removeEntry: (i: number) => void;
@@ -93,6 +98,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const activeRef = useRef<ActiveWorkout | null>(null);
   const exRef = useRef<Exercise[]>([]);
   useEffect(() => { exRef.current = exercises; }, [exercises]);
+  const [trainer, setTrainerState] = useState<TrainerProgram | null>(null);
+  const trainerRef = useRef<TrainerProgram | null>(null);
   const [wprefs, setWprefsState] = useState<WorkoutPrefs>(DEFAULT_WPREFS);
   const prefsRef = useRef<WorkoutPrefs>(DEFAULT_WPREFS);
   const wkRef = useRef<Workout[]>([]);
@@ -150,7 +157,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const meta = w.meta ?? {};
       return {
         id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
-        routineId: meta.routineId ?? null, location: meta.location ?? null, entries: order.map((id) => ({ exerciseId: id, notes: meta.notes?.[id] ?? '', restSec: meta.rest?.[id] ?? 0, superset: meta.superset?.[id] ?? null, sets: by.get(id)! })),
+        routineId: meta.routineId ?? null, location: meta.location ?? null, fromTrainer: !!meta.trainer, entries: order.map((id) => ({ exerciseId: id, notes: meta.notes?.[id] ?? '', restSec: meta.rest?.[id] ?? 0, superset: meta.superset?.[id] ?? null, sets: by.get(id)! })),
       } as Workout;
     }));
 
@@ -159,6 +166,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const ms = await supabase.from('measurements').select('id,measured_on,values,photo_uri').order('measured_on', { ascending: false });
     if (!ms.error) setMeasurements(ms.data.map((m: any) => ({ id: m.id, date: m.measured_on, values: m.values, photoUri: m.photo_uri })));
 
+    const tr = await AsyncStorage.getItem(`reps:trainer:${uid}`);
+    trainerRef.current = tr ? JSON.parse(tr) : null;
+    setTrainerState(trainerRef.current);
     const wp = await AsyncStorage.getItem(`reps:wprefs:${uid}`);
     prefsRef.current = { ...DEFAULT_WPREFS, ...(wp ? JSON.parse(wp) : {}) };
     setWprefsState(prefsRef.current);
@@ -172,7 +182,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); if (!data.session) setReady(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      if (!s) { setExercises([]); setWorkouts([]); setRoutines([]); setMeasurements([]); setProfile(EMPTY_PROFILE); activeRef.current = null; setActiveState(null); }
+      if (!s) { setExercises([]); setWorkouts([]); setRoutines([]); setMeasurements([]); setProfile(EMPTY_PROFILE); trainerRef.current = null; setTrainerState(null); activeRef.current = null; setActiveState(null); }
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -209,6 +219,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     allExercises.forEach((e) => { m.set(e.id, e); if (e.catalogId) m.set(`cat:${e.catalogId}`, e); });
     return m;
   }, [allExercises]);
+
+  const allExRef = useRef<Exercise[]>([]);
+  const startRef = useRef<(opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string; trainerUid?: string }) => void>(() => {});
+  const persistTrainer = useCallback((p: TrainerProgram | null) => {
+    trainerRef.current = p;
+    setTrainerState(p);
+    if (userId) (p ? AsyncStorage.setItem(`reps:trainer:${userId}`, JSON.stringify(p)) : AsyncStorage.removeItem(`reps:trainer:${userId}`)).catch(() => {});
+  }, [userId]);
+
+  /** Ao terminar um treino do Trainer: avança para o próximo; fecha a semana/ciclo e renova os exercícios conforme a variedade. */
+  const advanceTrainer = useCallback((doneUid: string) => {
+    const p = trainerRef.current;
+    if (!p) return;
+    const i = p.workouts.findIndex((x) => x.uid === doneUid);
+    const nextUid = p.workouts[(i + 1) % p.workouts.length]?.uid ?? p.nextUid;
+    const completed = p.completed + 1;
+    const freq = p.settings.frequency;
+    const enOf = (e: Exercise) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.en : undefined);
+    const cycleDone = completed >= freq * (CYCLE_WEEKS + (p.settings.deload ? 1 : 0));
+    const weekDone = completed % freq === 0;
+    if ((cycleDone && p.settings.variety !== 'consistent') || (weekDone && p.settings.variety === 'varied')) {
+      const nxt = generateProgram(p.settings, allExRef.current, enOf, p.seed + 1, p.name, cycleDone ? p.cycle + 1 : p.cycle, p);
+      persistTrainer({ ...nxt, startedAt: p.startedAt, completed: cycleDone ? 0 : completed });
+      return;
+    }
+    persistTrainer({ ...p, completed: cycleDone ? 0 : completed, cycle: cycleDone ? p.cycle + 1 : p.cycle, nextUid });
+  }, [persistTrainer]);
+  const value_startWorkout = (opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string; trainerUid?: string }) => startRef.current(opts);
 
   const value = useMemo<Store>(() => ({
     ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
@@ -261,9 +299,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           return p && !s.kg ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, done: false } : { ...s, done: false };
         }),
       }));
-      activeRef.current = { id: randomUUID(), title: opts?.title ?? opts?.routine?.title ?? 'Workout', startedAt: new Date().toISOString(), pausedAt: null, pausedMs: 0, entries, fromRoutineId: opts?.routine?.id ?? null };
+      activeRef.current = { id: randomUUID(), title: opts?.title ?? opts?.routine?.title ?? 'Workout', startedAt: new Date().toISOString(), pausedAt: null, pausedMs: 0, entries, fromRoutineId: opts?.routine?.id ?? null, fromTrainer: opts?.trainerUid ?? null };
       setActiveState(activeRef.current);
       if (userId) AsyncStorage.setItem(`reps:active:${userId}`, JSON.stringify(activeRef.current)).catch(() => {});
+    },
+    trainer,
+    saveTrainer: (p) => persistTrainer(p),
+    startTrainerWorkout: (tuid) => {
+      const w = trainerRef.current?.workouts.find((x) => x.uid === tuid);
+      if (!w) return;
+      const entries: SavedEntry[] = w.exercises.map((e) => ({
+        exerciseId: e.exerciseId, notes: '', restSec: e.restSec, superset: null,
+        sets: Array.from({ length: e.sets }, () => ({ type: 'normal' as const, kg: null, reps: e.repMax })),
+      }));
+      value_startWorkout({ entries, title: w.title, trainerUid: tuid });
+    },
+    skipTrainerWorkout: (tuid) => {
+      const p = trainerRef.current;
+      if (!p) return;
+      const i = p.workouts.findIndex((x) => x.uid === tuid);
+      persistTrainer({ ...p, nextUid: p.workouts[(i + 1) % p.workouts.length].uid });
     },
     setActiveTitle: (t) => setActive((a) => ({ ...a, title: t })),
     addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => {
@@ -311,6 +366,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
         routineId: a.fromRoutineId ?? null,
         location: meta.location || null,
+        trainer: a.fromTrainer ? true : undefined,
       };
       const w = await supabase.from('workouts').insert({ id: a.id, performed_at: meta.date, title: meta.title || 'Workout', description: meta.description, duration_sec: meta.durationSec, visibility: meta.visibility, meta: meta2 });
       if (w.error) { fail(w.error.message); return null; }
@@ -319,6 +375,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const s = await supabase.from('workout_sets').insert(rows);
       if (s.error) { await supabase.from('workouts').delete().eq('id', a.id); fail(s.error.message); return null; }
       const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null, location: meta.location || null };
+      if (a.fromTrainer) { saved.fromTrainer = true; advanceTrainer(a.fromTrainer); }
       setWorkouts((l) => [saved, ...l]);
       setActive(() => null);
       setRest(null);
@@ -369,8 +426,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
       if (e) fail(e.message);
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs]);
+  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer]);
 
+  useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

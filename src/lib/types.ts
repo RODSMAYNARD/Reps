@@ -21,7 +21,7 @@ export type Exercise = { id: string; name: string; muscle: string; equipment: st
 export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null };
 export type ActiveSet = SetRow & { done: boolean };
 export type ActiveEntry = { uid?: string; hidden?: boolean; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
-export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null };
+export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null; fromTrainer?: string | null };
 
 export type SavedEntry = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
 export type Workout = {
@@ -34,6 +34,7 @@ export type Workout = {
   entries: SavedEntry[];
   routineId?: string | null;
   location?: string | null;
+  fromTrainer?: boolean;
 };
 
 export type RoutineExercise = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
@@ -51,4 +52,20 @@ export const DEFAULT_WARMUP: WarmupRow[] = [{ pct: 40, reps: 5 }, { pct: 60, rep
 export const DEFAULT_WPREFS: WorkoutPrefs = {
   sounds: true, defaultRestSec: 90, prevMode: 'any', warmupCalc: false, warmupFormula: DEFAULT_WARMUP, plateRounding: 5, dumbbellRounding: 1,
   keepAwake: false, plateCalc: true, rpe: false, smartSuperset: false, inlineTimer: true, livePR: true,
+};
+
+export type TrainerLevel = 'beginner' | 'intermediate' | 'advanced';
+export type TrainerSplit = 'pplul' | 'fullbody' | 'ul' | 'ppl';
+export type TrainerGoal = 'hypertrophy' | 'strength' | 'fatloss';
+export type TrainerSettings = {
+  level: TrainerLevel; preset: string; equipment: string[]; focus: string | null; duration: 40 | 60 | 80;
+  rest: 'short' | 'medium' | 'long'; variety: 'balanced' | 'consistent' | 'varied'; deload: boolean;
+  cardio: boolean; cardioWhere: 'start' | 'end'; excluded: string[]; injuries: string[];
+  split: TrainerSplit; goal: TrainerGoal; frequency: number;
+};
+export type TrainerExercise = { exerciseId: string; sets: number; repMin: number; repMax: number; restSec: number; kind: ExerciseKind };
+export type TrainerWorkout = { uid: string; kind: string; title: string; notes: string; exercises: TrainerExercise[] };
+export type TrainerProgram = {
+  id: string; name: string; startedAt: string; cycle: number; seed: number; completed: number;
+  settings: TrainerSettings; workouts: TrainerWorkout[]; nextUid: string;
 };

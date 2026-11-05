@@ -33,7 +33,7 @@ const PARAMS: Record<Goal, { sets: number; reps: number; rest: number; label: st
 const PER_LEVEL: Record<Level, number> = { beginner: 4, intermediate: 5, advanced: 6 };
 
 // Exercícios clássicos por músculo (nome em inglês do catálogo), usados pelo gerador de planos.
-const STAPLES: Record<string, string[]> = {
+export const STAPLES: Record<string, string[]> = {
   "Chest": [
     "barbell bench press",
     "dumbbell bench press",

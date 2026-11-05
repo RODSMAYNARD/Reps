@@ -28,6 +28,7 @@ function Routes() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="active" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
           <Stack.Screen name="routines" />
+          <Stack.Screen name="trainer" />
           <Stack.Screen name="exercises" />
           <Stack.Screen name="feed" />
           <Stack.Screen name="profile" />

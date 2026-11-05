@@ -81,6 +81,12 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Wearables: smartwatch (Apple Watch e Wear OS), etc. — registrar treino no relógio, descanso e frequência cardíaca. Hoje só existe a tela de interface em `settings/integrations` e o cartão "Sync with your watch" no Início (sem backend real).
 - Considerar junto: Apple Saúde / Health Connect, e serviço em primeiro plano para a notificação do treino com contagem ao vivo.
 
+## Trainer (programa personalizado) — `src/app/trainer/`, `src/lib/trainer.ts`
+- Entrada: cartão "Trainer" no topo da aba Workout. Telas: início (meta semanal, próximo treino, programa/semana), `workouts` (treinos do programa, ⋯ Reorder/Skip/Program Settings), `reorder`, `settings` (Modify My Program + Start New Program + Restart/Delete + Science/Feedback), `option/[key]` (level, equipment, focus, duration, rest, variety, cardio, excluded, injuries, split, goal, frequency), `setup`, `science`.
+- Gera treinos a partir do catálogo (equipamento, lesões, exercícios excluídos, foco, duração, descanso, meta). Ciclo de 6 semanas (+1 com deload); variedade: balanced renova no fim do ciclo, varied toda semana, consistent não renova.
+- O programa fica SÓ NO APARELHO (AsyncStorage `reps:trainer:<uid>`; não sincroniza com o Supabase ainda). Treino iniciado pelo Trainer leva `fromTrainer` e, ao salvar, avança o próximo treino.
+- Só interface: os ícones de equipamento são genéricos (sem as imagens do Hevy); "Edit" dos pesos dos equipamentos não existe.
+
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR
