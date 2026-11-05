@@ -5,13 +5,10 @@ import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { ActiveBar } from '../../components/ActiveBar';
 import { WorkoutCard } from '../../components/WorkoutCard';
 import { Avatar, Btn, Dialog, IconButton, Screen, Sheet } from '../../components/ui';
+import { DEMO_ATHLETES as ATHLETES } from '../../lib/constants';
 import { weekStreak } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
-
-export const ATHLETES = [
-  { id: 'a1', name: 'Marina Costa', tag: 'Destaque' }, { id: 'a2', name: 'Lucas Prado', tag: 'Destaque' }, { id: 'a3', name: 'Bia Nogueira', tag: 'Destaque' }, { id: 'a4', name: 'Rafa Lima', tag: 'Destaque' },
-];
 
 export default function Home() {
   const { workouts, deleteWorkout, startWorkout, showToast } = useStore();

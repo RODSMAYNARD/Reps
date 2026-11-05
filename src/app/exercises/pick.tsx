@@ -1,0 +1,43 @@
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { FlatList, Pressable, Text, View } from 'react-native';
+import { Btn, Empty, Header, HeaderAction, PillRow, Screen, SearchBar } from '../../components/ui';
+import { MUSCLES } from '../../lib/constants';
+import { resolvePick } from '../../lib/picker';
+import { useStore } from '../../lib/store';
+import { colors } from '../../lib/theme';
+
+export default function PickExercise() {
+  const { single } = useLocalSearchParams<{ single?: string }>();
+  const { exercises } = useStore();
+  const [q, setQ] = useState('');
+  const [muscle, setMuscle] = useState('all');
+  const [sel, setSel] = useState<string[]>([]);
+  const list = useMemo(() => exercises.filter((e) => (muscle === 'all' || e.muscle === muscle) && e.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name)), [exercises, q, muscle]);
+  const toggle = (id: string) => (single ? setSel([id]) : setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]));
+  const done = () => { resolvePick(sel); router.back(); };
+  return (
+    <Screen>
+      <Header left="cancel" title="Adicionar exercício" right={<HeaderAction label="Criar" onPress={() => router.push('/exercises/create')} />} />
+      <SearchBar value={q} onChangeText={setQ} placeholder="Buscar exercício" />
+      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'Todos' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
+      <FlatList
+        data={list}
+        keyExtractor={(e) => e.id}
+        ListEmptyComponent={<Empty text="Nenhum exercício encontrado." action={<Btn title="Criar exercício" variant="secondary" onPress={() => router.push('/exercises/create')} />} />}
+        renderItem={({ item }) => (
+          <Pressable onPress={() => toggle(item.id)} testID="pick-row" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: sel.includes(item.id) ? colors.primarySoft : colors.bg }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="barbell-outline" size={22} color={colors.muted} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, color: colors.text }}>{item.name}</Text>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>{item.muscle}</Text>
+            </View>
+            {sel.includes(item.id) && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
+          </Pressable>
+        )}
+      />
+      <View style={{ padding: 16 }}><Btn title={sel.length ? `Adicionar ${sel.length} exercício(s)` : 'Selecione exercícios'} disabled={!sel.length} testID="pick-confirm" onPress={done} /></View>
+    </Screen>
+  );
+}

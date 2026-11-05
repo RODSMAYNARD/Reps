@@ -64,3 +64,19 @@ export const CATEGORIES = [
   { id: 'gym', label: 'Academia', icon: 'fitness-outline' },
   { id: 'body', label: 'Peso do corpo', icon: 'body-outline' },
 ] as const;
+
+export type Template = { title: string; notes: string; exercises: string[] };
+export const CATEGORY_ROUTINES: Record<string, Template[]> = {
+  home: [{ title: 'Treino em casa', notes: 'Sem equipamento, pode ser feito em qualquer lugar.', exercises: ['Flexão de braço', 'Mergulho (Paralelas)', 'Prancha'] }],
+  travel: [{ title: 'Treino de viagem', notes: 'Rápido e sem equipamento, ideal para o quarto do hotel.', exercises: ['Flexão de braço', 'Prancha', 'Mergulho (Paralelas)'] }],
+  dumbbell: [{ title: 'Halteres: corpo todo', notes: 'Treino completo usando apenas halteres.', exercises: ['Supino inclinado (Halter)', 'Desenvolvimento (Halter)', 'Avanço (Halter)', 'Rosca martelo (Halter)', 'Elevação lateral (Halter)'] }],
+  band: [],
+  cardio: [{ title: 'Cardio e HIIT', notes: 'Condicionamento cardiovascular.', exercises: ['Corrida (Esteira)', 'Bicicleta ergométrica', 'Prancha'] }],
+  gym: PROGRAMS.flatMap((p) => p.routines),
+  body: [{ title: 'Peso do corpo', notes: 'Força usando só o seu corpo.', exercises: ['Flexão de braço', 'Barra fixa', 'Mergulho (Paralelas)', 'Prancha'] }],
+};
+
+export const DEMO_ATHLETES = [
+  { id: 'a1', name: 'Marina Costa', tag: 'Destaque' }, { id: 'a2', name: 'Lucas Prado', tag: 'Destaque' },
+  { id: 'a3', name: 'Bia Nogueira', tag: 'Destaque' }, { id: 'a4', name: 'Rafa Lima', tag: 'Destaque' },
+];
