@@ -71,3 +71,6 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Supabase > Authentication: ativar "Leaked password protection" e decidir confirmação de e-mail
 - Supabase Storage para fotos; Apple/Google sign-in nativos; RevenueCat para o Pro
 - Modo offline: hoje o app precisa de internet
+
+## Regras do dono (builds)
+- NÃO disparar builds (Android/iOS) nem enviar ao TestFlight sem autorização expressa do Rodrigo na mensagem. Implementar, validar (`tsc`, lint) e commitar; perguntar antes de buildar.

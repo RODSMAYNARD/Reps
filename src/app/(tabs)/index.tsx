@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { ActiveBar } from '../../components/ActiveBar';
 import { WorkoutCard } from '../../components/WorkoutCard';
@@ -11,7 +12,7 @@ import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 
 export default function Home() {
-  const { workouts, deleteWorkout, startWorkout, showToast } = useStore();
+  const { workouts, deleteWorkout, startWorkout, showToast, session } = useStore();
   const [feed, setFeed] = useState<'home' | 'mine'>('home');
   const [menu, setMenu] = useState(false);
   const [watch, setWatch] = useState(true);
@@ -19,6 +20,13 @@ export default function Home() {
   const [follow, setFollow] = useState<Record<string, boolean>>({});
   const [target, setTarget] = useState<string | null>(null);
   const streak = weekStreak(workouts);
+  const pm = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
+  const pmKey = `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, '0')}`;
+  const pmCount = workouts.filter((w) => { const d = new Date(w.date); return d.getFullYear() === pm.getFullYear() && d.getMonth() === pm.getMonth(); }).length;
+  const uid = session?.user.id;
+  const [reportGone, setReportGone] = useState(true);
+  useEffect(() => { if (uid) AsyncStorage.getItem(`reps:report-dismissed:${uid}`).then((v) => setReportGone(v === pmKey)).catch(() => setReportGone(false)); }, [uid, pmKey]);
+  const dismissReport = () => { setReportGone(true); if (uid) AsyncStorage.setItem(`reps:report-dismissed:${uid}`, pmKey).catch(() => {}); };
   const list = workouts;
 
   const header = (
@@ -30,6 +38,14 @@ export default function Home() {
           <Text style={{ color: colors.muted, alignSelf: 'flex-start' }}>Log your workouts right from your wrist.</Text>
           <Btn title="Connect watch" onPress={() => setWatchDlg(true)} style={{ alignSelf: 'stretch' }} />
           <Btn title="Dismiss" variant="secondary" onPress={() => setWatch(false)} style={{ alignSelf: 'stretch' }} />
+        </View>
+      )}
+      {pmCount > 0 && !reportGone && (
+        <View style={{ padding: 16, gap: 8, borderBottomWidth: 8, borderBottomColor: colors.surface }} testID="report-card">
+          <Text style={{ fontWeight: '800', fontSize: 20, color: colors.text }}>Your {pm.toLocaleDateString('en-US', { month: 'long' })} Monthly Report is ready!</Text>
+          <Text style={{ color: colors.muted, fontSize: 16 }}>Get an overview of your workout data, milestones, and improvements from last month.</Text>
+          <Btn title="View Report" onPress={() => router.push({ pathname: '/profile/report', params: { month: pmKey } })} />
+          <Btn title="Dismiss" variant="secondary" onPress={dismissReport} />
         </View>
       )}
       {streak > 0 && (

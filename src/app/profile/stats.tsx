@@ -49,7 +49,7 @@ export default function Stats() {
         </Card></View>
         <Section title="Advanced statistics" />
         {ADVANCED.map((a) => (
-          <Pressable key={a.type} onPress={() => router.push({ pathname: '/profile/stats-detail', params: { type: a.type } })} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.surface }}>
+          <Pressable key={a.type} onPress={() => (a.type === 'monthly' ? router.push('/profile/report') : router.push({ pathname: '/profile/stats-detail', params: { type: a.type } }))} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.surface }}>
             <Ionicons name={a.icon as any} size={24} color={colors.text} />
             <View style={{ flex: 1 }}><Text style={{ fontSize: 16, color: colors.text }}>{a.title}</Text><Text style={{ color: colors.muted, fontSize: 13 }}>{a.sub}</Text></View>
             <Ionicons name="chevron-forward" size={18} color={colors.faint} />
