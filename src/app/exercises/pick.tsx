@@ -3,9 +3,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { Btn, Empty, Header, HeaderAction, PillRow, Screen, SearchBar } from '../../components/ui';
-import { searchExercises } from '../../lib/catalog';
-import { EQUIPMENT, MUSCLES } from '../../lib/constants';
+import { ExerciseFilterBar } from '../../components/ExerciseFilterBar';
+import { Btn, Empty, Header, HeaderAction, Screen, SearchBar } from '../../components/ui';
+import { filterExercises } from '../../lib/catalog';
 import { resolvePick } from '../../lib/picker';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
@@ -14,19 +14,18 @@ export default function PickExercise() {
   const { single } = useLocalSearchParams<{ single?: string }>();
   const { allExercises } = useStore();
   const [q, setQ] = useState('');
-  const [muscle, setMuscle] = useState('all');
-  const [equip, setEquip] = useState('all');
+  const [muscles, setMuscles] = useState<string[]>([]);
+  const [equip, setEquip] = useState<string[]>([]);
   const [sel, setSel] = useState<string[]>([]);
   const dq = useDeferredValue(q);
-  const list = useMemo(() => searchExercises(allExercises, dq, muscle, equip), [allExercises, dq, muscle, equip]);
+  const list = useMemo(() => filterExercises(allExercises, dq, muscles, equip), [allExercises, dq, muscles, equip]);
   const toggle = (id: string) => (single ? setSel([id]) : setSel(sel.includes(id) ? sel.filter((x) => x !== id) : [...sel, id]));
   const done = () => { resolvePick(sel); router.back(); };
   return (
     <Screen>
       <Header left="cancel" title="Add exercise" right={<HeaderAction label="Create" onPress={() => router.push('/exercises/create')} />} />
       <SearchBar value={q} onChangeText={setQ} placeholder="Search exercises" />
-      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'All muscles' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
-      <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'All equipment' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
+      <ExerciseFilterBar list={allExercises} q={dq} muscles={muscles} equipment={equip} onChange={(m, e) => { setMuscles(m); setEquip(e); }} />
       <Text style={{ color: colors.muted, paddingHorizontal: 16, paddingBottom: 6, fontSize: 12 }}>{list.length} exercises</Text>
       <FlatList
         data={list}

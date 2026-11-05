@@ -2,9 +2,9 @@ import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { router } from 'expo-router';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
-import { Empty, Header, IconButton, PillRow, Screen, SearchBar } from '../../components/ui';
-import { searchExercises } from '../../lib/catalog';
-import { EQUIPMENT, MUSCLES } from '../../lib/constants';
+import { ExerciseFilterBar } from '../../components/ExerciseFilterBar';
+import { Empty, Header, IconButton, Screen, SearchBar } from '../../components/ui';
+import { filterExercises } from '../../lib/catalog';
 import { fmtWeight } from '../../lib/format';
 import { records } from '../../lib/stats';
 import { useStore } from '../../lib/store';
@@ -13,16 +13,15 @@ import { colors } from '../../lib/theme';
 export default function Library() {
   const { allExercises, workouts, profile } = useStore();
   const [q, setQ] = useState('');
-  const [muscle, setMuscle] = useState('all');
-  const [equip, setEquip] = useState('all');
+  const [muscles, setMuscles] = useState<string[]>([]);
+  const [equip, setEquip] = useState<string[]>([]);
   const dq = useDeferredValue(q);
-  const list = useMemo(() => searchExercises(allExercises, dq, muscle, equip), [allExercises, dq, muscle, equip]);
+  const list = useMemo(() => filterExercises(allExercises, dq, muscles, equip), [allExercises, dq, muscles, equip]);
   return (
     <Screen>
       <Header title="Exercises" right={<IconButton name="add" size={28} onPress={() => router.push('/exercises/create')} testID="create-exercise" />} />
       <SearchBar value={q} onChangeText={setQ} placeholder="Search exercises" />
-      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'All' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
-      <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'All equipment' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
+      <ExerciseFilterBar list={allExercises} q={dq} muscles={muscles} equipment={equip} onChange={(m, e) => { setMuscles(m); setEquip(e); }} />
       <FlatList
         data={list}
         initialNumToRender={14}
