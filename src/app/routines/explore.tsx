@@ -13,6 +13,7 @@ export default function Explore() {
     <Screen>
       <Header title="Explorar" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+        <Btn title="Gerar plano personalizado" icon="sparkles-outline" onPress={() => router.push('/routines/generate')} />
         <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Programas</Text>
         {progs.map((p) => (
           <Card key={p.id} onPress={() => router.push({ pathname: '/routines/program/[id]', params: { id: p.id } })} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }} >

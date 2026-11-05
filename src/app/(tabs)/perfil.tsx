@@ -39,7 +39,7 @@ export default function Perfil() {
         {!!profile.bio && <Text style={{ paddingHorizontal: 16, color: colors.text }}>{profile.bio}</Text>}
         <View style={{ padding: 16, gap: 10 }}>
           <Text style={{ fontSize: 17, color: colors.text }}><Text style={{ fontWeight: '700' }}>{headline}</Text> esta semana</Text>
-          <BarChart data={series} highlightLast format={(v) => (metric === 'duration' ? `${Math.round(v * 10) / 10} h` : String(Math.round(v)))} />
+          <BarChart data={series} highlightLast format={(v) => (metric === 'duration' ? (v < 1 ? `${Math.round(v * 60)} min` : `${Math.round(v * 10) / 10} h`) : String(Math.round(v)))} />
         </View>
         <PillRow value={metric} onChange={(m) => setMetric(m as typeof metric)} items={[{ id: 'duration', label: 'Duração' }, { id: 'volume', label: 'Volume' }, { id: 'reps', label: 'Reps' }]} />
         <Section title="Painel" />

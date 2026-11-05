@@ -10,6 +10,7 @@ export default function Forgot() {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
   return (
     <Screen>
       <Header title="Recuperar senha" />
@@ -17,7 +18,7 @@ export default function Forgot() {
         <Text style={{ color: colors.muted }}>Informe seu e-mail e enviaremos um link para criar uma nova senha.</Text>
         <Field label="E-mail" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
         {!!msg && <Text style={{ color: colors.danger }}>{msg}</Text>}
-        <Btn title="Enviar link" disabled={!email.includes('@')} onPress={async () => { const e = await resetPassword(email.trim()); setMsg(e); if (!e) setSent(true); }} />
+        <Btn title="Enviar link" disabled={!email.includes('@')} loading={busy} onPress={async () => { setBusy(true); setMsg(null); const e = await resetPassword(email.trim()); setBusy(false); setMsg(e); if (!e) setSent(true); }} />
       </ScrollView>
       <Dialog visible={sent} title="Verifique seu e-mail" message="Se existir uma conta com esse e-mail, o link já está a caminho." actions={[{ label: 'Ok', primary: true, onPress: () => { setSent(false); router.back(); } }]} />
     </Screen>

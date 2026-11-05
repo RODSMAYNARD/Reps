@@ -27,8 +27,8 @@ export function Header({ title, left = 'back', onLeft, right, subtitle, leftNode
       <View style={{ minWidth: 70, alignItems: 'flex-start' }}>
         {leftNode}
         {left === 'back' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable>}
-        {left === 'down' && <Pressable onPress={go} hitSlop={12}><Ionicons name="chevron-down" size={26} color={colors.text} /></Pressable>}
-        {left === 'cancel' && <Pressable onPress={go} hitSlop={12}><Text style={{ color: colors.primary, fontSize: 16 }}>Cancelar</Text></Pressable>}
+        {left === 'down' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="chevron-down" size={26} color={colors.text} /></Pressable>}
+        {left === 'cancel' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Text style={{ color: colors.primary, fontSize: 16 }}>Cancelar</Text></Pressable>}
       </View>
       <View style={{ flex: 1, alignItems: 'center' }}>
         {typeof title === 'string' ? <Text numberOfLines={1} style={s.headerTitle}>{title}</Text> : title}
@@ -103,7 +103,7 @@ export function Field({ label, error, ...props }: TextInputProps & { label?: str
 export function SearchBar({ value, onChangeText, placeholder = 'Buscar', onBack }: { value: string; onChangeText: (t: string) => void; placeholder?: string; onBack?: () => void }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
-      {onBack && <IconButton name="arrow-back" onPress={onBack} />}
+      {onBack && <IconButton name="arrow-back" onPress={onBack} testID="header-back" />}
       <View style={s.search}>
         <Ionicons name="search" size={18} color={colors.muted} />
         <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={colors.faint} style={{ flex: 1, fontSize: 16, color: colors.text }} />
@@ -143,9 +143,9 @@ export function ListRow({ icon, label, detail, onPress, danger, last, right, sub
   );
 }
 
-export function Card({ children, style, onPress }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
+export function Card({ children, style, onPress, testID }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; testID?: string }) {
   const C: any = onPress ? Pressable : View;
-  return <C onPress={onPress} style={[s.card, style]}>{children}</C>;
+  return <C onPress={onPress} testID={testID} style={[s.card, style]}>{children}</C>;
 }
 
 export function Tile({ icon, label, onPress, style }: { icon: IconName; label: string; onPress: () => void; style?: StyleProp<ViewStyle> }) {
@@ -168,7 +168,7 @@ export function Pill({ label, active, onPress, color }: { label: string; active?
 
 export function PillRow({ items, value, onChange }: { items: { id: string; label: string }[]; value: string; onChange: (id: string) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 8 }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center' }}>
       {items.map((i) => <Pill key={i.id} label={i.label} active={value === i.id} onPress={() => onChange(i.id)} />)}
     </ScrollView>
   );

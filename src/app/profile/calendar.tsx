@@ -11,6 +11,8 @@ import { colors } from '../../lib/theme';
 export default function CalendarScreen() {
   const { workouts } = useStore();
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const raw = cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const monthLabel = raw.charAt(0).toUpperCase() + raw.slice(1);
   const first = (cursor.getDay() + 6) % 7;
   const dim = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
   const cells = [...Array(first).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
@@ -25,7 +27,7 @@ export default function CalendarScreen() {
       <ScrollView>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
           <Ionicons name="chevron-back" size={24} color={colors.text} onPress={() => shift(-1)} testID="cal-prev" />
-          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, textTransform: 'capitalize' }}>{cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{monthLabel}</Text>
           <Ionicons name="chevron-forward" size={24} color={colors.text} onPress={() => shift(1)} />
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: 8 }}>{['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.muted }}>{d}</Text>)}</View>

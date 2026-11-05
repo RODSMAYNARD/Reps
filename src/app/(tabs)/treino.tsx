@@ -33,6 +33,9 @@ export default function Treino() {
           <Tile icon="clipboard-outline" label="Nova rotina" onPress={() => router.push('/routines/edit')} />
           <Tile icon="search-outline" label="Explorar rotinas" onPress={() => router.push('/routines/explore')} />
         </View>
+        <Pressable onPress={() => router.push('/routines/generate')} testID="open-generate" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primarySoft, padding: 16, borderRadius: radius.md }}>
+          <Text style={{ fontSize: 20 }}>✨</Text><View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Gerar plano de treino</Text><Text style={{ color: colors.muted }}>Escolha objetivo, dias e equipamento</Text></View>
+        </Pressable>
         {routines.length > 0 && <Section title={`Minhas rotinas (${routines.length})`} />}
         {routines.map((r) => (
           <Card key={r.id} onPress={() => router.push({ pathname: '/routines/[id]', params: { id: r.id } })} style={{ gap: 6, marginBottom: 8 }}>
