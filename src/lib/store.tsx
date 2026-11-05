@@ -89,6 +89,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const activeRef = useRef<ActiveWorkout | null>(null);
   const exRef = useRef<Exercise[]>([]);
   useEffect(() => { exRef.current = exercises; }, [exercises]);
+  const wkRef = useRef<Workout[]>([]);
+  useEffect(() => { wkRef.current = workouts; }, [workouts]);
+  // Sets da última vez que o exercício foi feito (aceita id real ou cat:<id>)
+  const lastSetsOf = useCallback((exerciseId: string): SetRow[] => {
+    const real = exerciseId.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === exerciseId.slice(4))?.id ?? exerciseId : exerciseId;
+    for (const w of wkRef.current) {
+      const en = w.entries.find((e) => e.exerciseId === real);
+      if (en && en.sets.length) return en.sets;
+    }
+    return [];
+  }, []);
 
   const showToast = useCallback((t: string) => {
     setToast(t);
@@ -229,14 +240,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const src = opts?.entries ?? opts?.routine?.exercises ?? [];
       const entries: ActiveEntry[] = src.map((e) => ({
         uid: randomUUID(), exerciseId: e.exerciseId, notes: e.notes ?? '', restSec: e.restSec ?? 0, superset: e.superset ?? null,
-        sets: (e.sets.length ? e.sets : ([{ type: 'normal', kg: null, reps: null }] as SetRow[])).map((s): ActiveSet => ({ ...s, done: false })),
+        sets: (e.sets.length ? e.sets : ([{ type: 'normal', kg: null, reps: null }] as SetRow[])).map((s, j): ActiveSet => {
+          // campos vazios/zerados vêm preenchidos com o que foi feito da última vez
+          const last = lastSetsOf(e.exerciseId);
+          const p = last.length ? last[Math.min(j, last.length - 1)] : null;
+          return p && !s.kg ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, done: false } : { ...s, done: false };
+        }),
       }));
       activeRef.current = { id: randomUUID(), title: opts?.title ?? opts?.routine?.title ?? 'Workout', startedAt: new Date().toISOString(), pausedAt: null, pausedMs: 0, entries, fromRoutineId: opts?.routine?.id ?? null };
       setActiveState(activeRef.current);
       if (userId) AsyncStorage.setItem(`reps:active:${userId}`, JSON.stringify(activeRef.current)).catch(() => {});
     },
     setActiveTitle: (t) => setActive((a) => ({ ...a, title: t })),
-    addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => ({ uid: randomUUID(), exerciseId: id, notes: '', restSec: 0, sets: [newSet()] }))] })),
+    addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => {
+      const last = lastSetsOf(id);
+      return { uid: randomUUID(), exerciseId: id, notes: '', restSec: 0, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
+    })] })),
     removeEntry: (i) => setActive((a) => ({ ...a, entries: a.entries.filter((_, k) => k !== i) })),
     moveEntry: (from, to) => setActive((a) => { const list = [...a.entries]; const [it] = list.splice(from, 1); list.splice(to, 0, it); return { ...a, entries: list }; }),
     replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, exerciseId } : e)) })),
@@ -329,7 +348,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
       if (e) fail(e.message);
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup]);
+  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
