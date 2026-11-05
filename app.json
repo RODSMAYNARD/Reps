@@ -44,7 +44,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#0B0B0F"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "scheme": "reps",
     "owner": "rodsappz4u",
