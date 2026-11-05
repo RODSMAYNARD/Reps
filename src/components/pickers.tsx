@@ -8,7 +8,7 @@ export function NumberSheet({ visible, title, values, selected, format, onDone, 
   return (
     <Sheet visible={visible} onClose={onClose} title={title}>
       <WheelPicker values={values} selected={v} onSelect={setV} format={format} />
-      <Btn title="Concluir" onPress={() => { onDone(v); onClose(); }} style={{ marginTop: 12 }} />
+      <Btn title="Done" onPress={() => { onDone(v); onClose(); }} style={{ marginTop: 12 }} />
     </Sheet>
   );
 }

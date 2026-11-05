@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Share, Text, View } from 'react-native';
+import { ExerciseGif } from '../../components/ExerciseThumb';
 import { CAT_BY_ID } from '../../lib/catalog';
 import { Btn, Card, Dialog, Header, IconButton, LineChart, ListRow, PillRow, Screen, Section, Sheet, TopTabs } from '../../components/ui';
 import { fmtDate, fmtWeight, toDisplayWeight } from '../../lib/format';
@@ -8,9 +9,9 @@ import { exerciseSeries, records } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
-const METRICS = [{ id: 'heaviest', label: 'Maior peso' }, { id: 'orm', label: '1RM estimado' }, { id: 'setVolume', label: 'Volume da série' }, { id: 'sessionVolume', label: 'Volume da sessão' }, { id: 'reps', label: 'Reps' }];
-const LEVELS = ['Iniciante', 'Intermediário', 'Avançado', 'Elite'];
-const HOWTO = ['Posicione-se com a postura neutra e o abdômen firme.', 'Execute o movimento de forma controlada, sem usar impulso.', 'Respire: expire no esforço, inspire na volta.', 'Escolha uma carga que permita completar todas as repetições com boa técnica.'];
+const METRICS = [{ id: 'heaviest', label: 'Heaviest weight' }, { id: 'orm', label: 'Estimated 1RM' }, { id: 'setVolume', label: 'Set volume' }, { id: 'sessionVolume', label: 'Session volume' }, { id: 'reps', label: 'Reps' }];
+const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Elite'];
+const HOWTO = ['Set up with a neutral posture and a braced core.', 'Move with control and avoid using momentum.', 'Breathe out on the effort and in on the way back.', 'Pick a weight that lets you finish every rep with good form.'];
 
 export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,7 +21,7 @@ export default function ExerciseDetail() {
   const [menu, setMenu] = useState(false);
   const [del, setDel] = useState(false);
   const ex = exercises.find((e) => e.id === id);
-  if (!ex) return <Screen><Header title="Exercício" /></Screen>;
+  if (!ex) return <Screen><Header title="Exercise" /></Screen>;
   const cat = ex.catalogId ? CAT_BY_ID.get(ex.catalogId) : undefined;
   const u = profile.units;
   const rec = records(workouts, ex.id);
@@ -32,29 +33,30 @@ export default function ExerciseDetail() {
 
   return (
     <Screen>
-      <Header title={ex.name} right={<><IconButton name="share-outline" onPress={() => Share.share({ message: `${ex.name} no Reps` })} /><IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} /></>} />
-      <TopTabs value={tab} onChange={setTab} items={[{ id: 'summary', label: 'Resumo' }, { id: 'history', label: 'Histórico' }, { id: 'how', label: 'Como fazer' }, { id: 'rank', label: 'Ranking' }]} />
+      <Header title={ex.name} right={<><IconButton name="share-outline" onPress={() => Share.share({ message: `${ex.name} on Reps` })} /><IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} /></>} />
+      <TopTabs value={tab} onChange={setTab} items={[{ id: 'summary', label: 'Summary' }, { id: 'history', label: 'History' }, { id: 'how', label: 'How to' }, { id: 'rank', label: 'Leaderboard' }]} />
       <ScrollView>
         {tab === 'summary' && (
           <View>
-            <View style={{ padding: 16 }}>{series.length ? <LineChart data={series} unit={metric === 'reps' ? '' : ` ${u.weight}`} /> : <Text style={{ color: colors.muted, textAlign: 'center', padding: 24 }}>Sem dados ainda</Text>}</View>
+            <ExerciseGif catalogId={ex.catalogId} />
+            <View style={{ padding: 16 }}>{series.length ? <LineChart data={series} unit={metric === 'reps' ? '' : ` ${u.weight}`} /> : <Text style={{ color: colors.muted, textAlign: 'center', padding: 24 }}>No data yet</Text>}</View>
             <PillRow items={METRICS} value={metric} onChange={setMetric} />
-            <Section title="Recordes pessoais" />
-            <ListRow label="Maior peso" detail={rec.heaviest ? fmtWeight(rec.heaviest, u) : '-'} last />
-            <ListRow label="Melhor 1RM" detail={rec.best1rm ? fmtWeight(rec.best1rm, u) : '-'} last />
-            <ListRow label="Melhor volume de série" detail={rec.bestSet ? `${fmtWeight(rec.bestSet.kg ?? 0, u)} × ${rec.bestSet.reps}` : '-'} last />
-            <ListRow label="Melhor volume de sessão" detail={rec.bestSession ? fmtWeight(rec.bestSession, u) : '-'} last />
-            <Section title="Nível de força" />
+            <Section title="Personal records" />
+            <ListRow label="Heaviest weight" detail={rec.heaviest ? fmtWeight(rec.heaviest, u) : '-'} last />
+            <ListRow label="Best 1RM" detail={rec.best1rm ? fmtWeight(rec.best1rm, u) : '-'} last />
+            <ListRow label="Best set volume" detail={rec.bestSet ? `${fmtWeight(rec.bestSet.kg ?? 0, u)} × ${rec.bestSet.reps}` : '-'} last />
+            <ListRow label="Best session volume" detail={rec.bestSession ? fmtWeight(rec.bestSession, u) : '-'} last />
+            <Section title="Strength level" />
             {missing > 0 || !rec.best1rm ? (
               <View style={{ padding: 16 }}>
                 <Card onPress={() => router.push('/profile/edit')} style={{ flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: colors.surface, borderWidth: 0 }}>
                   <Text style={{ borderWidth: 3, borderColor: colors.border, borderRadius: 24, width: 48, height: 48, textAlign: 'center', textAlignVertical: 'center', lineHeight: 42, color: colors.muted }}>{3 - missing}/3</Text>
-                  <Text style={{ flex: 1, color: colors.text }}>{missing > 0 ? 'Informe sexo, idade e peso para ver seu nível de força.' : 'Registre uma série com carga para ver seu nível de força.'}</Text>
+                  <Text style={{ flex: 1, color: colors.text }}>{missing > 0 ? 'Add your sex, age and weight to see your strength level.' : 'Log a weighted set to see your strength level.'}</Text>
                 </Card>
               </View>
             ) : (
               <View style={{ padding: 16, gap: 10 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.muted }}>Melhor 1RM{'\n'}<Text style={{ color: colors.text, fontSize: 16 }}>{fmtWeight(rec.best1rm, u)}</Text></Text><Text style={{ color: colors.muted, textAlign: 'right' }}>Nível{'\n'}<Text style={{ color: colors.text, fontSize: 16 }}>{LEVELS[lvl]}</Text></Text></View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.muted }}>Best 1RM{'\n'}<Text style={{ color: colors.text, fontSize: 16 }}>{fmtWeight(rec.best1rm, u)}</Text></Text><Text style={{ color: colors.muted, textAlign: 'right' }}>Level{'\n'}<Text style={{ color: colors.text, fontSize: 16 }}>{LEVELS[lvl]}</Text></Text></View>
                 <View style={{ flexDirection: 'row', gap: 3 }}>{LEVELS.map((l, k) => <View key={l} style={{ flex: 1, height: 6, backgroundColor: k <= lvl ? colors.primary : colors.surfaceAlt }} />)}</View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>{LEVELS.map((l) => <Text key={l} style={{ color: colors.muted, fontSize: 11 }}>{l}</Text>)}</View>
               </View>
@@ -63,7 +65,7 @@ export default function ExerciseDetail() {
         )}
         {tab === 'history' && (
           <View>
-            {sessions.length === 0 && <Text style={{ color: colors.muted, textAlign: 'center', padding: 30 }}>Você ainda não fez este exercício.</Text>}
+            {sessions.length === 0 && <Text style={{ color: colors.muted, textAlign: 'center', padding: 30 }}>You haven&apos;t done this exercise yet.</Text>}
             {sessions.map((w) => (
               <View key={w.id} style={{ padding: 16, gap: 4, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                 <Text onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} style={{ color: colors.primary, fontWeight: '600' }}>{w.title} · {fmtDate(w.date)}</Text>
@@ -74,23 +76,24 @@ export default function ExerciseDetail() {
         )}
         {tab === 'how' && (
           <View style={{ padding: 16, gap: 10 }}>
+            <ExerciseGif catalogId={ex.catalogId} />
             <Text style={{ color: colors.muted }}>{ex.muscle} · {ex.equipment}</Text>
-            {cat && <Text style={{ color: colors.text }}>Alvo: <Text style={{ fontWeight: '600' }}>{cat.t}</Text>{cat.s.length ? `\nSecundários: ${cat.s.join(', ')}` : ''}</Text>}
+            {cat && <Text style={{ color: colors.text }}>Target: <Text style={{ fontWeight: '600' }}>{cat.t}</Text>{cat.s.length ? `\nSecondary: ${cat.s.join(', ')}` : ''}</Text>}
             {(cat ? cat.i : HOWTO).map((t, i) => <Text key={i} style={{ color: colors.text, fontSize: 16 }}>{i + 1}. {t}</Text>)}
           </View>
         )}
         {tab === 'rank' && (
           <View style={{ padding: 24, gap: 12, alignItems: 'center' }}>
-            <Text style={{ color: colors.muted, textAlign: 'center' }}>O ranking compara você com quem você segue. Siga amigos para ver a classificação neste exercício.</Text>
-            <Btn title="Descobrir atletas" variant="secondary" onPress={() => router.push('/feed/discover')} />
+            <Text style={{ color: colors.muted, textAlign: 'center' }}>The leaderboard compares you with people you follow. Follow friends to see rankings for this exercise.</Text>
+            <Btn title="Discover athletes" variant="secondary" onPress={() => router.push('/feed/discover')} />
           </View>
         )}
       </ScrollView>
       <Sheet visible={menu} onClose={() => setMenu(false)}>
-        {ex.id.startsWith('cat:') ? <ListRow icon="information-circle-outline" label="Exercício do catálogo (não pode ser excluído)" last /> : <ListRow icon="trash-outline" label="Excluir exercício" danger last onPress={() => { setMenu(false); setDel(true); }} />}
+        {ex.id.startsWith('cat:') ? <ListRow icon="information-circle-outline" label="Catalog exercise (can't be deleted)" last /> : <ListRow icon="trash-outline" label="Delete exercise" danger last onPress={() => { setMenu(false); setDel(true); }} />}
       </Sheet>
-      <Dialog visible={del} title="Excluir exercício?" message="Ele também será removido dos treinos e rotinas onde aparece." onClose={() => setDel(false)}
-        actions={[{ label: 'Cancelar' }, { label: 'Excluir', danger: true, onPress: async () => { setDel(false); await removeExercise(ex.id); router.back(); } }]} />
+      <Dialog visible={del} title="Delete exercise?" message="It will also be removed from workouts and routines where it appears." onClose={() => setDel(false)}
+        actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); await removeExercise(ex.id); router.back(); } }]} />
     </Screen>
   );
 }

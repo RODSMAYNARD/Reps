@@ -11,46 +11,30 @@ tr_dir = sys.argv[2] if len(sys.argv) > 2 else None
 data = json.load(open(src))
 
 MUSCLE = {  # target -> grupo muscular do app
-    'abs': 'Abdômen', 'pectorals': 'Peito', 'biceps': 'Bíceps', 'glutes': 'Glúteos', 'delts': 'Ombros', 'triceps': 'Tríceps',
-    'upper back': 'Costas', 'lats': 'Costas', 'calves': 'Panturrilha', 'quads': 'Quadríceps', 'forearms': 'Antebraço',
-    'cardiovascular system': 'Cardio', 'hamstrings': 'Posterior', 'spine': 'Costas', 'traps': 'Costas', 'adductors': 'Glúteos',
-    'abductors': 'Glúteos', 'serratus anterior': 'Peito', 'levator scapulae': 'Ombros',
-}
-TARGET_PT = {
-    'abs': 'Abdominais', 'pectorals': 'Peitoral', 'biceps': 'Bíceps', 'glutes': 'Glúteos', 'delts': 'Deltoides', 'triceps': 'Tríceps',
-    'upper back': 'Parte superior das costas', 'lats': 'Dorsais', 'calves': 'Panturrilhas', 'quads': 'Quadríceps', 'forearms': 'Antebraços',
-    'cardiovascular system': 'Sistema cardiovascular', 'hamstrings': 'Posteriores da coxa', 'spine': 'Coluna', 'traps': 'Trapézio',
-    'adductors': 'Adutores', 'abductors': 'Abdutores', 'serratus anterior': 'Serrátil anterior', 'levator scapulae': 'Levantador da escápula',
-}
-SECONDARY_PT = {
-    'hip flexors': 'Flexores do quadril', 'lower back': 'Lombar', 'obliques': 'Oblíquos', 'hamstrings': 'Posteriores da coxa', 'glutes': 'Glúteos',
-    'biceps': 'Bíceps', 'rhomboids': 'Romboides', 'ankle stabilizers': 'Estabilizadores do tornozelo', 'forearms': 'Antebraços', 'triceps': 'Tríceps',
-    'shoulders': 'Ombros', 'core': 'Core', 'back': 'Costas', 'quadriceps': 'Quadríceps', 'calves': 'Panturrilhas', 'chest': 'Peito',
-    'rear deltoids': 'Deltoide posterior', 'traps': 'Trapézio', 'upper back': 'Parte superior das costas', 'trapezius': 'Trapézio', 'ankles': 'Tornozelos',
-    'feet': 'Pés', 'deltoids': 'Deltoides', 'brachialis': 'Braquial', 'groin': 'Virilha', 'wrists': 'Punhos', 'rotator cuff': 'Manguito rotador',
-    'upper chest': 'Peito superior', 'latissimus dorsi': 'Dorsais', 'wrist flexors': 'Flexores do punho', 'wrist extensors': 'Extensores do punho',
-    'abdominals': 'Abdominais', 'grip muscles': 'Músculos da pegada', 'lower abs': 'Abdômen inferior', 'lats': 'Dorsais', 'inner thighs': 'Parte interna da coxa',
-    'soleus': 'Sóleo', 'sternocleidomastoid': 'Esternocleidomastóideo', 'hands': 'Mãos', 'shins': 'Canelas',
+    'abs': 'Abs', 'pectorals': 'Chest', 'biceps': 'Biceps', 'glutes': 'Glutes', 'delts': 'Shoulders', 'triceps': 'Triceps',
+    'upper back': 'Back', 'lats': 'Back', 'calves': 'Calves', 'quads': 'Quads', 'forearms': 'Forearms',
+    'cardiovascular system': 'Cardio', 'hamstrings': 'Hamstrings', 'spine': 'Back', 'traps': 'Back', 'adductors': 'Glutes',
+    'abductors': 'Glutes', 'serratus anterior': 'Chest', 'levator scapulae': 'Shoulders',
 }
 EQUIP = {
-    'body weight': 'Peso do corpo', 'dumbbell': 'Halter', 'cable': 'Cabo', 'barbell': 'Barra', 'ez barbell': 'Barra', 'olympic barbell': 'Barra', 'trap bar': 'Barra',
-    'leverage machine': 'Máquina', 'smith machine': 'Máquina', 'sled machine': 'Máquina', 'assisted': 'Máquina', 'skierg machine': 'Máquina',
-    'upper body ergometer': 'Máquina', 'stationary bike': 'Máquina', 'elliptical machine': 'Máquina', 'stepmill machine': 'Máquina',
-    'band': 'Elástico', 'resistance band': 'Elástico', 'kettlebell': 'Kettlebell',
+    'body weight': 'Body weight', 'dumbbell': 'Dumbbell', 'cable': 'Cable', 'barbell': 'Barbell', 'ez barbell': 'Barbell', 'olympic barbell': 'Barbell', 'trap bar': 'Barbell',
+    'leverage machine': 'Machine', 'smith machine': 'Machine', 'sled machine': 'Machine', 'assisted': 'Machine', 'skierg machine': 'Machine',
+    'upper body ergometer': 'Machine', 'stationary bike': 'Machine', 'elliptical machine': 'Machine', 'stepmill machine': 'Machine',
+    'band': 'Band', 'resistance band': 'Band', 'kettlebell': 'Kettlebell',
 }
 
 def refine(e, mus):
     """No dataset, agachamentos e avanços têm alvo 'glutes'; separa por nome para o app."""
     n = e['name'].lower()
     if e['target'] == 'glutes' and e.get('category') not in ('upper legs', None):
-        cat = {'chest': 'Peito', 'back': 'Costas', 'waist': 'Abdômen', 'shoulders': 'Ombros', 'lower legs': 'Panturrilha', 'cardio': 'Cardio', 'lower arms': 'Antebraço'}.get(e['category'])
-        if e['category'] == 'upper arms': return 'Tríceps' if 'tricep' in n else 'Bíceps'
+        cat = {'chest': 'Chest', 'back': 'Back', 'waist': 'Abs', 'shoulders': 'Shoulders', 'lower legs': 'Calves', 'cardio': 'Cardio', 'lower arms': 'Forearms'}.get(e['category'])
+        if e['category'] == 'upper arms': return 'Triceps' if 'tricep' in n else 'Biceps'
         if cat: return cat
     if e['target'] == 'glutes':
-        if re.search(r'stretch|pose|adduction|abduction|lift', n): return 'Glúteos'
-        if re.search(r'hip thrust|glute bridge|bridge|kickback|kick back|pull through|donkey|fire hydrant|hip extension|clam', n): return 'Glúteos'
-        if re.search(r'deadlift|good morning|stiff|leg curl|hamstring|romanian', n): return 'Posterior'
-        return 'Quadríceps'
+        if re.search(r'stretch|pose|adduction|abduction|lift', n): return 'Glutes'
+        if re.search(r'hip thrust|glute bridge|bridge|kickback|kick back|pull through|donkey|fire hydrant|hip extension|clam', n): return 'Glutes'
+        if re.search(r'deadlift|good morning|stiff|leg curl|hamstring|romanian', n): return 'Hamstrings'
+        return 'Quads'
     return mus
 
 def kind(e, mus):
@@ -68,23 +52,24 @@ if tr_dir:
             tr[x['id']] = x
 
 def cap(s): return s[:1].upper() + s[1:]
+def clean(n): return re.sub(r'\s*\((masculino|feminino|male|female)\)', '', n, flags=re.I).replace('в°', '°').strip()
+TARGET_EN = {'delts': 'Deltoids', 'abs': 'Abs', 'pectorals': 'Pectorals', 'lats': 'Lats', 'quads': 'Quadriceps', 'cardiovascular system': 'Cardiovascular system'}
 
 out, seen = [], {}
 for e in data:
-    mus = refine(e, MUSCLE.get(e['target'], 'Corpo todo'))
-    en_steps = e['instruction_steps']['en']
-    t = tr.get(e['id'])
-    ok = t and len(t['passos']) == len(en_steps) and t.get('nome')
-    name = cap(t['nome'].strip()) if ok else cap(e['name'])
-    name = re.sub(r'\s*\((masculino|feminino|male|female)\)', '', name, flags=re.I).strip()
+    mus = refine(e, MUSCLE.get(e['target'], 'Full body'))
+    en_steps = [x.strip() for x in e['instruction_steps']['en']]
+    name = cap(clean(e['name']))
     seen[name] = seen.get(name, 0) + 1
     if seen[name] > 1: name = f"{name} ({seen[name]})"
-    out.append({
-        'id': e['id'], 'n': name, 'en': e['name'], 'm': mus, 'e': EQUIP.get(e['equipment'], 'Outro'), 'k': kind(e, mus),
-        't': TARGET_PT.get(e['target'], cap(e['target'])), 's': [SECONDARY_PT.get(x, cap(x)) for x in e['secondary_muscles']],
-        'i': [s.strip() for s in (t['passos'] if ok else en_steps)], 'l': 'pt' if ok else 'en',
-    })
+    item = {
+        'id': e['id'], 'n': name, 'en': clean(e['name']).lower(), 'm': mus, 'e': EQUIP.get(e['equipment'], 'Other'), 'k': kind(e, mus),
+        't': TARGET_EN.get(e['target'], cap(e['target'])), 's': [cap(x) for x in e['secondary_muscles']], 'i': en_steps,
+    }
+    t = tr.get(e['id'])
+    if t and len(t['passos']) == len(en_steps) and t.get('nome'):  # português (pt-BR), guardado para o futuro seletor de idioma
+        item['pt'] = {'n': cap(re.sub(r'\s*\((masculino|feminino|male|female)\)', '', t['nome'], flags=re.I).strip()), 'i': [x.strip() for x in t['passos']]}
+    out.append(item)
 os.makedirs('src/data', exist_ok=True)
 json.dump(out, open('src/data/catalog.json', 'w'), ensure_ascii=False, separators=(',', ':'))
-pt = sum(1 for x in out if x['l'] == 'pt')
-print(f'{len(out)} exercícios, {pt} traduzidos, {os.path.getsize("src/data/catalog.json")//1024} KB')
+print(f'{len(out)} exercises, {sum(1 for x in out if "pt" in x)} with pt-BR, {os.path.getsize("src/data/catalog.json")//1024} KB')

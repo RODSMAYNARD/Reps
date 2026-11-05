@@ -103,9 +103,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const load = useCallback(async (uid: string, email: string) => {
     const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id').order('created_at');
     if (ex.error) return setError(ex.error.message);
-    setExercises(ex.data.map((r: any) => ({ id: r.id, name: r.name, muscle: r.muscle, equipment: r.equipment, kind: r.kind, catalogId: r.catalog_id })));
+    setExercises(ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id }; }));
 
-    const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'atleta';
+    const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'athlete';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
     if (pr.data) {
       const p = pr.data;
@@ -173,7 +173,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const rows = missing.flatMap((cid) => { const c = CAT_BY_ID.get(cid); return c ? [{ name: c.n, muscle: c.m, equipment: c.e, kind: c.k, catalog_id: cid }] : []; });
         const { data, error: e } = await supabase.from('exercises').insert(rows).select('id,name,muscle,equipment,kind,catalog_id');
         if (e) { fail(e.message); return ids; }
-        const added: Exercise[] = data.map((r: any) => ({ id: r.id, name: r.name, muscle: r.muscle, equipment: r.equipment, kind: r.kind, catalogId: r.catalog_id }));
+        const added: Exercise[] = data.map((r: any) => { const c = CAT_BY_ID.get(r.catalog_id); return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id }; });
         added.forEach((a) => have.set(a.catalogId!, a.id));
         exRef.current = [...exRef.current.filter((x) => !added.some((a) => a.id === x.id)), ...added];
         setExercises(exRef.current);
@@ -184,7 +184,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     signUp: async (email, password) => {
       const { data, error: e } = await supabase.auth.signUp({ email, password });
       if (e) return e.message;
-      return data.session ? null : 'Conta criada. Confirme o e-mail que enviamos e depois entre.';
+      return data.session ? null : 'Account created. Confirm the email we sent and then sign in.';
     },
     resetPassword: async (email) => (await supabase.auth.resetPasswordForEmail(email)).error?.message ?? null,
     signOut: async () => void (await supabase.auth.signOut()),
@@ -218,7 +218,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         exerciseId: e.exerciseId, notes: e.notes ?? '', restSec: e.restSec ?? 0, superset: e.superset ?? null,
         sets: (e.sets.length ? e.sets : ([{ type: 'normal', kg: null, reps: null }] as SetRow[])).map((s): ActiveSet => ({ ...s, done: false })),
       }));
-      activeRef.current = { id: randomUUID(), title: opts?.title ?? opts?.routine?.title ?? 'Treino', startedAt: new Date().toISOString(), pausedAt: null, pausedMs: 0, entries, fromRoutineId: opts?.routine?.id ?? null };
+      activeRef.current = { id: randomUUID(), title: opts?.title ?? opts?.routine?.title ?? 'Workout', startedAt: new Date().toISOString(), pausedAt: null, pausedMs: 0, entries, fromRoutineId: opts?.routine?.id ?? null };
       setActiveState(activeRef.current);
       if (userId) AsyncStorage.setItem(`reps:active:${userId}`, JSON.stringify(activeRef.current)).catch(() => {});
     },
@@ -248,19 +248,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const entries: SavedEntry[] = a.entries
         .map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, ...s }) => s) }))
         .filter((e) => e.sets.length > 0);
-      if (!entries.length) { fail('Conclua ao menos uma série para salvar o treino.'); return null; }
+      if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }
       const meta2 = {
         notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
         rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
         superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
       };
-      const w = await supabase.from('workouts').insert({ id: a.id, performed_at: meta.date, title: meta.title || 'Treino', description: meta.description, duration_sec: meta.durationSec, visibility: meta.visibility, meta: meta2 });
+      const w = await supabase.from('workouts').insert({ id: a.id, performed_at: meta.date, title: meta.title || 'Workout', description: meta.description, duration_sec: meta.durationSec, visibility: meta.visibility, meta: meta2 });
       if (w.error) { fail(w.error.message); return null; }
       let pos = 0;
       const rows = entries.flatMap((e) => e.sets.map((s) => ({ workout_id: a.id, exercise_id: e.exerciseId, position: pos++, reps: s.reps ?? 0, weight: s.kg ?? 0, set_type: s.type })));
       const s = await supabase.from('workout_sets').insert(rows);
       if (s.error) { await supabase.from('workouts').delete().eq('id', a.id); fail(s.error.message); return null; }
-      const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Treino', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries };
+      const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries };
       setWorkouts((l) => [saved, ...l]);
       setActive(() => null);
       setRest(null);
@@ -278,7 +278,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     saveRoutine: async (r) => {
-      const row = { title: r.title.trim() || 'Rotina', notes: r.notes, exercises: r.exercises as RoutineExercise[] };
+      const row = { title: r.title.trim() || 'Routine', notes: r.notes, exercises: r.exercises as RoutineExercise[] };
       const q = r.id ? supabase.from('routines').update(row).eq('id', r.id) : supabase.from('routines').insert(row);
       const { data, error: e } = await q.select('id,title,notes,exercises').single();
       if (e) { fail(e.message); return null; }
@@ -315,7 +315,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
 export function useStore() {
   const s = useContext(Ctx);
-  if (!s) throw new Error('useStore fora do StoreProvider');
+  if (!s) throw new Error('useStore must be used within StoreProvider');
   return s;
 }
 

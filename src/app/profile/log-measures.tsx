@@ -31,7 +31,7 @@ export default function LogMeasures() {
     MEASURE_FIELDS.forEach((f) => { const v = vals[f.key]; if (v != null) values[f.key] = f.unit === 'weight' ? fromDisplayWeight(v, u) : f.unit === 'body' ? fromDisplayBody(v, u) : v; });
     await saveMeasurement({ id: existing?.id, date: iso, values, photoUri: photo });
     if (values.weight) await syncWeight(values.weight);
-    showToast('Medidas salvas'); router.back();
+    showToast('Measurements saved'); router.back();
   };
   const syncWeight = async (kg: number) => { if (!existing) await saveProfileWeight(kg); };
   const { saveProfile } = useStore();
@@ -40,19 +40,19 @@ export default function LogMeasures() {
 
   return (
     <Screen>
-      <Header left="cancel" title="Registrar medidas" right={<HeaderAction label="Salvar" disabled={!any} onPress={save} />} />
+      <Header left="cancel" title="Log Measurements" right={<HeaderAction label="Save" disabled={!any} onPress={save} />} />
       <ScrollView keyboardShouldPersistTaps="handled">
-        <ListRow label="Data" detail={date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })} onPress={existing ? undefined : () => setSheet(true)} last />
-        <Section title="Foto de progresso" />
+        <ListRow label="Date" detail={date.toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })} onPress={existing ? undefined : () => setSheet(true)} last />
+        <Section title="Progress photo" />
         <View style={{ paddingHorizontal: 16 }}>
           {photo ? (
             <View><Image source={{ uri: photo }} style={{ width: 120, height: 160, borderRadius: 12 }} /><Pressable onPress={() => setPhoto(null)} style={{ position: 'absolute', left: 6, top: 6, backgroundColor: '#000a', borderRadius: 12 }}><Ionicons name="close" size={20} color="#fff" /></Pressable></View>
           ) : (
-            <Pressable onPress={pick} style={{ width: 120, height: 160, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, alignItems: 'center', justifyContent: 'center', gap: 6 }}><Ionicons name="camera-outline" size={28} color={colors.primary} /><Text style={{ color: colors.primary }}>Adicionar</Text></Pressable>
+            <Pressable onPress={pick} style={{ width: 120, height: 160, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, alignItems: 'center', justifyContent: 'center', gap: 6 }}><Ionicons name="camera-outline" size={28} color={colors.primary} /><Text style={{ color: colors.primary }}>Add</Text></Pressable>
           )}
-          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>A foto fica salva só neste aparelho.</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>The photo is saved on this device only.</Text>
         </View>
-        <Section title="Medidas" />
+        <Section title="Measurements" />
         {MEASURE_FIELDS.map((f) => {
           const unit = f.unit === 'weight' ? u.weight : f.unit === 'body' ? u.body : '%';
           return (
@@ -62,13 +62,13 @@ export default function LogMeasures() {
             </View>
           );
         })}
-        {existing && <Text onPress={() => setDel(true)} style={{ color: colors.danger, textAlign: 'center', padding: 24 }}>Excluir registro</Text>}
+        {existing && <Text onPress={() => setDel(true)} style={{ color: colors.danger, textAlign: 'center', padding: 24 }}>Delete entry</Text>}
         <TextInput style={{ height: 0 }} />
       </ScrollView>
-      <Sheet visible={sheet} onClose={() => setSheet(false)} title="Data do registro">
-        {[0, 1, 2, 3, 7, 14, 30].map((d) => <ListRow key={d} label={d === 0 ? 'Hoje' : d === 1 ? 'Ontem' : `Há ${d} dias`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setSheet(false); }} />)}
+      <Sheet visible={sheet} onClose={() => setSheet(false)} title="Entry date">
+        {[0, 1, 2, 3, 7, 14, 30].map((d) => <ListRow key={d} label={d === 0 ? 'Today' : d === 1 ? 'Yesterday' : `${d} days ago`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setSheet(false); }} />)}
       </Sheet>
-      <Dialog visible={del} title="Excluir registro?" message="Essa ação não pode ser desfeita." onClose={() => setDel(false)} actions={[{ label: 'Cancelar' }, { label: 'Excluir', danger: true, onPress: async () => { setDel(false); await deleteMeasurement(existing!.id); router.back(); } }]} />
+      <Dialog visible={del} title="Delete entry?" message="This can't be undone." onClose={() => setDel(false)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); await deleteMeasurement(existing!.id); router.back(); } }]} />
     </Screen>
   );
 }

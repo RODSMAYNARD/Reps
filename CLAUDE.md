@@ -32,6 +32,8 @@
 - Build nas lojas: `npx eas-cli@latest build --profile preview --platform all`
 
 ## Decisões
+- **App em inglês** (US). A versão em português está na tag git `pt-br-v1`; o catálogo guarda também o pt-BR (`pt` em cada item de `catalog.json`) e `data-src/exercises-all-languages.json` tem os 10 idiomas do dataset (en, es, it, tr, ru, zh, hi, pl, ko, fr) para adicionar idiomas depois
+- **Mídia dos exercícios (SÓ PARA TESTE):** 1.324 GIFs + miniaturas © Gym visual ficam no bucket PRIVADO `exercise-media` do Supabase (`gif/<id>.gif`, `thumb/<id>.jpg`), lidos por URL assinada (`src/lib/media.ts`). NÃO têm licença para distribuição: remover/trocar antes de qualquer lançamento
 - Layout e fluxos inspirados no Hevy (via Mobbin), com identidade própria: nome Reps, sem logo, ícones nem ilustrações do Hevy
 - Textos em português do Brasil; pesos guardados em kg e convertidos na tela
 - Reps em exercícios de duração = segundos
@@ -41,6 +43,8 @@
 Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, tema escuro (preferência salva, tema ainda não aplicado), importação de dados.
 
 ## Pendências
+- URGENTE: remover a policy temporária de upload anônimo do bucket: `drop policy "TEMP exercise media upload (anon)" on storage.objects;` (e apagar `probe/ping.jpg`)
+- Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR
 - Mídia dos exercícios: exige licença própria da Gym visual (https://gymvisual.com/) ou outra fonte livre
 - Conferir amostras das traduções (feitas por IA) e corrigir termos
 - Supabase > Authentication: ativar "Leaked password protection" e decidir confirmação de e-mail

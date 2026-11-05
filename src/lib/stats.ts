@@ -67,7 +67,7 @@ export function weeklySeries(workouts: Workout[], metric: 'duration' | 'volume' 
       (t, w) => t + (metric === 'duration' ? w.durationSec / 3600 : metric === 'volume' ? workoutVolume(w) : w.entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.reps ?? 0), 0), 0)),
       0,
     );
-    return { label: from.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), value };
+    return { label: from.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' }), value };
   });
 }
 

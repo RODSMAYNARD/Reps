@@ -2,7 +2,7 @@ import raw from '../data/catalog.json';
 import { Exercise, ExerciseKind } from './types';
 
 /** Catálogo de exercícios embutido no app (texto do dataset MIT hasaneyldrm/exercises-dataset, traduzido). */
-export type CatItem = { id: string; n: string; en: string; m: string; e: string; k: ExerciseKind; t: string; s: string[]; i: string[]; l: 'pt' | 'en' };
+export type CatItem = { id: string; n: string; en: string; m: string; e: string; k: ExerciseKind; t: string; s: string[]; i: string[]; pt?: { n: string; i: string[] } };
 export const CATALOG = raw as CatItem[];
 export const CAT_BY_ID = new Map(CATALOG.map((c) => [c.id, c]));
 export const CAT_BY_EN = new Map(CATALOG.map((c) => [c.en.toLowerCase(), c]));
@@ -19,8 +19,9 @@ export function searchExercises(list: Exercise[], q: string, muscle: string, equ
       if (muscle !== 'all' && e.muscle !== muscle) return false;
       if (equipment !== 'all' && e.equipment !== equipment) return false;
       if (!terms.length) return true;
-      const hay = norm(e.name + ' ' + (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.en ?? '' : ''));
+      const c = e.catalogId ? CAT_BY_ID.get(e.catalogId) : undefined;
+      const hay = norm(e.name + ' ' + (c?.pt?.n ?? ''));
       return terms.every((t) => hay.includes(t));
     })
-    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'));
 }

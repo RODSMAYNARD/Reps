@@ -17,20 +17,20 @@ export default function AboutYou() {
   const thisYear = new Date().getFullYear();
   return (
     <Screen>
-      <Header title="Sobre você" />
+      <Header title="About you" />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: colors.muted, padding: 16 }}>Usamos esses dados para calcular seu nível de força e comparar com outras pessoas. Você pode pular e preencher depois.</Text>
-        <ListRow label="Sexo" detail={sex === 'male' ? 'Masculino' : sex === 'female' ? 'Feminino' : 'Selecionar'} onPress={() => setSheet('sex')} />
-        <ListRow label="Ano de nascimento" detail={year ? String(year) : 'Selecionar'} onPress={() => setSheet('year')} />
-        <ListRow label="Peso corporal" detail={kg ? `${Math.round(toDisplayWeight(kg, u) * 10) / 10} ${u.weight}` : 'Selecionar'} onPress={() => setSheet('weight')} last />
+        <Text style={{ color: colors.muted, padding: 16 }}>We use this to calculate your strength level and compare you with other people. You can skip this and fill it in later.</Text>
+        <ListRow label="Sex" detail={sex === 'male' ? 'Male' : sex === 'female' ? 'Female' : 'Select'} onPress={() => setSheet('sex')} />
+        <ListRow label="Birth year" detail={year ? String(year) : 'Select'} onPress={() => setSheet('year')} />
+        <ListRow label="Body weight" detail={kg ? `${Math.round(toDisplayWeight(kg, u) * 10) / 10} ${u.weight}` : 'Select'} onPress={() => setSheet('weight')} last />
       </View>
       <View style={{ padding: 16, gap: 8 }}>
-        <Btn title="Continuar" testID="about-continue" onPress={() => { saveProfile({ sex, birthYear: year, weightKg: kg }); router.push('/paywall'); }} />
-        <TextLink title="Pular" onPress={() => router.push('/paywall')} style={{ padding: 8 }} />
+        <Btn title="Continue" testID="about-continue" onPress={() => { saveProfile({ sex, birthYear: year, weightKg: kg }); router.push('/paywall'); }} />
+        <TextLink title="Skip" onPress={() => router.push('/paywall')} style={{ padding: 8 }} />
       </View>
-      <OptionSheet visible={sheet === 'sex'} title="Sexo" onClose={() => setSheet(null)} options={[{ id: 'male', label: 'Masculino' }, { id: 'female', label: 'Feminino' }]} onPick={(v) => setSex(v as 'male' | 'female')} />
-      {sheet === 'year' && <NumberSheet visible title="Ano de nascimento" values={range(thisYear - 90, thisYear - 12).reverse()} selected={year ?? 1995} onDone={setYear} onClose={() => setSheet(null)} />}
-      {sheet === 'weight' && <NumberSheet visible title={`Peso corporal (${u.weight})`} values={range(u.weight === 'kg' ? 30 : 66, u.weight === 'kg' ? 200 : 440, 0.5)} selected={Math.round(toDisplayWeight(kg ?? 75, u) * 2) / 2} format={(v) => `${v} ${u.weight}`} onDone={(v) => setKg(fromDisplayWeight(v, u))} onClose={() => setSheet(null)} />}
+      <OptionSheet visible={sheet === 'sex'} title="Sex" onClose={() => setSheet(null)} options={[{ id: 'male', label: 'Male' }, { id: 'female', label: 'Female' }]} onPick={(v) => setSex(v as 'male' | 'female')} />
+      {sheet === 'year' && <NumberSheet visible title="Birth year" values={range(thisYear - 90, thisYear - 12).reverse()} selected={year ?? 1995} onDone={setYear} onClose={() => setSheet(null)} />}
+      {sheet === 'weight' && <NumberSheet visible title={`Body weight (${u.weight})`} values={range(u.weight === 'kg' ? 30 : 66, u.weight === 'kg' ? 200 : 440, 0.5)} selected={Math.round(toDisplayWeight(kg ?? 75, u) * 2) / 2} format={(v) => `${v} ${u.weight}`} onDone={(v) => setKg(fromDisplayWeight(v, u))} onClose={() => setSheet(null)} />}
     </Screen>
   );
 }

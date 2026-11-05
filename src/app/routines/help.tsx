@@ -5,15 +5,15 @@ import { Btn, Header, Screen } from '../../components/ui';
 import { colors, radius } from '../../lib/theme';
 
 const STEPS = [
-  { icon: 'clipboard-outline', text: 'Rotinas são reutilizáveis e poupam tempo: você planeja o treino antes de ir à academia.' },
-  { icon: 'create-outline', text: 'Informe a carga e as repetições planejadas, ou deixe em branco e preencha durante o treino.' },
-  { icon: 'timer-outline', text: 'Defina um cronômetro de descanso automático entre as séries de cada exercício.' },
+  { icon: 'clipboard-outline', text: 'Routines are reusable and save time: plan your workout before you hit the gym.' },
+  { icon: 'create-outline', text: 'Enter your planned weight and reps, or leave them blank and fill them in during the workout.' },
+  { icon: 'timer-outline', text: 'Set an automatic rest timer between sets for each exercise.' },
 ] as const;
 
 export default function RoutineHelp() {
   return (
     <Screen>
-      <Header title="Ajuda de rotinas" />
+      <Header title="Routine help" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 18 }}>
         {STEPS.map((s) => (
           <View key={s.text} style={{ gap: 12 }}>
@@ -21,8 +21,8 @@ export default function RoutineHelp() {
             <View style={{ backgroundColor: colors.surface, borderRadius: radius.lg, height: 120, alignItems: 'center', justifyContent: 'center' }}><Ionicons name={s.icon} size={52} color={colors.primary} /></View>
           </View>
         ))}
-        <View style={{ alignItems: 'center', gap: 8 }}><Ionicons name="checkmark-circle" size={44} color={colors.success} /><Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Termine de criar sua rotina</Text></View>
-        <Btn title="Voltar" onPress={() => router.back()} />
+        <View style={{ alignItems: 'center', gap: 8 }}><Ionicons name="checkmark-circle" size={44} color={colors.success} /><Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Finish creating your routine</Text></View>
+        <Btn title="Back" onPress={() => router.back()} />
       </ScrollView>
     </Screen>
   );

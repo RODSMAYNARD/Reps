@@ -36,19 +36,19 @@ export default function GeneratePlan() {
     const map = new Map(all.map((id, i) => [id, real[i]]));
     for (const r of plan.routines) await saveRoutine({ title: `${plan.name} · ${r.title}`, notes: r.notes, exercises: r.exercises.map((e) => ({ ...e, exerciseId: map.get(e.exerciseId) ?? e.exerciseId })) });
     setBusy(false);
-    showToast(`Plano salvo: ${plan.routines.length} rotinas`);
+    showToast(`Plan saved: ${plan.routines.length} routines`);
     router.back();
   };
 
   return (
     <Screen>
-      <Header title="Gerar plano de treino" />
+      <Header title="Generate workout plan" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 18 }}>
-        <Group title="Objetivo" value={goal} onChange={(v) => { setGoal(v); setPlan(null); }} items={[{ id: 'hypertrophy', label: 'Hipertrofia' }, { id: 'strength', label: 'Força' }, { id: 'fatloss', label: 'Emagrecimento' }]} />
-        <Group title="Dias por semana" value={days} onChange={(v) => { setDays(v); setPlan(null); }} items={[2, 3, 4, 5, 6].map((d) => ({ id: d, label: `${d} dias` }))} />
-        <Group title="Nível" value={level} onChange={(v) => { setLevel(v); setPlan(null); }} items={[{ id: 'beginner', label: 'Iniciante' }, { id: 'intermediate', label: 'Intermediário' }, { id: 'advanced', label: 'Avançado' }]} />
-        <Group title="Equipamento" value={gear} onChange={(v) => { setGear(v); setPlan(null); }} items={[{ id: 'gym', label: 'Academia' }, { id: 'dumbbell', label: 'Só halteres' }, { id: 'body', label: 'Peso do corpo' }]} />
-        <Btn title={plan ? 'Gerar outra variação' : 'Gerar plano'} icon="sparkles-outline" onPress={() => make(plan ? seed + 1 : 1)} testID="generate-plan" />
+        <Group title="Goal" value={goal} onChange={(v) => { setGoal(v); setPlan(null); }} items={[{ id: 'hypertrophy', label: 'Hypertrophy' }, { id: 'strength', label: 'Strength' }, { id: 'fatloss', label: 'Fat loss' }]} />
+        <Group title="Days per week" value={days} onChange={(v) => { setDays(v); setPlan(null); }} items={[2, 3, 4, 5, 6].map((d) => ({ id: d, label: `${d} days` }))} />
+        <Group title="Level" value={level} onChange={(v) => { setLevel(v); setPlan(null); }} items={[{ id: 'beginner', label: 'Beginner' }, { id: 'intermediate', label: 'Intermediate' }, { id: 'advanced', label: 'Advanced' }]} />
+        <Group title="Equipment" value={gear} onChange={(v) => { setGear(v); setPlan(null); }} items={[{ id: 'gym', label: 'Gym' }, { id: 'dumbbell', label: 'Dumbbells only' }, { id: 'body', label: 'Body weight' }]} />
+        <Btn title={plan ? 'Generate another variation' : 'Generate plan'} icon="sparkles-outline" onPress={() => make(plan ? seed + 1 : 1)} testID="generate-plan" />
         {plan && (
           <View style={{ gap: 12 }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{plan.name}</Text>
@@ -57,10 +57,10 @@ export default function GeneratePlan() {
                 <Text style={{ fontWeight: '700', fontSize: 16, color: colors.text }}>{r.title}</Text>
                 <Text style={{ color: colors.muted }}>{r.notes}</Text>
                 {r.exercises.map((e) => <Text key={e.exerciseId} style={{ color: colors.text }}>• {nameOf(e.exerciseId)}</Text>)}
-                {r.exercises.length === 0 && <Text style={{ color: colors.danger }}>Sem exercícios compatíveis. Cadastre exercícios ou mude o equipamento.</Text>}
+                {r.exercises.length === 0 && <Text style={{ color: colors.danger }}>No matching exercises. Add exercises or change your equipment.</Text>}
               </Card>
             ))}
-            <Btn title={`Salvar plano (${plan.routines.length} rotinas)`} loading={busy} onPress={save} testID="save-plan" />
+            <Btn title={`Save plan (${plan.routines.length} routines)`} loading={busy} onPress={save} testID="save-plan" />
           </View>
         )}
       </ScrollView>

@@ -11,17 +11,17 @@ export default function UnitsStep() {
   const [u, setU] = useState<Units>(profile.units);
   return (
     <Screen>
-      <Header title="Escolha as unidades" left="none" />
+      <Header title="Choose your units" left="none" />
       <View style={{ flex: 1, padding: 16, gap: 22 }}>
-        <View style={{ gap: 8 }}><Text style={{ color: colors.muted }}>Peso</Text>
+        <View style={{ gap: 8 }}><Text style={{ color: colors.muted }}>Weight</Text>
           <Segmented options={[{ id: 'kg', label: 'kg' }, { id: 'lbs', label: 'lbs' }]} value={u.weight} onChange={(weight) => setU({ ...u, weight })} /></View>
-        <View style={{ gap: 8 }}><Text style={{ color: colors.muted }}>Distância</Text>
-          <Segmented options={[{ id: 'km', label: 'quilômetros' }, { id: 'mi', label: 'milhas' }]} value={u.distance} onChange={(distance) => setU({ ...u, distance })} /></View>
-        <View style={{ gap: 8 }}><Text style={{ color: colors.muted }}>Medidas corporais</Text>
-          <Segmented options={[{ id: 'cm', label: 'cm' }, { id: 'in', label: 'pol' }]} value={u.body} onChange={(body) => setU({ ...u, body })} /></View>
+        <View style={{ gap: 8 }}><Text style={{ color: colors.muted }}>Distance</Text>
+          <Segmented options={[{ id: 'km', label: 'kilometers' }, { id: 'mi', label: 'miles' }]} value={u.distance} onChange={(distance) => setU({ ...u, distance })} /></View>
+        <View style={{ gap: 8 }}><Text style={{ color: colors.muted }}>Body measurements</Text>
+          <Segmented options={[{ id: 'cm', label: 'cm' }, { id: 'in', label: 'in' }]} value={u.body} onChange={(body) => setU({ ...u, body })} /></View>
       </View>
       <View style={{ padding: 16 }}>
-        <Btn title="Continuar" testID="units-continue" onPress={() => { saveProfile({ units: u }); router.push('/intro'); }} />
+        <Btn title="Continue" testID="units-continue" onPress={() => { saveProfile({ units: u }); router.push('/intro'); }} />
       </View>
     </Screen>
   );

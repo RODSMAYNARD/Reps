@@ -16,16 +16,16 @@ export default function WorkoutDetail() {
   const [more, setMore] = useState(false);
   const [del, setDel] = useState(false);
   const [liked, setLiked] = useState(false);
-  if (!w) return <Screen><Header title="Detalhe do treino" /></Screen>;
+  if (!w) return <Screen><Header title="Workout detail" /></Screen>;
   const u = profile.units;
   const dist = muscleDistribution([w], exercises);
-  const nameOf = (eid: string) => exercises.find((e) => e.id === eid)?.name ?? 'Exercício removido';
-  const copy = () => { setMenu(false); if (active) return showToast('Termine ou descarte o treino atual primeiro.'); startWorkout({ entries: w.entries, title: w.title }); router.push('/active'); };
-  const asRoutine = async () => { setMenu(false); const r = await saveRoutine({ title: w.title, notes: '', exercises: w.entries.map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, sets: e.sets, superset: e.superset })) }); if (r) showToast('Salvo como rotina'); };
+  const nameOf = (eid: string) => exercises.find((e) => e.id === eid)?.name ?? 'Removed exercise';
+  const copy = () => { setMenu(false); if (active) return showToast('Finish or discard your current workout first.'); startWorkout({ entries: w.entries, title: w.title }); router.push('/active'); };
+  const asRoutine = async () => { setMenu(false); const r = await saveRoutine({ title: w.title, notes: '', exercises: w.entries.map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, sets: e.sets, superset: e.superset })) }); if (r) showToast('Saved as routine'); };
   return (
     <Screen>
-      <Header title="Detalhe do treino" right={<>
-        <IconButton name="share-outline" onPress={() => Share.share({ message: `${w.title} — ${fmtDuration(w.durationSec)}, ${fmtVolume(workoutVolume(w), u)} no Reps` })} />
+      <Header title="Workout detail" right={<>
+        <IconButton name="share-outline" onPress={() => Share.share({ message: `${w.title} — ${fmtDuration(w.durationSec)}, ${fmtVolume(workoutVolume(w), u)} on Reps` })} />
         <IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} testID="detail-menu" />
       </>} />
       <ScrollView>
@@ -36,13 +36,13 @@ export default function WorkoutDetail() {
           </View>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{w.title}</Text>
           {!!w.description && <Text style={{ color: colors.text }}>{w.description}</Text>}
-          <View style={{ flexDirection: 'row', gap: 28 }}><Stat label="Tempo" value={fmtDuration(w.durationSec)} /><Stat label="Volume" value={fmtVolume(workoutVolume(w), u)} /><Stat label="Séries" value={String(workoutSets(w))} /></View>
+          <View style={{ flexDirection: 'row', gap: 28 }}><Stat label="Time" value={fmtDuration(w.durationSec)} /><Stat label="Volume" value={fmtVolume(workoutVolume(w), u)} /><Stat label="Sets" value={String(workoutSets(w))} /></View>
           <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>
             <Pressable onPress={() => setLiked(!liked)}><Ionicons name={liked ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={liked ? colors.primary : colors.text} /></Pressable>
-            <Ionicons name="chatbubble-outline" size={24} color={colors.text} onPress={() => showToast('Comentários chegam com o recurso social.')} />
+            <Ionicons name="chatbubble-outline" size={24} color={colors.text} onPress={() => showToast('Comments are coming with the social features.')} />
           </View>
         </View>
-        <Section title="Distribuição muscular" />
+        <Section title="Muscle distribution" />
         <View style={{ paddingHorizontal: 16, gap: 10 }}>
           {(more ? dist : dist.slice(0, 3)).map((d) => (
             <View key={d.name} style={{ gap: 4 }}>
@@ -50,26 +50,26 @@ export default function WorkoutDetail() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={{ height: 14, width: `${Math.max(2, d.pct) * 0.8}%`, backgroundColor: colors.primary, borderRadius: 3 }} /><Text style={{ color: colors.muted }}>{d.pct}%</Text></View>
             </View>
           ))}
-          {dist.length > 3 && <Text onPress={() => setMore(!more)} style={{ color: colors.primary }}>{more ? 'Mostrar menos' : 'Mostrar mais'}</Text>}
+          {dist.length > 3 && <Text onPress={() => setMore(!more)} style={{ color: colors.primary }}>{more ? 'Show less' : 'Show more'}</Text>}
         </View>
-        <Section title="Treino" />
+        <Section title="Workout" />
         {w.entries.map((e, i) => (
           <View key={i} style={{ paddingBottom: 10 }}>
             {e.superset != null && <Text style={{ alignSelf: 'flex-start', marginLeft: 16, backgroundColor: colors.purple, color: '#fff', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' }}>Superset</Text>}
             <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: 16, fontWeight: '600', padding: 16, paddingBottom: 6 }}>{nameOf(e.exerciseId)}</Text>
             {e.notes ? <Text style={{ paddingHorizontal: 16, color: colors.muted }}>{e.notes}</Text> : null}
-            <View style={{ flexDirection: 'row', paddingHorizontal: 16 }}><Text style={{ width: 50, color: colors.muted, fontSize: 12 }}>SÉRIE</Text><Text style={{ color: colors.muted, fontSize: 12 }}>PESO E REPS</Text></View>
-            {e.sets.map((s, j) => <View key={j} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: j % 2 ? colors.surface : colors.bg }}><Text style={{ width: 50, fontWeight: '600', color: s.type === 'warmup' ? colors.warn : colors.text }}>{s.type === 'warmup' ? 'A' : s.type === 'failure' ? 'F' : s.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((x) => x.type === 'normal').length}</Text><Text style={{ color: colors.text }}>{fmtWeight(s.kg ?? 0, u)} × {s.reps} reps</Text></View>)}
+            <View style={{ flexDirection: 'row', paddingHorizontal: 16 }}><Text style={{ width: 50, color: colors.muted, fontSize: 12 }}>SET</Text><Text style={{ color: colors.muted, fontSize: 12 }}>WEIGHT & REPS</Text></View>
+            {e.sets.map((s, j) => <View key={j} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: j % 2 ? colors.surface : colors.bg }}><Text style={{ width: 50, fontWeight: '600', color: s.type === 'warmup' ? colors.warn : colors.text }}>{s.type === 'warmup' ? 'W' : s.type === 'failure' ? 'F' : s.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((x) => x.type === 'normal').length}</Text><Text style={{ color: colors.text }}>{fmtWeight(s.kg ?? 0, u)} × {s.reps} reps</Text></View>)}
           </View>
         ))}
       </ScrollView>
       <Sheet visible={menu} onClose={() => setMenu(false)}>
-        <ListRow icon="download-outline" label="Salvar como rotina" onPress={asRoutine} />
-        <ListRow icon="copy-outline" label="Copiar treino" onPress={copy} />
-        <ListRow icon="alert-circle-outline" label="Reportar treino" danger onPress={() => { setMenu(false); router.push({ pathname: '/feed/report', params: { id: w.id } }); }} />
-        <ListRow icon="trash-outline" label="Excluir treino" danger last onPress={() => { setMenu(false); setDel(true); }} />
+        <ListRow icon="download-outline" label="Save as routine" onPress={asRoutine} />
+        <ListRow icon="copy-outline" label="Copy workout" onPress={copy} />
+        <ListRow icon="alert-circle-outline" label="Report workout" danger onPress={() => { setMenu(false); router.push({ pathname: '/feed/report', params: { id: w.id } }); }} />
+        <ListRow icon="trash-outline" label="Delete workout" danger last onPress={() => { setMenu(false); setDel(true); }} />
       </Sheet>
-      <Dialog visible={del} title="Excluir treino?" message="Essa ação não pode ser desfeita." onClose={() => setDel(false)} actions={[{ label: 'Cancelar' }, { label: 'Excluir', danger: true, onPress: async () => { setDel(false); await deleteWorkout(w.id); router.back(); } }]} />
+      <Dialog visible={del} title="Delete workout?" message="This can't be undone." onClose={() => setDel(false)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); await deleteWorkout(w.id); router.back(); } }]} />
     </Screen>
   );
 }

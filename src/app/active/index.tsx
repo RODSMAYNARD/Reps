@@ -1,3 +1,4 @@
+import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -37,7 +38,7 @@ export default function ActiveWorkoutScreen() {
 
   if (!active)
     return (
-      <Screen><Header left="down" title="Registrar treino" /><Empty text="Nenhum treino em andamento." action={<Btn title="Voltar" onPress={() => router.back()} />} /></Screen>
+      <Screen><Header left="down" title="Log Workout" /><Empty text="No workout in progress." action={<Btn title="Back" onPress={() => router.back()} />} /></Screen>
     );
 
   const exOf = (id: string): Exercise | undefined => exercises.find((e) => e.id === id);
@@ -48,7 +49,7 @@ export default function ActiveWorkoutScreen() {
 
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
   const goSave = () => router.push('/active/save');
-  const finish = () => (doneSets.length === 0 ? st.showToast('Conclua ao menos uma série.') : pending > 0 ? setIncomplete(true) : goSave());
+  const finish = () => (doneSets.length === 0 ? st.showToast('Complete at least one set.') : pending > 0 ? setIncomplete(true) : goSave());
   const restLeft = rest ? Math.max(0, Math.round((rest.endsAt - now) / 1000)) : 0;
   if (rest && restLeft <= 0) setTimeout(() => st.skipRest(), 0);
 
@@ -60,18 +61,18 @@ export default function ActiveWorkoutScreen() {
 
   return (
     <Screen>
-      <Header left="down" title="Registrar treino" right={<>
+      <Header left="down" title="Log Workout" right={<>
         <IconButton name="timer-outline" onPress={() => setTimerSheet(true)} testID="open-timer" />
-        <HeaderAction label="Finalizar" primary onPress={finish} />
+        <HeaderAction label="Finish" primary onPress={finish} />
       </>} />
       <ScrollView contentContainerStyle={{ paddingBottom: rest ? 180 : 40 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Pressable onPress={() => setDurSheet(true)} testID="duration"><Text style={{ color: colors.muted, fontSize: 13 }}>Duração</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDuration(elapsed)}</Text></Pressable>
+          <Pressable onPress={() => setDurSheet(true)} testID="duration"><Text style={{ color: colors.muted, fontSize: 13 }}>Duration</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDuration(elapsed)}</Text></Pressable>
           <Stat label="Volume" value={fmtVolume(volume, u)} />
-          <Stat label="Séries" value={String(doneSets.length)} />
+          <Stat label="Sets" value={String(doneSets.length)} />
         </View>
 
-        {active.entries.length === 0 && <Empty text="Comece adicionando um exercício ao seu treino." />}
+        {active.entries.length === 0 && <Empty text="Start by adding an exercise to your workout." />}
 
         {active.entries.map((e, i) => {
           const ex = exOf(e.exerciseId);
@@ -79,19 +80,19 @@ export default function ActiveWorkoutScreen() {
           return (
             <View key={`${e.exerciseId}-${i}`} style={{ paddingTop: 16 }} testID="entry">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="barbell-outline" size={22} color={colors.muted} /></View>
-                <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ flex: 1, color: colors.primary, fontSize: 17, fontWeight: '600' }}>{ex?.name ?? 'Exercício removido'}</Text>
+                <ExerciseThumb catalogId={ex?.catalogId} />
+                <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ flex: 1, color: colors.primary, fontSize: 17, fontWeight: '600' }}>{ex?.name ?? 'Removed exercise'}</Text>
                 <IconButton name="ellipsis-vertical" onPress={() => setMenu(i)} testID="entry-menu" />
               </View>
-              <TextInput value={e.notes} onChangeText={(t) => st.patchEntry(i, { notes: t })} placeholder="Adicione notas aqui..." placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 10, color: colors.text }} />
+              <TextInput value={e.notes} onChangeText={(t) => st.patchEntry(i, { notes: t })} placeholder="Add notes here..." placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 10, color: colors.text }} />
               <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 10 }}>
-                <Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Descanso: {fmtRest(e.restSec)}</Text>
+                <Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Rest Timer: {fmtRest(e.restSec)}</Text>
               </Pressable>
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
-                <Text style={[h.c, { width: 44 }]}>SÉRIE</Text>
-                <Text style={[h.c, { flex: 1.3 }]}>ANTERIOR</Text>
+                <Text style={[h.c, { width: 44 }]}>SET</Text>
+                <Text style={[h.c, { flex: 1.3 }]}>PREVIOUS</Text>
                 {kind === 'weight_reps' && <Text style={[h.c, { flex: 1 }]}>{u.weight.toUpperCase()}</Text>}
-                <Text style={[h.c, { flex: 1 }]}>{kind === 'duration' ? 'SEG' : 'REPS'}</Text>
+                <Text style={[h.c, { flex: 1 }]}>{kind === 'duration' ? 'SEC' : 'REPS'}</Text>
                 <Text style={[h.c, { width: 44 }]}>✓</Text>
               </View>
               {e.sets.map((s, j) => {
@@ -119,14 +120,14 @@ export default function ActiveWorkoutScreen() {
                   </View>
                 );
               })}
-              <View style={{ paddingHorizontal: 16, paddingTop: 10 }}><Btn title="Adicionar série" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
+              <View style={{ paddingHorizontal: 16, paddingTop: 10 }}><Btn title="Add Set" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
             </View>
           );
         })}
 
         <View style={{ padding: 16, gap: 10, marginTop: 16 }}>
-          <Btn title="Adicionar exercício" icon="add" onPress={() => pickFor((ids) => st.addEntries(ids))} testID="add-exercise" />
-          <Btn title="Cancelar treino" variant="ghost" onPress={() => setCancelAsk(true)} style={{ borderWidth: 0 }} />
+          <Btn title="Add Exercise" icon="add" onPress={() => pickFor((ids) => st.addEntries(ids))} testID="add-exercise" />
+          <Btn title="Cancel Workout" variant="ghost" onPress={() => setCancelAsk(true)} style={{ borderWidth: 0 }} />
         </View>
       </ScrollView>
 
@@ -137,27 +138,27 @@ export default function ActiveWorkoutScreen() {
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Btn title="-15" variant="secondary" style={{ flex: 1 }} onPress={() => st.adjustRest(-15)} />
             <Btn title="+15" variant="secondary" style={{ flex: 1 }} onPress={() => st.adjustRest(15)} />
-            <Btn title="Pular" style={{ flex: 1 }} onPress={st.skipRest} testID="rest-skip" />
+            <Btn title="Skip" style={{ flex: 1 }} onPress={st.skipRest} testID="rest-skip" />
           </View>
         </View>
       )}
 
-      {/* tipo de série */}
-      <Sheet visible={!!setSheet} onClose={() => setSetSheet(null)} title="Tipo de série">
+      {/* set type */}
+      <Sheet visible={!!setSheet} onClose={() => setSetSheet(null)} title="Set Type">
         {SET_TYPES.map((t) => (
           <ListRow key={t.type} label={t.label} last={false}
             right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ color: t.color, fontWeight: '700', width: 16 }}>{t.badge || '1'}</Text><Ionicons name="help-circle-outline" size={20} color={colors.faint} onPress={() => setHelpType(t.help)} /></View>}
             onPress={() => { st.patchSet(setSheet!.i, setSheet!.j, { type: t.type }); setSetSheet(null); }} />
         ))}
-        <ListRow icon="close" label="Remover série" danger last onPress={() => { st.removeSet(setSheet!.i, setSheet!.j); setSetSheet(null); }} />
+        <ListRow icon="close" label="Remove Set" danger last onPress={() => { st.removeSet(setSheet!.i, setSheet!.j); setSetSheet(null); }} />
       </Sheet>
       <Dialog visible={!!helpType} message={helpType ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setHelpType(null) }]} />
 
       {/* descanso do exercício */}
-      <Sheet visible={restSheet !== null} onClose={() => setRestSheet(null)} title="Cronômetro de descanso">
+      <Sheet visible={restSheet !== null} onClose={() => setRestSheet(null)} title="Rest Timer">
         <ScrollView style={{ maxHeight: 320 }}>
           {REST_OPTIONS.map((sec) => (
-            <ListRow key={sec} label={sec ? fmtRest(sec) : 'Desligado'} last right={restSheet !== null && active.entries[restSheet]?.restSec === sec ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined}
+            <ListRow key={sec} label={sec ? fmtRest(sec) : 'Off'} last right={restSheet !== null && active.entries[restSheet]?.restSec === sec ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined}
               onPress={() => { st.patchEntry(restSheet!, { restSec: sec }); setRestSheet(null); }} />
           ))}
         </ScrollView>
@@ -165,37 +166,37 @@ export default function ActiveWorkoutScreen() {
 
       {/* menu do exercício */}
       <Sheet visible={menu !== null} onClose={() => setMenu(null)}>
-        <ListRow icon="swap-horizontal-outline" label="Substituir exercício" onPress={() => { const i = menu!; setMenu(null); pickFor((ids) => ids[0] && st.replaceEntry(i, ids[0]), true); }} />
-        <ListRow icon="link-outline" label={menu !== null && active.entries[menu]?.superset != null ? 'Remover do superset' : 'Superset com o próximo'} onPress={() => {
+        <ListRow icon="swap-horizontal-outline" label="Replace Exercise" onPress={() => { const i = menu!; setMenu(null); pickFor((ids) => ids[0] && st.replaceEntry(i, ids[0]), true); }} />
+        <ListRow icon="link-outline" label={menu !== null && active.entries[menu]?.superset != null ? 'Remove from superset' : 'Superset with next'} onPress={() => {
           const i = menu!; setMenu(null);
           const cur = active.entries[i];
           if (cur.superset != null) return st.patchEntry(i, { superset: null });
           const id = (Math.max(0, ...active.entries.map((x) => x.superset ?? 0)) + 1);
           st.patchEntry(i, { superset: id }); if (active.entries[i + 1]) st.patchEntry(i + 1, { superset: id });
         }} />
-        <ListRow icon="information-circle-outline" label="Ver exercício" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
-        <ListRow icon="trash-outline" label="Remover exercício" danger last onPress={() => { st.removeEntry(menu!); setMenu(null); }} />
+        <ListRow icon="information-circle-outline" label="View Exercise" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
+        <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { st.removeEntry(menu!); setMenu(null); }} />
       </Sheet>
 
       {/* duração */}
       {durSheet && (
-        <Sheet visible onClose={() => setDurSheet(false)} title="Duração">
-          <ListRow label="Duração" detail={fmtDuration(elapsed)} last />
+        <Sheet visible onClose={() => setDurSheet(false)} title="Duration">
+          <ListRow label="Duration" detail={fmtDuration(elapsed)} last />
           <NumberSheetInline minutes={Math.floor(elapsed / 60)} onChange={(m) => st.setElapsed(m * 60)} />
-          <ListRow label="Início" detail={new Date(active.startedAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} last />
-          <Btn title={active.pausedAt ? 'Retomar cronômetro' : 'Pausar cronômetro do treino'} icon={active.pausedAt ? 'play' : 'pause'} onPress={() => { st.pauseToggle(); setDurSheet(false); }} style={{ marginTop: 12 }} />
+          <ListRow label="Start" detail={new Date(active.startedAt).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} last />
+          <Btn title={active.pausedAt ? 'Resume timer' : 'Pause workout timer'} icon={active.pausedAt ? 'play' : 'pause'} onPress={() => { st.pauseToggle(); setDurSheet(false); }} style={{ marginTop: 12 }} />
         </Sheet>
       )}
 
       {/* timer manual */}
-      <Sheet visible={timerSheet} onClose={() => setTimerSheet(false)} title="Cronômetro de descanso">
+      <Sheet visible={timerSheet} onClose={() => setTimerSheet(false)} title="Rest Timer">
         {[30, 60, 90, 120, 180, 300].map((s) => <ListRow key={s} icon="timer-outline" label={fmtRest(s)} last onPress={() => { st.startRest(s); setTimerSheet(false); }} />)}
       </Sheet>
 
-      <Dialog visible={cancelAsk} title="Cancelar treino?" message="Todo o progresso deste treino será perdido." onClose={() => setCancelAsk(false)}
-        actions={[{ label: 'Continuar' }, { label: 'Descartar', danger: true, onPress: () => { setCancelAsk(false); st.discardActive(); router.back(); } }]} />
-      <Dialog visible={incomplete} title="Há séries não concluídas" message={`${pending} série(s) sem ✓ não serão salvas. Finalizar mesmo assim?`} onClose={() => setIncomplete(false)}
-        actions={[{ label: 'Voltar' }, { label: 'Finalizar', primary: true, onPress: () => { setIncomplete(false); goSave(); } }]} />
+      <Dialog visible={cancelAsk} title="Cancel workout?" message="All progress in this workout will be lost." onClose={() => setCancelAsk(false)}
+        actions={[{ label: 'Keep going' }, { label: 'Discard', danger: true, onPress: () => { setCancelAsk(false); st.discardActive(); router.back(); } }]} />
+      <Dialog visible={incomplete} title="Incomplete sets" message={`${pending} set(s) without ✓ won't be saved. Finish anyway?`} onClose={() => setIncomplete(false)}
+        actions={[{ label: 'Back' }, { label: 'Finish', primary: true, onPress: () => { setIncomplete(false); goSave(); } }]} />
     </Screen>
   );
 }

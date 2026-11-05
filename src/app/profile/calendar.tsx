@@ -11,7 +11,7 @@ import { colors } from '../../lib/theme';
 export default function CalendarScreen() {
   const { workouts } = useStore();
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
-  const raw = cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const raw = cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const monthLabel = raw.charAt(0).toUpperCase() + raw.slice(1);
   const first = (cursor.getDay() + 6) % 7;
   const dim = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
@@ -23,14 +23,14 @@ export default function CalendarScreen() {
   const today = dayKey(new Date());
   return (
     <Screen>
-      <Header title="Calendário" />
+      <Header title="Calendar" />
       <ScrollView>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
           <Ionicons name="chevron-back" size={24} color={colors.text} onPress={() => shift(-1)} testID="cal-prev" />
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{monthLabel}</Text>
           <Ionicons name="chevron-forward" size={24} color={colors.text} onPress={() => shift(1)} />
         </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: 8 }}>{['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.muted }}>{d}</Text>)}</View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: 8 }}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.muted }}>{d}</Text>)}</View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 }}>
           {cells.map((c, i) => {
             const k = c ? dayKey(new Date(cursor.getFullYear(), cursor.getMonth(), c)) : '';
@@ -42,8 +42,8 @@ export default function CalendarScreen() {
             );
           })}
         </View>
-        <Text style={{ color: colors.muted, padding: 16 }}>{monthList.length} treino(s) neste mês</Text>
-        {monthList.map((w) => <ListRow key={w.id} label={w.title} subtitle={`${new Date(w.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · ${fmtDuration(w.durationSec)}`} onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} />)}
+        <Text style={{ color: colors.muted, padding: 16 }}>{monthList.length} workout(s) this month</Text>
+        {monthList.map((w) => <ListRow key={w.id} label={w.title} subtitle={`${new Date(w.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })} · ${fmtDuration(w.durationSec)}`} onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} />)}
       </ScrollView>
     </Screen>
   );

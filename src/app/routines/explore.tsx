@@ -11,18 +11,18 @@ export default function Explore() {
   const progs = all ? PROGRAMS : PROGRAMS.slice(0, 2);
   return (
     <Screen>
-      <Header title="Explorar" />
+      <Header title="Explore" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-        <Btn title="Gerar plano personalizado" icon="sparkles-outline" onPress={() => router.push('/routines/generate')} />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Programas</Text>
+        <Btn title="Generate custom plan" icon="sparkles-outline" onPress={() => router.push('/routines/generate')} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Programs</Text>
         {progs.map((p) => (
           <Card key={p.id} onPress={() => router.push({ pathname: '/routines/program/[id]', params: { id: p.id } })} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }} >
             <View style={{ width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="calendar-outline" size={30} color={colors.primary} /></View>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{p.title}</Text><Text style={{ color: colors.muted }}>{p.subtitle}</Text></View>
           </Card>
         ))}
-        <Btn title={all ? 'Mostrar menos programas' : 'Mostrar mais programas'} variant="secondary" onPress={() => setAll(!all)} />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 8 }}>Rotinas</Text>
+        <Btn title={all ? 'Show fewer programs' : 'Show more programs'} variant="secondary" onPress={() => setAll(!all)} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 8 }}>Routines</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {CATEGORIES.map((c) => (
             <Pressable key={c.id} onPress={() => router.push({ pathname: '/routines/category/[id]', params: { id: c.id } })} style={{ width: '47.5%', backgroundColor: colors.surface, borderRadius: radius.md, padding: 14, minHeight: 84, justifyContent: 'space-between' }}>

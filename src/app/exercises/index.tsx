@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
@@ -18,21 +18,21 @@ export default function Library() {
   const list = useMemo(() => searchExercises(allExercises, q, muscle, equip), [allExercises, q, muscle, equip]);
   return (
     <Screen>
-      <Header title="Exercícios" right={<IconButton name="add" size={28} onPress={() => router.push('/exercises/create')} testID="create-exercise" />} />
-      <SearchBar value={q} onChangeText={setQ} placeholder="Buscar exercício" />
-      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'Todos' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
-      <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'Todo equipamento' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
+      <Header title="Exercises" right={<IconButton name="add" size={28} onPress={() => router.push('/exercises/create')} testID="create-exercise" />} />
+      <SearchBar value={q} onChangeText={setQ} placeholder="Search exercises" />
+      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'All' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
+      <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'All equipment' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
       <FlatList
         data={list}
         initialNumToRender={20}
         windowSize={7}
         keyExtractor={(e) => e.id}
-        ListEmptyComponent={<Empty text="Nenhum exercício encontrado." />}
+        ListEmptyComponent={<Empty text="No exercises found." />}
         renderItem={({ item }) => {
           const r = records(workouts, item.id);
           return (
             <Pressable onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: item.id } })} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="barbell-outline" size={22} color={colors.muted} /></View>
+              <ExerciseThumb catalogId={item.catalogId} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, color: colors.text }}>{item.name}</Text>
                 <Text style={{ color: colors.muted, fontSize: 13 }}>{item.muscle} · {item.equipment}</Text>

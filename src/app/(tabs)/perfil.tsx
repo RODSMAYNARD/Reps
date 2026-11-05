@@ -19,9 +19,9 @@ export default function Perfil() {
   const name = profile.displayName || profile.username;
   return (
     <Screen>
-      <Header left="none" leftNode={<HeaderAction label="Editar perfil" onPress={() => router.push('/profile/edit')} />} title={profile.username}
+      <Header left="none" leftNode={<HeaderAction label="Edit Profile" onPress={() => router.push('/profile/edit')} />} title={profile.username}
         right={<>
-          <IconButton name="share-outline" onPress={() => Share.share({ message: `Siga @${profile.username} no Reps` })} />
+          <IconButton name="share-outline" onPress={() => Share.share({ message: `Follow @${profile.username} on Reps` })} />
           <IconButton name="settings-outline" onPress={() => router.push('/settings')} testID="open-settings" />
         </>} />
       <ScrollView>
@@ -30,7 +30,7 @@ export default function Perfil() {
           <View style={{ flex: 1, gap: 8 }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{name}</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              {[['Treinos', String(workouts.length), '/profile/calendar'], ['Seguidores', '0', '/feed/friends'], ['Seguindo', '0', '/feed/friends']].map(([l, v, to]) => (
+              {[['Workouts', String(workouts.length), '/profile/calendar'], ['Followers', '0', '/feed/friends'], ['Following', '0', '/feed/friends']].map(([l, v, to]) => (
                 <Text key={l} onPress={() => router.push(to as never)} style={{ color: colors.muted }}>{l}{'\n'}<Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{v}</Text></Text>
               ))}
             </View>
@@ -38,27 +38,27 @@ export default function Perfil() {
         </View>
         {!!profile.bio && <Text style={{ paddingHorizontal: 16, color: colors.text }}>{profile.bio}</Text>}
         <View style={{ padding: 16, gap: 10 }}>
-          <Text style={{ fontSize: 17, color: colors.text }}><Text style={{ fontWeight: '700' }}>{headline}</Text> esta semana</Text>
+          <Text style={{ fontSize: 17, color: colors.text }}><Text style={{ fontWeight: '700' }}>{headline}</Text> this week</Text>
           <BarChart data={series} highlightLast format={(v) => (metric === 'duration' ? (v < 1 ? `${Math.round(v * 60)} min` : `${Math.round(v * 10) / 10} h`) : String(Math.round(v)))} />
         </View>
-        <PillRow value={metric} onChange={(m) => setMetric(m as typeof metric)} items={[{ id: 'duration', label: 'Duração' }, { id: 'volume', label: 'Volume' }, { id: 'reps', label: 'Reps' }]} />
-        <Section title="Painel" />
+        <PillRow value={metric} onChange={(m) => setMetric(m as typeof metric)} items={[{ id: 'duration', label: 'Duration' }, { id: 'volume', label: 'Volume' }, { id: 'reps', label: 'Reps' }]} />
+        <Section title="Dashboard" />
         <View style={{ paddingHorizontal: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', gap: 12 }}>
-            <Tile icon="trending-up-outline" label="Estatísticas" onPress={() => router.push('/profile/stats')} />
-            <Tile icon="barbell-outline" label="Exercícios" onPress={() => router.push('/exercises')} />
+            <Tile icon="trending-up-outline" label="Statistics" onPress={() => router.push('/profile/stats')} />
+            <Tile icon="barbell-outline" label="Exercises" onPress={() => router.push('/exercises')} />
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
-            <Tile icon="body-outline" label="Medidas" onPress={() => router.push('/profile/measures')} />
-            <Tile icon="calendar-outline" label="Calendário" onPress={() => router.push('/profile/calendar')} />
+            <Tile icon="body-outline" label="Measures" onPress={() => router.push('/profile/measures')} />
+            <Tile icon="calendar-outline" label="Calendar" onPress={() => router.push('/profile/calendar')} />
           </View>
         </View>
-        <Section title="Treinos" />
-        {workouts.length === 0 && <Text style={{ color: colors.muted, textAlign: 'center', padding: 24 }}>Nenhum treino registrado ainda.</Text>}
+        <Section title="Workouts" />
+        {workouts.length === 0 && <Text style={{ color: colors.muted, textAlign: 'center', padding: 24 }}>No workouts logged yet.</Text>}
         {workouts.map((w) => <WorkoutCard key={w.id} w={w} onMenu={() => setDel(w.id)} />)}
       </ScrollView>
       <ActiveBar />
-      <Dialog visible={!!del} title="Excluir treino?" message="Essa ação não pode ser desfeita." onClose={() => setDel(null)} actions={[{ label: 'Cancelar' }, { label: 'Excluir', danger: true, onPress: () => { deleteWorkout(del!); setDel(null); } }]} />
+      <Dialog visible={!!del} title="Delete workout?" message="This action can't be undone." onClose={() => setDel(null)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: () => { deleteWorkout(del!); setDel(null); } }]} />
     </Screen>
   );
 }

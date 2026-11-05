@@ -10,14 +10,14 @@ export default function Category() {
   const list = CATEGORY_ROUTINES[id] ?? [];
   return (
     <Screen>
-      <Header title={`Rotinas · ${c?.label ?? ''}`} />
+      <Header title={`Routines · ${c?.label ?? ''}`} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-        {list.length === 0 && <Empty text="Ainda não temos rotinas nessa categoria." />}
+        {list.length === 0 && <Empty text="No routines in this category yet." />}
         {list.map((r, i) => (
           <Card key={r.title} onPress={() => router.push({ pathname: '/routines/preview', params: { src: 'cat', id: id!, idx: String(i) } })} style={{ gap: 4 }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{r.title}</Text>
             <Text style={{ color: colors.muted }} numberOfLines={2}>{r.notes}</Text>
-            <Text style={{ color: colors.muted }}>{r.exercises.length} exercícios</Text>
+            <Text style={{ color: colors.muted }}>{r.exercises.length} exercises</Text>
           </Card>
         ))}
       </ScrollView>

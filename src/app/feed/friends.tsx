@@ -8,18 +8,18 @@ export default function Friends() {
   const [q, setQ] = useState('');
   return (
     <Screen>
-      <SearchBar value={q} onChangeText={setQ} placeholder="Buscar amigos" onBack={() => router.back()} />
-      <Section title="Descoberta de contatos" />
+      <SearchBar value={q} onChangeText={setQ} placeholder="Search friends" onBack={() => router.back()} />
+      <Section title="Contact discovery" />
       <View style={{ padding: 16 }}>
         <Card style={{ gap: 12, backgroundColor: colors.surface, borderWidth: 0 }}>
-          <Text style={{ color: colors.text, fontSize: 16, textAlign: 'center' }}>Verifique seu telefone para seus amigos encontrarem você no Reps</Text>
-          <Btn title="Verificar" onPress={() => router.push('/feed/verify-phone')} testID="verify-phone" />
+          <Text style={{ color: colors.text, fontSize: 16, textAlign: 'center' }}>Verify your phone so your friends can find you on Reps</Text>
+          <Btn title="Verify" onPress={() => router.push('/feed/verify-phone')} testID="verify-phone" />
         </Card>
       </View>
-      <Section title="Convide seus contatos" />
+      <Section title="Invite your contacts" />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
-        <Avatar /><Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>Convidar um amigo</Text>
-        <Text onPress={() => Share.share({ message: 'Venha treinar comigo no Reps!' })} style={{ color: colors.primary, fontSize: 16 }}>Convidar</Text>
+        <Avatar /><Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>Invite a friend</Text>
+        <Text onPress={() => Share.share({ message: 'Come train with me on Reps!' })} style={{ color: colors.primary, fontSize: 16 }}>Invite</Text>
       </View>
     </Screen>
   );

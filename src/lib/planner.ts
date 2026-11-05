@@ -8,12 +8,12 @@ export type PlannedRoutine = { title: string; notes: string; exercises: RoutineE
 
 type Kind = 'push' | 'pull' | 'legs' | 'upper' | 'lower' | 'full';
 const SLOTS: Record<Kind, [string, number][]> = {
-  push: [['Peito', 2], ['Ombros', 2], ['Tríceps', 1]],
-  pull: [['Costas', 3], ['Bíceps', 2]],
-  legs: [['Quadríceps', 2], ['Posterior', 1], ['Glúteos', 1], ['Panturrilha', 1]],
-  upper: [['Peito', 1], ['Costas', 2], ['Ombros', 1], ['Bíceps', 1], ['Tríceps', 1]],
-  lower: [['Quadríceps', 2], ['Posterior', 1], ['Glúteos', 1], ['Panturrilha', 1]],
-  full: [['Quadríceps', 1], ['Peito', 1], ['Costas', 1], ['Ombros', 1], ['Abdômen', 1]],
+  push: [['Chest', 2], ['Shoulders', 2], ['Triceps', 1]],
+  pull: [['Back', 3], ['Biceps', 2]],
+  legs: [['Quads', 2], ['Hamstrings', 1], ['Glutes', 1], ['Calves', 1]],
+  upper: [['Chest', 1], ['Back', 2], ['Shoulders', 1], ['Biceps', 1], ['Triceps', 1]],
+  lower: [['Quads', 2], ['Hamstrings', 1], ['Glutes', 1], ['Calves', 1]],
+  full: [['Quads', 1], ['Chest', 1], ['Back', 1], ['Shoulders', 1], ['Abs', 1]],
 };
 const LABEL: Record<Kind, string> = { push: 'Push', pull: 'Pull', legs: 'Legs', upper: 'Upper', lower: 'Lower', full: 'Full Body' };
 
@@ -26,15 +26,15 @@ export const splitFor = (days: number): Kind[] => {
 };
 
 const PARAMS: Record<Goal, { sets: number; reps: number; rest: number; label: string }> = {
-  hypertrophy: { sets: 3, reps: 10, rest: 90, label: 'Hipertrofia' },
-  strength: { sets: 5, reps: 5, rest: 180, label: 'Força' },
-  fatloss: { sets: 3, reps: 15, rest: 45, label: 'Emagrecimento' },
+  hypertrophy: { sets: 3, reps: 10, rest: 90, label: 'Hypertrophy' },
+  strength: { sets: 5, reps: 5, rest: 180, label: 'Strength' },
+  fatloss: { sets: 3, reps: 15, rest: 45, label: 'Fat loss' },
 };
 const PER_LEVEL: Record<Level, number> = { beginner: 4, intermediate: 5, advanced: 6 };
 
 // Exercícios clássicos por músculo (nome em inglês do catálogo), usados pelo gerador de planos.
 const STAPLES: Record<string, string[]> = {
-  "Peito": [
+  "Chest": [
     "barbell bench press",
     "dumbbell bench press",
     "barbell incline bench press",
@@ -52,7 +52,7 @@ const STAPLES: Record<string, string[]> = {
     "diamond push-up",
     "dumbbell decline bench press"
   ],
-  "Costas": [
+  "Back": [
     "pull-up",
     "chin-up",
     "barbell bent over row",
@@ -71,7 +71,7 @@ const STAPLES: Record<string, string[]> = {
     "dumbbell deadlift",
     "body-up"
   ],
-  "Ombros": [
+  "Shoulders": [
     "dumbbell standing overhead press",
     "barbell seated overhead press",
     "dumbbell lateral raise",
@@ -89,7 +89,7 @@ const STAPLES: Record<string, string[]> = {
     "band front raise",
     "handstand push-up"
   ],
-  "Bíceps": [
+  "Biceps": [
     "barbell curl",
     "dumbbell biceps curl",
     "dumbbell hammer curl",
@@ -104,7 +104,7 @@ const STAPLES: Record<string, string[]> = {
     "cable hammer curl (with rope)",
     "chin-up"
   ],
-  "Tríceps": [
+  "Triceps": [
     "cable pushdown",
     "triceps dip",
     "bench dip (knees bent)",
@@ -118,7 +118,7 @@ const STAPLES: Record<string, string[]> = {
     "diamond push-up",
     "weighted bench dip"
   ],
-  "Quadríceps": [
+  "Quads": [
     "barbell full squat",
     "barbell front squat",
     "lever alternate leg press",
@@ -134,7 +134,7 @@ const STAPLES: Record<string, string[]> = {
     "dumbbell step-up",
     "walking lunge"
   ],
-  "Posterior": [
+  "Hamstrings": [
     "barbell romanian deadlift",
     "dumbbell romanian deadlift",
     "lever lying leg curl",
@@ -144,7 +144,7 @@ const STAPLES: Record<string, string[]> = {
     "band stiff leg deadlift",
     "barbell deadlift"
   ],
-  "Glúteos": [
+  "Glutes": [
     "barbell glute bridge",
     "glute bridge march",
     "low glute bridge on floor",
@@ -155,7 +155,7 @@ const STAPLES: Record<string, string[]> = {
     "barbell sumo deadlift",
     "glute bridge two legs on bench (male)"
   ],
-  "Panturrilha": [
+  "Calves": [
     "barbell standing calf raise",
     "lever seated calf raise",
     "bodyweight standing calf raise",
@@ -164,7 +164,7 @@ const STAPLES: Record<string, string[]> = {
     "dumbbell standing calf raise",
     "barbell seated calf raise"
   ],
-  "Abdômen": [
+  "Abs": [
     "crunch floor",
     "hanging leg raise",
     "russian twist",
@@ -183,7 +183,7 @@ const rng = (seed: number) => { let s = seed || 1; return () => ((s = (s * 16645
 export function generatePlan(o: PlanOpts, exercises: Exercise[], enOf?: (e: Exercise) => string | undefined): { name: string; routines: PlannedRoutine[] } {
   const rand = rng(o.seed);
   const p = PARAMS[o.goal];
-  const allowed = (e: Exercise) => o.gear === 'gym' ? e.equipment !== 'Outro' : o.gear === 'dumbbell' ? ['Halter', 'Peso do corpo', 'Elástico', 'Kettlebell'].includes(e.equipment) : e.equipment === 'Peso do corpo';
+  const allowed = (e: Exercise) => o.gear === 'gym' ? e.equipment !== 'Other' : o.gear === 'dumbbell' ? ['Dumbbell', 'Body weight', 'Band', 'Kettlebell'].includes(e.equipment) : e.equipment === 'Body weight';
   const byEn = new Map<string, Exercise>();
   exercises.forEach((e) => { const n = enOf?.(e); if (n) byEn.set(n.toLowerCase(), e); });
   const loose = /bench press|squat|deadlift|row\b|pulldown|pull-up|chin-up|push-up|dip\b|curl|press|raise|extension|fly\b|lunge|crunch|thrust|bridge|pushdown|calf/;
@@ -211,7 +211,7 @@ export function generatePlan(o: PlanOpts, exercises: Exercise[], enOf?: (e: Exer
       exerciseId: e.id, notes: '', restSec: e.kind === 'reps' ? Math.min(60, p.rest) : p.rest,
       sets: Array.from({ length: p.sets }, () => ({ type: 'normal' as const, kg: null, reps: e.kind === 'reps' ? Math.max(8, p.reps) : p.reps })),
     }));
-    return { title: `${LABEL[k]}${letter}`, notes: `${p.label} · ${p.sets}×${p.reps} · descanso de ${p.rest}s`, exercises: exs };
+    return { title: `${LABEL[k]}${letter}`, notes: `${p.label} · ${p.sets}×${p.reps} · ${p.rest}s rest`, exercises: exs };
   });
-  return { name: `${p.label} ${o.days}x/semana`, routines };
+  return { name: `${p.label} ${o.days}x/week`, routines };
 }

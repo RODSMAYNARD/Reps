@@ -10,12 +10,12 @@ import { elapsedSec, useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 import { Workout } from '../../lib/types';
 
-const VIS: { id: Workout['visibility']; label: string }[] = [{ id: 'everyone', label: 'Todos' }, { id: 'followers', label: 'Seguidores' }, { id: 'private', label: 'Só eu' }];
+const VIS: { id: Workout['visibility']; label: string }[] = [{ id: 'everyone', label: 'Everyone' }, { id: 'followers', label: 'Followers' }, { id: 'private', label: 'Only me' }];
 
 export default function SaveWorkout() {
   const st = useStore();
   const { active, profile } = st;
-  const [title, setTitle] = useState(active?.title ?? 'Treino');
+  const [title, setTitle] = useState(active?.title ?? 'Workout');
   const [desc, setDesc] = useState('');
   const [vis, setVis] = useState<Workout['visibility']>('everyone');
   const [visSheet, setVisSheet] = useState(false);
@@ -32,9 +32,9 @@ export default function SaveWorkout() {
 
   const save = async () => {
     setBusy(true);
-    const w = await st.finishActive({ title: title.trim() || 'Treino', description: desc, visibility: vis, date: when.toISOString(), durationSec: dur });
+    const w = await st.finishActive({ title: title.trim() || 'Workout', description: desc, visibility: vis, date: when.toISOString(), durationSec: dur });
     setBusy(false);
-    if (w) { st.showToast('Treino salvo!'); router.dismissTo('/'); }
+    if (w) { st.showToast('Workout saved!'); router.dismissTo('/'); }
   };
   const pickPhoto = async () => {
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
@@ -43,39 +43,39 @@ export default function SaveWorkout() {
 
   return (
     <Screen>
-      <Header title="Salvar treino" right={<HeaderAction label="Salvar" primary onPress={save} disabled={busy} />} />
+      <Header title="Save Workout" right={<HeaderAction label="Save" primary onPress={save} disabled={busy} />} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 18 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TextInput value={title} onChangeText={setTitle} placeholder="Título do treino" placeholderTextColor={colors.faint} style={{ flex: 1, fontSize: 22, fontWeight: '700', color: colors.text }} testID="save-title" />
+          <TextInput value={title} onChangeText={setTitle} placeholder="Workout title" placeholderTextColor={colors.faint} style={{ flex: 1, fontSize: 22, fontWeight: '700', color: colors.text }} testID="save-title" />
           {!!title && <Ionicons name="close-circle" size={22} color={colors.faint} onPress={() => setTitle('')} />}
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Stat label="Duração" value={fmtDuration(dur)} color={colors.primary} />
+          <Stat label="Duration" value={fmtDuration(dur)} color={colors.primary} />
           <Stat label="Volume" value={fmtVolume(done.reduce((t, s) => t + setVolume(s), 0), profile.units)} />
-          <Stat label="Séries" value={String(done.length)} />
+          <Stat label="Sets" value={String(done.length)} />
         </View>
-        <Pressable onPress={() => setWhenSheet(true)}><Text style={{ color: colors.muted, fontSize: 13 }}>Quando</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{when.toLocaleString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text></Pressable>
+        <Pressable onPress={() => setWhenSheet(true)}><Text style={{ color: colors.muted, fontSize: 13 }}>When</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{when.toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text></Pressable>
         <Pressable onPress={pickPhoto} style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           {photo ? <Image source={{ uri: photo }} style={{ width: 96, height: 96, borderRadius: 12 }} /> : (
             <View style={{ width: 96, height: 96, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="image-outline" size={30} color={colors.primary} /></View>
           )}
-          <Text style={{ color: colors.text, fontSize: 16 }}>{photo ? 'Trocar foto' : 'Adicionar foto / vídeo'}</Text>
+          <Text style={{ color: colors.text, fontSize: 16 }}>{photo ? 'Change photo' : 'Add a photo / video'}</Text>
         </Pressable>
         <View style={{ gap: 4 }}>
-          <Text style={{ color: colors.muted, fontSize: 13 }}>Descrição</Text>
-          <TextInput value={desc} onChangeText={setDesc} multiline placeholder="Como foi o treino? Deixe algumas notas aqui..." placeholderTextColor={colors.faint} style={{ minHeight: 70, fontSize: 16, color: colors.text, textAlignVertical: 'top' }} />
+          <Text style={{ color: colors.muted, fontSize: 13 }}>Description</Text>
+          <TextInput value={desc} onChangeText={setDesc} multiline placeholder="How did your workout go? Share some notes here..." placeholderTextColor={colors.faint} style={{ minHeight: 70, fontSize: 16, color: colors.text, textAlignVertical: 'top' }} />
         </View>
-        <ListRow label="Visibilidade" detail={VIS.find((v) => v.id === vis)!.label} onPress={() => setVisSheet(true)} />
-        <Btn title="Descartar treino" variant="ghost" onPress={() => setDiscard(true)} style={{ borderWidth: 0 }} />
+        <ListRow label="Visibility" detail={VIS.find((v) => v.id === vis)!.label} onPress={() => setVisSheet(true)} />
+        <Btn title="Discard Workout" variant="ghost" onPress={() => setDiscard(true)} style={{ borderWidth: 0 }} />
       </ScrollView>
-      <Sheet visible={visSheet} onClose={() => setVisSheet(false)} title="Quem pode ver">
+      <Sheet visible={visSheet} onClose={() => setVisSheet(false)} title="Who can see this">
         {VIS.map((v) => <ListRow key={v.id} label={v.label} last right={vis === v.id ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setVis(v.id); setVisSheet(false); }} />)}
       </Sheet>
-      <Sheet visible={whenSheet} onClose={() => setWhenSheet(false)} title="Quando foi o treino?">
-        {[0, 1, 2, 3, 7].map((d) => <ListRow key={d} label={d === 0 ? 'Agora' : d === 1 ? 'Ontem' : `Há ${d} dias`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setWhenSheet(false); }} />)}
+      <Sheet visible={whenSheet} onClose={() => setWhenSheet(false)} title="When was the workout?">
+        {[0, 1, 2, 3, 7].map((d) => <ListRow key={d} label={d === 0 ? 'Now' : d === 1 ? 'Yesterday' : `${d} days ago`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setWhenSheet(false); }} />)}
       </Sheet>
-      <Dialog visible={discard} title="Descartar treino?" message="O treino não será salvo." onClose={() => setDiscard(false)}
-        actions={[{ label: 'Cancelar' }, { label: 'Descartar', danger: true, onPress: () => { setDiscard(false); st.discardActive(); router.dismissTo('/'); } }]} />
+      <Dialog visible={discard} title="Discard workout?" message="This workout won't be saved." onClose={() => setDiscard(false)}
+        actions={[{ label: 'Cancel' }, { label: 'Discard', danger: true, onPress: () => { setDiscard(false); st.discardActive(); router.dismissTo('/'); } }]} />
     </Screen>
   );
 }

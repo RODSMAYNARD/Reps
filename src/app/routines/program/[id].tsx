@@ -9,13 +9,13 @@ export default function Program() {
   const p = PROGRAMS.find((x) => x.id === id);
   return (
     <Screen>
-      <Header title={p?.title ?? 'Programa'} />
+      <Header title={p?.title ?? 'Program'} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         <Text style={{ color: colors.muted }}>{p?.subtitle}</Text>
         {p?.routines.map((r, i) => (
           <Card key={r.title} onPress={() => router.push({ pathname: '/routines/preview', params: { src: 'program', id: p.id, idx: String(i) } })} style={{ gap: 4 }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{r.title}</Text>
-            <Text style={{ color: colors.muted }}>{r.exercises.length} exercícios</Text>
+            <Text style={{ color: colors.muted }}>{r.exercises.length} exercises</Text>
           </Card>
         ))}
       </ScrollView>

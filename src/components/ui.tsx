@@ -28,7 +28,7 @@ export function Header({ title, left = 'back', onLeft, right, subtitle, leftNode
         {leftNode}
         {left === 'back' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable>}
         {left === 'down' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="chevron-down" size={26} color={colors.text} /></Pressable>}
-        {left === 'cancel' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Text style={{ color: colors.primary, fontSize: 16 }}>Cancelar</Text></Pressable>}
+        {left === 'cancel' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text></Pressable>}
       </View>
       <View style={{ flex: 1, alignItems: 'center' }}>
         {typeof title === 'string' ? <Text numberOfLines={1} style={s.headerTitle}>{title}</Text> : title}
@@ -100,7 +100,7 @@ export function Field({ label, error, ...props }: TextInputProps & { label?: str
   );
 }
 
-export function SearchBar({ value, onChangeText, placeholder = 'Buscar', onBack }: { value: string; onChangeText: (t: string) => void; placeholder?: string; onBack?: () => void }) {
+export function SearchBar({ value, onChangeText, placeholder = 'Search', onBack }: { value: string; onChangeText: (t: string) => void; placeholder?: string; onBack?: () => void }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8 }}>
       {onBack && <IconButton name="arrow-back" onPress={onBack} testID="header-back" />}
@@ -311,7 +311,7 @@ export function BarChart({ data, height = 140, format = (v: number) => String(Ma
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
         <Text style={{ color: colors.muted, fontSize: 11 }}>{data[0]?.label}</Text>
-        <Text style={{ color: colors.muted, fontSize: 11 }}>máx {format(max)}</Text>
+        <Text style={{ color: colors.muted, fontSize: 11 }}>max {format(max)}</Text>
         <Text style={{ color: colors.muted, fontSize: 11 }}>{data[data.length - 1]?.label}</Text>
       </View>
     </View>
@@ -320,7 +320,7 @@ export function BarChart({ data, height = 140, format = (v: number) => String(Ma
 
 export function LineChart({ data, height = 150, unit = '' }: { data: { label: string; value: number }[]; height?: number; unit?: string }) {
   const [w, setW] = useState(0);
-  if (!data.length) return <Text style={{ color: colors.muted, textAlign: 'center', padding: 30 }}>Sem dados ainda</Text>;
+  if (!data.length) return <Text style={{ color: colors.muted, textAlign: 'center', padding: 30 }}>No data yet</Text>;
   const vals = data.map((d) => d.value);
   const min = Math.min(...vals), max = Math.max(...vals);
   const span = max - min || 1;

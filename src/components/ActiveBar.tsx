@@ -13,7 +13,7 @@ export function ActiveBar() {
     <Pressable onPress={() => router.push('/active')} testID="active-bar" style={{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <Ionicons name="barbell" size={20} color="#fff" />
       <View style={{ flex: 1 }}>
-        <Text style={{ color: '#fff', fontWeight: '700' }}>Treino em andamento</Text>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>Workout in progress</Text>
         <Text style={{ color: '#E6F2FF', fontSize: 12 }}>{active.title} · {fmtClock(elapsedSec(active, now))}</Text>
       </View>
       <Ionicons name="chevron-up" size={20} color="#fff" />

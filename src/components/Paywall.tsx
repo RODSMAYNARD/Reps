@@ -4,22 +4,22 @@ import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { colors, radius } from '../lib/theme';
 import { Btn, Dialog, TextLink } from './ui';
 
-const BENEFITS = ['Rotinas ilimitadas', 'Estatísticas avançadas por músculo', 'Gráficos de evolução de cada exercício', 'Exportar todos os seus dados', 'Sem anúncios'];
+const BENEFITS = ['Unlimited routines', 'Advanced stats by muscle', 'Progress charts for every exercise', 'Export all your data', 'No ads'];
 const PLANS = [
-  { id: 'month', title: 'Mensal', price: 'R$ 19,90 / mês', note: '' },
-  { id: 'year', title: 'Anual', price: 'R$ 129,90 / ano', note: 'Economize 45%' },
-  { id: 'life', title: 'Vitalício', price: 'R$ 299,90 uma vez', note: 'Pague uma vez' },
+  { id: 'month', title: 'Monthly', price: '$4.99 / month', note: '' },
+  { id: 'year', title: 'Yearly', price: '$29.99 / year', note: 'Save 50%' },
+  { id: 'life', title: 'Lifetime', price: '$69.99 one-time', note: 'Pay once' },
 ];
 const FAQ = [
-  ['O que o Reps Pro inclui?', 'Rotinas ilimitadas, estatísticas avançadas, gráficos por exercício e exportação de dados.'],
-  ['É pagamento único ou renova sozinho?', 'Os planos mensal e anual renovam automaticamente. O vitalício é pagamento único.'],
-  ['Posso cancelar quando quiser?', 'Sim. Você cancela na loja de aplicativos e mantém o acesso até o fim do período pago.'],
-  ['É possível pedir reembolso?', 'Reembolsos são tratados pela loja de aplicativos onde a compra foi feita.'],
-  ['Posso trocar de plano?', 'Sim, a qualquer momento pela sua conta na loja.'],
-  ['O que acontece se eu trocar de aparelho?', 'Entre com a mesma conta e use “Restaurar compras”.'],
+  ['What does Reps Pro include?', 'Unlimited routines, advanced stats, per-exercise charts, and data export.'],
+  ['Is it a one-time payment or does it renew?', 'Monthly and yearly plans renew automatically. Lifetime is a one-time payment.'],
+  ['Can I cancel anytime?', 'Yes. You cancel in the app store and keep access until the end of the paid period.'],
+  ['Can I get a refund?', 'Refunds are handled by the app store where the purchase was made.'],
+  ['Can I switch plans?', 'Yes, anytime from your app store account.'],
+  ['What if I get a new device?', 'Log in with the same account and use “Restore purchases”.'],
 ];
 
-export function Paywall({ onContinueFree, freeLabel = 'Continuar grátis' }: { onContinueFree: () => void; freeLabel?: string }) {
+export function Paywall({ onContinueFree, freeLabel = 'Continue for free' }: { onContinueFree: () => void; freeLabel?: string }) {
   const [plan, setPlan] = useState('year');
   const [open, setOpen] = useState<number | null>(null);
   const [dlg, setDlg] = useState<string | null>(null);
@@ -28,7 +28,7 @@ export function Paywall({ onContinueFree, freeLabel = 'Continuar grátis' }: { o
       <View style={{ alignItems: 'center', gap: 6, paddingVertical: 10 }}>
         <Ionicons name="trophy" size={48} color={colors.warn} />
         <Text style={{ fontSize: 24, fontWeight: '800', color: colors.text }}>Reps Pro</Text>
-        <Text style={{ color: colors.muted, textAlign: 'center' }}>Desbloqueie tudo para acompanhar sua evolução.</Text>
+        <Text style={{ color: colors.muted, textAlign: 'center' }}>Unlock everything to track your progress.</Text>
       </View>
       <View style={{ gap: 10 }}>
         {BENEFITS.map((b) => (
@@ -48,9 +48,9 @@ export function Paywall({ onContinueFree, freeLabel = 'Continuar grátis' }: { o
           {!!p.note && <Text style={{ color: colors.success, fontWeight: '600' }}>{p.note}</Text>}
         </Pressable>
       ))}
-      <Btn title="Assinar" onPress={() => setDlg('As compras ainda não estão ativas nesta versão. Quando o app for publicado nas lojas, o pagamento será liberado.')} />
+      <Btn title="Subscribe" onPress={() => setDlg('Purchases are not active in this version yet. Payments will be enabled once the app is published in the stores.')} />
       <Btn title={freeLabel} variant="secondary" onPress={onContinueFree} />
-      <Text style={{ fontSize: 20, fontWeight: '700', textAlign: 'center', color: colors.text, marginTop: 10 }}>Alguma dúvida?</Text>
+      <Text style={{ fontSize: 20, fontWeight: '700', textAlign: 'center', color: colors.text, marginTop: 10 }}>Any questions?</Text>
       {FAQ.map(([q, a], i) => (
         <Pressable key={q} onPress={() => setOpen(open === i ? null : i)} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 14, gap: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -61,9 +61,9 @@ export function Paywall({ onContinueFree, freeLabel = 'Continuar grátis' }: { o
         </Pressable>
       ))}
       <View style={{ alignItems: 'center', gap: 8, paddingTop: 6 }}>
-        <Text style={{ color: colors.muted }}>Problemas com sua assinatura?</Text>
-        <TextLink title="Fale com a gente" onPress={() => Linking.openURL('mailto:rodrigo.maynard@gmail.com')} />
-        <TextLink title="Restaurar compras" onPress={() => setDlg('Nenhuma compra encontrada para restaurar.')} />
+        <Text style={{ color: colors.muted }}>Problems with your subscription?</Text>
+        <TextLink title="Contact us" onPress={() => Linking.openURL('mailto:rodrigo.maynard@gmail.com')} />
+        <TextLink title="Restore purchases" onPress={() => setDlg('No purchases found to restore.')} />
       </View>
       <Dialog visible={!!dlg} message={dlg ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setDlg(null) }]} />
     </ScrollView>

@@ -22,18 +22,18 @@ export default function Welcome() {
         <View style={{ alignItems: 'center', marginTop: 60, gap: 6 }}>
           <Ionicons name="barbell" size={56} color="#fff" />
           <Text style={{ color: '#fff', fontSize: 40, fontWeight: '800', letterSpacing: 6 }}>REPS</Text>
-          <Text style={{ color: '#9AA3AF', fontSize: 15, marginTop: 6 }}>Registre treinos. Veja a evolução.</Text>
+          <Text style={{ color: '#9AA3AF', fontSize: 15, marginTop: 6 }}>Log workouts. See progress.</Text>
         </View>
         <View style={{ gap: 10 }}>
-          <SocialButton icon="logo-apple" label="Cadastrar com Apple" onPress={() => setSoon(true)} />
-          <SocialButton icon="logo-google" label="Cadastrar com Google" onPress={() => setSoon(true)} />
-          <SocialButton icon="mail-outline" label="Cadastrar com e-mail" onPress={() => router.push('/signup')} />
+          <SocialButton icon="logo-apple" label="Sign up with Apple" onPress={() => setSoon(true)} />
+          <SocialButton icon="logo-google" label="Sign up with Google" onPress={() => setSoon(true)} />
+          <SocialButton icon="mail-outline" label="Sign up with email" onPress={() => router.push('/signup')} />
           <Pressable onPress={() => router.push('/login')} style={{ alignItems: 'center', paddingVertical: 14 }}>
-            <Text style={{ color: '#fff' }}>Já tem conta? <Text style={{ color: '#4DA3FF' }}>Entrar</Text></Text>
+            <Text style={{ color: '#fff' }}>Already have an account? <Text style={{ color: '#4DA3FF' }}>Log in</Text></Text>
           </Pressable>
         </View>
       </SafeAreaView>
-      <Dialog visible={soon} title="Em breve" message="Esse tipo de login precisa de configuração nativa e será ativado na versão publicada. Use o e-mail por enquanto." actions={[{ label: 'Ok', primary: true, onPress: () => setSoon(false) }]} />
+      <Dialog visible={soon} title="Coming soon" message="This kind of login needs native setup and will be enabled in the published version. Use email for now." actions={[{ label: 'Ok', primary: true, onPress: () => setSoon(false) }]} />
     </View>
   );
 }

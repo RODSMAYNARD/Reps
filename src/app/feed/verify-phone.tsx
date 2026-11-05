@@ -12,16 +12,16 @@ export default function VerifyPhone() {
   const [ask, setAsk] = useState(false);
   return (
     <Screen>
-      <Header title="Verificar telefone" />
+      <Header title="Verify phone" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-        <Text style={{ color: colors.muted }}>Informe seu número com DDD. Enviaremos um código por SMS.</Text>
-        <Field label="Telefone" keyboardType="phone-pad" placeholder="+55 11 99999-9999" value={phone} onChangeText={setPhone} />
-        <Btn title="Enviar código" disabled={phone.replace(/\D/g, '').length < 10} onPress={() => setAsk(true)} testID="send-code" />
+        <Text style={{ color: colors.muted }}>Enter your phone number. We&apos;ll text you a code.</Text>
+        <Field label="Phone" keyboardType="phone-pad" placeholder="+55 11 99999-9999" value={phone} onChangeText={setPhone} />
+        <Btn title="Send code" disabled={phone.replace(/\D/g, '').length < 10} onPress={() => setAsk(true)} testID="send-code" />
       </ScrollView>
-      <Dialog visible={ask} title="Digite o código de verificação" onClose={() => setAsk(false)}
-        actions={[{ label: 'Cancelar', onPress: () => setAsk(false) }, { label: 'Continuar', primary: true, onPress: () => { setAsk(false); showToast('Verificação por SMS ainda não está ativa nesta versão.'); router.back(); } }]}>
+      <Dialog visible={ask} title="Enter the verification code" onClose={() => setAsk(false)}
+        actions={[{ label: 'Cancel', onPress: () => setAsk(false) }, { label: 'Continue', primary: true, onPress: () => { setAsk(false); showToast("SMS verification isn't available in this version yet."); router.back(); } }]}>
         <Field value={code} onChangeText={setCode} keyboardType="number-pad" placeholder="000000" />
-        <TextLink title="Não recebeu? Pedir de novo" onPress={() => showToast('Reenvio indisponível nesta versão.')} />
+        <TextLink title="Didn't get it? Send again" onPress={() => showToast("Resend isn't available in this version.")} />
       </Dialog>
     </Screen>
   );

@@ -28,33 +28,33 @@ export default function EditRoutine() {
   const patchSet = (i: number, j: number, p: Partial<SetRow>) => setItems((l) => l.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, ...p } : s)) } : e)));
   const valid = title.trim().length > 0 && items.length > 0;
   const add = () => { setPickHandler((ids) => setItems((l) => [...l, ...ids.map((eid): RoutineExercise => ({ exerciseId: eid, notes: '', restSec: 90, sets: [{ type: 'normal', kg: null, reps: null }] }))])); router.push('/exercises/pick'); };
-  const save = async () => { const r = await saveRoutine({ id: existing?.id, title, notes: existing?.notes ?? '', exercises: items }); if (r) { showToast('Rotina salva'); router.back(); } };
+  const save = async () => { const r = await saveRoutine({ id: existing?.id, title, notes: existing?.notes ?? '', exercises: items }); if (r) { showToast('Routine saved'); router.back(); } };
   const dirty = !!title || items.length > 0;
 
   return (
     <Screen>
-      <Header left="cancel" onLeft={() => (dirty && !existing ? setCancelAsk(true) : router.back())} title={existing ? 'Editar rotina' : 'Criar rotina'} right={<HeaderAction label="Salvar" primary disabled={!valid} onPress={save} />} />
-      {hint && <Banner text="Você está criando uma rotina. Toque para ver a ajuda..." onPress={() => router.push('/routines/help')} onClose={() => setHint(false)} />}
+      <Header left="cancel" onLeft={() => (dirty && !existing ? setCancelAsk(true) : router.back())} title={existing ? 'Edit routine' : 'Create routine'} right={<HeaderAction label="Save" primary disabled={!valid} onPress={save} />} />
+      {hint && <Banner text="You're creating a routine. Tap for help..." onPress={() => router.push('/routines/help')} onClose={() => setHint(false)} />}
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-        <TextInput value={title} onChangeText={setTitle} placeholder="Título da rotina" placeholderTextColor={colors.faint} style={{ fontSize: 22, fontWeight: '600', padding: 16, color: colors.text }} testID="routine-title" />
+        <TextInput value={title} onChangeText={setTitle} placeholder="Routine title" placeholderTextColor={colors.faint} style={{ fontSize: 22, fontWeight: '600', padding: 16, color: colors.text }} testID="routine-title" />
         {items.length === 0 && (
           <View style={{ alignItems: 'center', padding: 24, gap: 14 }}>
             <Ionicons name="barbell-outline" size={44} color={colors.faint} />
-            <Text style={{ color: colors.muted, textAlign: 'center' }}>Comece adicionando um exercício à sua rotina.</Text>
+            <Text style={{ color: colors.muted, textAlign: 'center' }}>Start by adding an exercise to your routine.</Text>
           </View>
         )}
         {items.map((e, i) => (
           <View key={i} style={{ paddingTop: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
-              <Text style={{ flex: 1, color: colors.primary, fontSize: 17, fontWeight: '600' }}>{nameOf(e.exerciseId)?.name ?? 'Exercício removido'}</Text>
+              <Text style={{ flex: 1, color: colors.primary, fontSize: 17, fontWeight: '600' }}>{nameOf(e.exerciseId)?.name ?? 'Removed exercise'}</Text>
               <IconButton name="trash-outline" color={colors.danger} onPress={() => setItems((l) => l.filter((_, k) => k !== i))} />
             </View>
-            <TextInput value={e.notes} onChangeText={(t) => setItems((l) => l.map((x, k) => (k === i ? { ...x, notes: t } : x)))} placeholder="Notas da rotina" placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 8, color: colors.text }} />
-            <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 }}><Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Descanso: {fmtRest(e.restSec)}</Text></Pressable>
+            <TextInput value={e.notes} onChangeText={(t) => setItems((l) => l.map((x, k) => (k === i ? { ...x, notes: t } : x)))} placeholder="Routine notes" placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 8, color: colors.text }} />
+            <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 }}><Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Rest: {fmtRest(e.restSec)}</Text></Pressable>
             <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 4 }}>
-              <Text style={[hd, { width: 44 }]}>SÉRIE</Text>
+              <Text style={[hd, { width: 44 }]}>SET</Text>
               {nameOf(e.exerciseId)?.kind !== 'reps' && nameOf(e.exerciseId)?.kind !== 'duration' && <Text style={[hd, { flex: 1 }]}>{u.weight.toUpperCase()}</Text>}
-              <Text style={[hd, { flex: 1 }]}>{nameOf(e.exerciseId)?.kind === 'duration' ? 'SEG' : 'REPS'}</Text>
+              <Text style={[hd, { flex: 1 }]}>{nameOf(e.exerciseId)?.kind === 'duration' ? 'SEC' : 'REPS'}</Text>
             </View>
             {e.sets.map((s, j) => {
               const t = SET_TYPES.find((x) => x.type === s.type)!;
@@ -67,19 +67,19 @@ export default function EditRoutine() {
                 </View>
               );
             })}
-            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}><Btn title="Adicionar série" icon="add" variant="secondary" onPress={() => setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: [...x.sets, { type: 'normal', kg: x.sets.at(-1)?.kg ?? null, reps: x.sets.at(-1)?.reps ?? null }] } : x)))} /></View>
+            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}><Btn title="Add set" icon="add" variant="secondary" onPress={() => setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: [...x.sets, { type: 'normal', kg: x.sets.at(-1)?.kg ?? null, reps: x.sets.at(-1)?.reps ?? null }] } : x)))} /></View>
           </View>
         ))}
-        <View style={{ padding: 16 }}><Btn title="Adicionar exercício" icon="add" onPress={add} testID="routine-add-exercise" /></View>
+        <View style={{ padding: 16 }}><Btn title="Add exercise" icon="add" onPress={add} testID="routine-add-exercise" /></View>
       </ScrollView>
-      <Sheet visible={!!typeSheet} onClose={() => setTypeSheet(null)} title="Tipo de série">
+      <Sheet visible={!!typeSheet} onClose={() => setTypeSheet(null)} title="Set type">
         {SET_TYPES.map((t) => <ListRow key={t.type} label={t.label} last onPress={() => { patchSet(typeSheet!.i, typeSheet!.j, { type: t.type }); setTypeSheet(null); }} />)}
-        <ListRow icon="close" label="Remover série" danger last onPress={() => { const { i, j } = typeSheet!; setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: x.sets.filter((_, n) => n !== j) } : x))); setTypeSheet(null); }} />
+        <ListRow icon="close" label="Remove set" danger last onPress={() => { const { i, j } = typeSheet!; setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: x.sets.filter((_, n) => n !== j) } : x))); setTypeSheet(null); }} />
       </Sheet>
-      <Sheet visible={restSheet !== null} onClose={() => setRestSheet(null)} title="Cronômetro de descanso">
-        <ScrollView style={{ maxHeight: 320 }}>{RESTS.map((sec) => <ListRow key={sec} label={sec ? fmtRest(sec) : 'Desligado'} last onPress={() => { setItems((l) => l.map((x, k) => (k === restSheet ? { ...x, restSec: sec } : x))); setRestSheet(null); }} />)}</ScrollView>
+      <Sheet visible={restSheet !== null} onClose={() => setRestSheet(null)} title="Rest timer">
+        <ScrollView style={{ maxHeight: 320 }}>{RESTS.map((sec) => <ListRow key={sec} label={sec ? fmtRest(sec) : 'Off'} last onPress={() => { setItems((l) => l.map((x, k) => (k === restSheet ? { ...x, restSec: sec } : x))); setRestSheet(null); }} />)}</ScrollView>
       </Sheet>
-      <Dialog visible={cancelAsk} title="Descartar rotina?" message="O que você preencheu será perdido." onClose={() => setCancelAsk(false)} actions={[{ label: 'Continuar editando' }, { label: 'Descartar', danger: true, onPress: () => { setCancelAsk(false); router.back(); } }]} />
+      <Dialog visible={cancelAsk} title="Discard routine?" message="What you've entered will be lost." onClose={() => setCancelAsk(false)} actions={[{ label: 'Keep editing' }, { label: 'Discard', danger: true, onPress: () => { setCancelAsk(false); router.back(); } }]} />
     </Screen>
   );
 }

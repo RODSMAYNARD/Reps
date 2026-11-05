@@ -22,44 +22,44 @@ export default function Treino() {
 
   return (
     <Screen>
-      <Header title="Treino" left="none" />
+      <Header title="Workout" left="none" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Início rápido</Text>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Quick Start</Text>
         <Pressable onPress={() => start(null)} testID="start-empty" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, padding: 16, borderRadius: radius.md }}>
-          <Text style={{ fontSize: 22, color: colors.text }}>＋</Text><Text style={{ fontSize: 16, color: colors.text }}>Iniciar treino vazio</Text>
+          <Text style={{ fontSize: 22, color: colors.text }}>＋</Text><Text style={{ fontSize: 16, color: colors.text }}>Start Empty Workout</Text>
         </Pressable>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 14 }}>Rotinas</Text>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 14 }}>Routines</Text>
         <View style={{ flexDirection: 'row', gap: 12 }}>
-          <Tile icon="clipboard-outline" label="Nova rotina" onPress={() => router.push('/routines/edit')} />
-          <Tile icon="search-outline" label="Explorar rotinas" onPress={() => router.push('/routines/explore')} />
+          <Tile icon="clipboard-outline" label="New Routine" onPress={() => router.push('/routines/edit')} />
+          <Tile icon="search-outline" label="Explore Routines" onPress={() => router.push('/routines/explore')} />
         </View>
         <Pressable onPress={() => router.push('/routines/generate')} testID="open-generate" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primarySoft, padding: 16, borderRadius: radius.md }}>
-          <Text style={{ fontSize: 20 }}>✨</Text><View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Gerar plano de treino</Text><Text style={{ color: colors.muted }}>Escolha objetivo, dias e equipamento</Text></View>
+          <Text style={{ fontSize: 20 }}>✨</Text><View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Generate workout plan</Text><Text style={{ color: colors.muted }}>Pick a goal, days and equipment</Text></View>
         </Pressable>
-        {routines.length > 0 && <Section title={`Minhas rotinas (${routines.length})`} />}
+        {routines.length > 0 && <Section title={`My routines (${routines.length})`} />}
         {routines.map((r) => (
           <Card key={r.id} onPress={() => router.push({ pathname: '/routines/[id]', params: { id: r.id } })} style={{ gap: 6, marginBottom: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ fontWeight: '700', fontSize: 16, color: colors.text, flex: 1 }}>{r.title}</Text>
               <IconButton name="ellipsis-horizontal" onPress={() => setMenu(r)} />
             </View>
-            <Text style={{ color: colors.muted }} numberOfLines={2}>{r.exercises.map((e) => nameOf(e.exerciseId)).join(', ') || 'Sem exercícios'}</Text>
-            <Btn title="Iniciar rotina" onPress={() => start(r)} style={{ minHeight: 40, marginTop: 4 }} />
+            <Text style={{ color: colors.muted }} numberOfLines={2}>{r.exercises.map((e) => nameOf(e.exerciseId)).join(', ') || 'No exercises'}</Text>
+            <Btn title="Start Routine" onPress={() => start(r)} style={{ minHeight: 40, marginTop: 4 }} />
           </Card>
         ))}
         <Pressable onPress={() => router.push('/settings/guide')} style={{ backgroundColor: colors.primarySoft, padding: 16, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', marginTop: 18 }}>
-          <Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>Como começar</Text><Text style={{ fontSize: 20 }}>→</Text>
+          <Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>How to get started</Text><Text style={{ fontSize: 20 }}>→</Text>
         </Pressable>
       </ScrollView>
       <ActiveBar />
       <Sheet visible={!!menu} onClose={() => setMenu(null)} title={menu?.title}>
-        <ListRow icon="play-outline" label="Iniciar rotina" onPress={() => { const r = menu!; setMenu(null); start(r); }} />
-        <ListRow icon="create-outline" label="Editar rotina" onPress={() => { const r = menu!; setMenu(null); router.push({ pathname: '/routines/edit', params: { id: r.id } }); }} />
-        <ListRow icon="copy-outline" label="Duplicar rotina" onPress={async () => { const r = menu!; setMenu(null); await saveRoutine({ title: `${r.title} (cópia)`, notes: r.notes, exercises: r.exercises }); showToast('Rotina duplicada'); }} />
-        <ListRow icon="trash-outline" label="Excluir rotina" danger last onPress={() => { const r = menu!; setMenu(null); deleteRoutine(r.id); showToast('Rotina excluída'); }} />
+        <ListRow icon="play-outline" label="Start Routine" onPress={() => { const r = menu!; setMenu(null); start(r); }} />
+        <ListRow icon="create-outline" label="Edit Routine" onPress={() => { const r = menu!; setMenu(null); router.push({ pathname: '/routines/edit', params: { id: r.id } }); }} />
+        <ListRow icon="copy-outline" label="Duplicate Routine" onPress={async () => { const r = menu!; setMenu(null); await saveRoutine({ title: `${r.title} (copy)`, notes: r.notes, exercises: r.exercises }); showToast('Routine duplicated'); }} />
+        <ListRow icon="trash-outline" label="Delete Routine" danger last onPress={() => { const r = menu!; setMenu(null); deleteRoutine(r.id); showToast('Routine deleted'); }} />
       </Sheet>
-      <Dialog visible={ask === 'replace'} title="Já existe um treino em andamento" message="Quer descartar o treino atual e começar outro?" onClose={() => setAsk(null)}
-        actions={[{ label: 'Voltar ao treino', onPress: () => { setAsk(null); router.push('/active'); } }, { label: 'Descartar e iniciar', danger: true, onPress: () => { discardActive(); startWorkout({ routine: pending ?? null }); setAsk(null); router.push('/active'); } }]} />
+      <Dialog visible={ask === 'replace'} title="A workout is already in progress" message="Discard the current workout and start a new one?" onClose={() => setAsk(null)}
+        actions={[{ label: 'Back to workout', onPress: () => { setAsk(null); router.push('/active'); } }, { label: 'Discard and start', danger: true, onPress: () => { discardActive(); startWorkout({ routine: pending ?? null }); setAsk(null); router.push('/active'); } }]} />
     </Screen>
   );
 }

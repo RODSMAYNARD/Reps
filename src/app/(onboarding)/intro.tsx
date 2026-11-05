@@ -6,10 +6,10 @@ import { Btn, Screen, TextLink } from '../../components/ui';
 import { colors, radius } from '../../lib/theme';
 
 const SLIDES = [
-  { icon: 'create-outline', title: 'Registre seus treinos', text: 'Anote séries, cargas e repetições em segundos, com o histórico do último treino ao lado.' },
-  { icon: 'stats-chart-outline', title: 'Acompanhe o progresso', text: 'Veja gráficos de força, volume e recordes pessoais de cada exercício.' },
-  { icon: 'clipboard-outline', title: 'Monte suas rotinas', text: 'Crie rotinas reutilizáveis ou comece por um programa pronto.' },
-  { icon: 'timer-outline', title: 'Descanso automático', text: 'O cronômetro de descanso inicia sozinho quando você conclui uma série.' },
+  { icon: 'create-outline', title: 'Log your workouts', text: 'Record sets, weights, and reps in seconds, with your previous workout history right beside it.' },
+  { icon: 'stats-chart-outline', title: 'Track your progress', text: 'See strength and volume charts and personal records for every exercise.' },
+  { icon: 'clipboard-outline', title: 'Build your routines', text: 'Create reusable routines or start with a ready-made program.' },
+  { icon: 'timer-outline', title: 'Automatic rest timer', text: 'The rest timer starts on its own when you complete a set.' },
 ] as const;
 
 export default function Intro() {
@@ -23,7 +23,7 @@ export default function Intro() {
   };
   return (
     <Screen>
-      <View style={{ alignItems: 'flex-end', padding: 16 }}><TextLink title="Pular" onPress={() => router.push('/about-you')} /></View>
+      <View style={{ alignItems: 'flex-end', padding: 16 }}><TextLink title="Skip" onPress={() => router.push('/about-you')} /></View>
       <ScrollView ref={ref} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onMomentumScrollEnd={(e) => setI(Math.round(e.nativeEvent.contentOffset.x / width))} style={{ flex: 1 }}>
         {SLIDES.map((s) => (
           <View key={s.title} style={{ width, padding: 24, alignItems: 'center', gap: 16 }}>
@@ -38,7 +38,7 @@ export default function Intro() {
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, paddingBottom: 12 }}>
         {SLIDES.map((_, k) => <View key={k} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: k === i ? colors.primary : colors.border }} />)}
       </View>
-      <View style={{ padding: 16 }}><Btn title="Continuar" testID="intro-continue" onPress={next} /></View>
+      <View style={{ padding: 16 }}><Btn title="Continue" testID="intro-continue" onPress={next} /></View>
     </Screen>
   );
 }

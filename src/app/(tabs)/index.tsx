@@ -26,18 +26,18 @@ export default function Home() {
       {watch && (
         <View style={{ padding: 16, gap: 10, borderBottomWidth: 8, borderBottomColor: colors.surface, alignItems: 'center' }}>
           <Ionicons name="watch-outline" size={64} color={colors.text} />
-          <Text style={{ fontWeight: '700', fontSize: 16, alignSelf: 'flex-start', color: colors.text }}>Sincronize com seu relógio</Text>
-          <Text style={{ color: colors.muted, alignSelf: 'flex-start' }}>Registre seus treinos direto no pulso.</Text>
-          <Btn title="Conectar relógio" onPress={() => setWatchDlg(true)} style={{ alignSelf: 'stretch' }} />
-          <Btn title="Dispensar" variant="secondary" onPress={() => setWatch(false)} style={{ alignSelf: 'stretch' }} />
+          <Text style={{ fontWeight: '700', fontSize: 16, alignSelf: 'flex-start', color: colors.text }}>Sync with your watch</Text>
+          <Text style={{ color: colors.muted, alignSelf: 'flex-start' }}>Log your workouts right from your wrist.</Text>
+          <Btn title="Connect watch" onPress={() => setWatchDlg(true)} style={{ alignSelf: 'stretch' }} />
+          <Btn title="Dismiss" variant="secondary" onPress={() => setWatch(false)} style={{ alignSelf: 'stretch' }} />
         </View>
       )}
       {streak > 0 && (
         <View style={{ margin: 16, borderRadius: radius.lg, backgroundColor: '#FDEDED', padding: 20, gap: 4 }}>
           <Ionicons name="flame" size={44} color={colors.danger} />
           <Text style={{ fontSize: 56, fontWeight: '800', color: colors.text }}>{streak}</Text>
-          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>{streak === 1 ? 'Semana seguida' : 'Semanas seguidas'}</Text>
-          <Text style={{ color: colors.text }}>Você treina com constância há {streak} {streak === 1 ? 'semana' : 'semanas'}!</Text>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>{streak === 1 ? 'Week streak' : 'Week streak'}</Text>
+          <Text style={{ color: colors.text }}>You&apos;ve worked out consistently for {streak} {streak === 1 ? 'week' : 'weeks'}!</Text>
         </View>
       )}
     </View>
@@ -51,15 +51,15 @@ export default function Home() {
             <Avatar name={a.name} size={64} />
             <Text style={{ fontWeight: '600', color: colors.text }} numberOfLines={1}>{a.name}</Text>
             <Text style={{ color: colors.muted, fontSize: 13 }}>{a.tag}</Text>
-            <Btn title={follow[a.id] ? 'Seguindo' : 'Seguir'} variant={follow[a.id] ? 'secondary' : 'primary'} onPress={() => setFollow({ ...follow, [a.id]: !follow[a.id] })} style={{ alignSelf: 'stretch', minHeight: 38 }} />
+            <Btn title={follow[a.id] ? 'Following' : 'Follow'} variant={follow[a.id] ? 'secondary' : 'primary'} onPress={() => setFollow({ ...follow, [a.id]: !follow[a.id] })} style={{ alignSelf: 'stretch', minHeight: 38 }} />
           </View>
         ))}
       </ScrollView>
       <View style={{ padding: 16, gap: 10 }}>
-        <Text style={{ color: colors.muted, textAlign: 'center' }}>Siga pessoas para ver os treinos delas no seu feed.</Text>
-        <Btn title="Descobrir atletas" variant="secondary" onPress={() => router.push('/feed/discover')} />
-        <Btn title="Conectar contatos" variant="secondary" onPress={() => router.push('/feed/friends')} />
-        <Btn title="Registrar meu primeiro treino" variant="ghost" onPress={() => { startWorkout(); router.push('/active'); }} />
+        <Text style={{ color: colors.muted, textAlign: 'center' }}>Follow people to see their workouts in your feed.</Text>
+        <Btn title="Discover athletes" variant="secondary" onPress={() => router.push('/feed/discover')} />
+        <Btn title="Connect contacts" variant="secondary" onPress={() => router.push('/feed/friends')} />
+        <Btn title="Log my first workout" variant="ghost" onPress={() => { startWorkout(); router.push('/active'); }} />
       </View>
     </View>
   );
@@ -68,7 +68,7 @@ export default function Home() {
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
         <Pressable onPress={() => setMenu(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.sm }}>
-          <Text style={{ fontWeight: '500', color: colors.text }}>{feed === 'home' ? 'Início' : 'Meus treinos'}</Text>
+          <Text style={{ fontWeight: '500', color: colors.text }}>{feed === 'home' ? 'Home' : 'My Workouts'}</Text>
           <Ionicons name="chevron-down" size={16} color={colors.text} />
         </Pressable>
         <View style={{ flexDirection: 'row', gap: 18 }}>
@@ -85,14 +85,14 @@ export default function Home() {
       />
       <ActiveBar />
       <Sheet visible={menu} onClose={() => setMenu(false)} title="Feed">
-        <Btn title="Início" variant={feed === 'home' ? 'primary' : 'secondary'} style={{ marginBottom: 8 }} onPress={() => { setFeed('home'); setMenu(false); }} />
-        <Btn title="Meus treinos" variant={feed === 'mine' ? 'primary' : 'secondary'} onPress={() => { setFeed('mine'); setMenu(false); }} />
+        <Btn title="Home" variant={feed === 'home' ? 'primary' : 'secondary'} style={{ marginBottom: 8 }} onPress={() => { setFeed('home'); setMenu(false); }} />
+        <Btn title="My Workouts" variant={feed === 'mine' ? 'primary' : 'secondary'} onPress={() => { setFeed('mine'); setMenu(false); }} />
       </Sheet>
       <Sheet visible={!!target} onClose={() => setTarget(null)}>
-        <Btn title="Abrir treino" variant="secondary" style={{ marginBottom: 8 }} onPress={() => { const id = target!; setTarget(null); router.push({ pathname: '/feed/workout/[id]', params: { id } }); }} />
-        <Btn title="Excluir treino" variant="danger" onPress={() => { deleteWorkout(target!); setTarget(null); showToast('Treino excluído'); }} />
+        <Btn title="Open workout" variant="secondary" style={{ marginBottom: 8 }} onPress={() => { const id = target!; setTarget(null); router.push({ pathname: '/feed/workout/[id]', params: { id } }); }} />
+        <Btn title="Delete workout" variant="danger" onPress={() => { deleteWorkout(target!); setTarget(null); showToast('Workout deleted'); }} />
       </Sheet>
-      <Dialog visible={watchDlg} title="Em breve" message="A integração com relógios depende de apps nativos e chega numa próxima versão." actions={[{ label: 'Ok', primary: true, onPress: () => setWatchDlg(false) }]} />
+      <Dialog visible={watchDlg} title="Coming soon" message="Watch integration requires native apps and is coming in a future version." actions={[{ label: 'Ok', primary: true, onPress: () => setWatchDlg(false) }]} />
     </Screen>
   );
 }

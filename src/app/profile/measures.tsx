@@ -8,7 +8,7 @@ import { fmtBody, fmtDate, toDisplayBody, toDisplayWeight } from '../../lib/form
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
-const RANGES = [{ id: '30', label: 'Último mês' }, { id: '90', label: 'Últimos 3 meses' }, { id: '365', label: 'Último ano' }, { id: '0', label: 'Tudo' }];
+const RANGES = [{ id: '30', label: 'Last month' }, { id: '90', label: 'Last 3 months' }, { id: '365', label: 'Last year' }, { id: '0', label: 'All' }];
 
 export default function Measures() {
   const { measurements, profile } = useStore();
@@ -27,11 +27,11 @@ export default function Measures() {
   const last = rows[0];
   return (
     <Screen>
-      <Header title="Medidas" right={<IconButton name="add" size={28} onPress={() => router.push('/profile/log-measures')} testID="add-measure" />} />
+      <Header title="Measurements" right={<IconButton name="add" size={28} onPress={() => router.push('/profile/log-measures')} testID="add-measure" />} />
       <ScrollView>
         {photos.length > 0 && (
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}><Text style={{ color: colors.muted }}>Fotos de progresso</Text><Text onPress={() => router.push('/profile/progress-photos')} style={{ color: colors.primary }}>Ver todas</Text></View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}><Text style={{ color: colors.muted }}>Progress photos</Text><Text onPress={() => router.push('/profile/progress-photos')} style={{ color: colors.primary }}>See all</Text></View>
             <ScrollView horizontal contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>{photos.slice(0, 6).map((m) => <Image key={m.id} source={{ uri: m.photoUri! }} style={{ width: 90, height: 120, borderRadius: 12 }} />)}</ScrollView>
           </View>
         )}
@@ -43,15 +43,15 @@ export default function Measures() {
           <LineChart data={series} unit={` ${unit}`} />
         </View>
         <PillRow value={field} onChange={setField} items={MEASURE_FIELDS.map((f) => ({ id: f.key, label: f.label }))} />
-        <Section title="Histórico" />
-        {rows.length === 0 && <Empty icon="body-outline" text="Nenhum registro ainda. Toque em + para registrar suas medidas." />}
+        <Section title="History" />
+        {rows.length === 0 && <Empty icon="body-outline" text="No entries yet. Tap + to log your measurements." />}
         {rows.map((m) => (
           <ListRow key={m.id} label={fmtDate(m.date, { day: '2-digit', month: 'short', year: 'numeric' })} last
             right={<View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>{m.photoUri ? <Ionicons name="camera-outline" size={20} color={colors.muted} /> : null}<Text style={{ fontSize: 16, color: colors.text }}>{def.unit === 'body' ? fmtBody(m.values[field], u) : `${Math.round(conv(m.values[field]) * 10) / 10} ${unit}`}</Text></View>}
             onPress={() => router.push({ pathname: '/profile/log-measures', params: { id: m.id } })} />
         ))}
       </ScrollView>
-      <Sheet visible={sheet} onClose={() => setSheet(false)} title="Período">
+      <Sheet visible={sheet} onClose={() => setSheet(false)} title="Period">
         {RANGES.map((r) => <ListRow key={r.id} label={r.label} last right={range === r.id ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setRange(r.id); setSheet(false); }} />)}
       </Sheet>
     </Screen>

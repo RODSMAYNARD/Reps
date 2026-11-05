@@ -5,19 +5,19 @@ import { Header, Screen } from '../../components/ui';
 import { colors } from '../../lib/theme';
 
 const FAQ = [
-  ['Como crio uma rotina?', 'Vá em Treino › Nova rotina, dê um título, adicione exercícios e toque em Salvar.'],
-  ['Como funciona o cronômetro de descanso?', 'Defina o descanso de cada exercício. Ao marcar uma série com ✓, o cronômetro inicia sozinho.'],
-  ['O que são séries de aquecimento, falha e drop set?', 'Toque no número da série para trocar o tipo. Aquecimento não conta no volume.'],
-  ['Como altero a duração de um treino?', 'Toque na duração durante o treino para ajustar os minutos ou pausar o cronômetro.'],
-  ['Como mudo de kg para lbs?', 'Configurações › Unidades.'],
-  ['Meus dados ficam salvos se eu trocar de celular?', 'Sim. Eles ficam na sua conta; é só entrar com o mesmo e-mail.'],
+  ['How do I create a routine?', 'Go to Workout › New Routine, give it a title, add exercises, and tap Save.'],
+  ['How does the rest timer work?', 'Set the rest time for each exercise. When you check off a set with ✓, the timer starts automatically.'],
+  ['What are warm-up, failure, and drop sets?', 'Tap the set number to change the type. Warm-up sets do not count toward volume.'],
+  ['How do I change a workout\'s duration?', 'Tap the duration during your workout to adjust the minutes or pause the timer.'],
+  ['How do I switch from kg to lbs?', 'Settings › Units.'],
+  ['Is my data saved if I switch phones?', 'Yes. It lives in your account; just sign in with the same email.'],
 ];
 
 export default function Faq() {
   const [open, setOpen] = useState<number | null>(null);
   return (
     <Screen>
-      <Header title="Perguntas frequentes" />
+      <Header title="FAQ" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
         {FAQ.map(([q, a], i) => (
           <Pressable key={q} onPress={() => setOpen(open === i ? null : i)} style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, gap: 8 }}>

@@ -11,9 +11,9 @@ export default function ProgressPhotos() {
   const [open, setOpen] = useState<string | null>(null);
   return (
     <Screen>
-      <Header title="Fotos de progresso" />
+      <Header title="Progress photos" />
       <ScrollView contentContainerStyle={{ padding: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {photos.length === 0 && <Empty icon="camera-outline" text="Nenhuma foto ainda. Adicione uma ao registrar medidas." />}
+        {photos.length === 0 && <Empty icon="camera-outline" text="No photos yet. Add one when you log measurements." />}
         {photos.map((m) => (
           <Pressable key={m.id} onPress={() => setOpen(m.photoUri)} style={{ width: '48%' }}>
             <Image source={{ uri: m.photoUri! }} style={{ width: '100%', aspectRatio: 0.75, borderRadius: 12 }} />
@@ -21,7 +21,7 @@ export default function ProgressPhotos() {
           </Pressable>
         ))}
       </ScrollView>
-      <Dialog visible={!!open} actions={[{ label: 'Fechar', primary: true, onPress: () => setOpen(null) }]} onClose={() => setOpen(null)}>
+      <Dialog visible={!!open} actions={[{ label: 'Close', primary: true, onPress: () => setOpen(null) }]} onClose={() => setOpen(null)}>
         {open && <Image source={{ uri: open }} style={{ width: '100%', height: 360, borderRadius: 12, backgroundColor: colors.surface }} resizeMode="contain" />}
       </Dialog>
     </Screen>

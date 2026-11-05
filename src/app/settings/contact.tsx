@@ -11,12 +11,12 @@ export default function Contact() {
   const [thanks, setThanks] = useState(false);
   return (
     <Screen>
-      <Header title="Fale com a gente" right={<HeaderAction label="Enviar" disabled={!body.trim()} onPress={async () => { await sendFeedback('contact', `${subject}\n${body}`); setThanks(true); }} />} />
+      <Header title="Contact Us" right={<HeaderAction label="Send" disabled={!body.trim()} onPress={async () => { await sendFeedback('contact', `${subject}\n${body}`); setThanks(true); }} />} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-        <Field label="Assunto" value={subject} onChangeText={setSubject} />
-        <Field label="Mensagem" multiline value={body} onChangeText={setBody} />
+        <Field label="Subject" value={subject} onChangeText={setSubject} />
+        <Field label="Message" multiline value={body} onChangeText={setBody} />
       </ScrollView>
-      <Dialog visible={thanks} message="Mensagem enviada. Responderemos em breve." actions={[{ label: 'Ok', primary: true, onPress: () => { setThanks(false); router.back(); } }]} />
+      <Dialog visible={thanks} message="Message sent. We will get back to you soon." actions={[{ label: 'Ok', primary: true, onPress: () => { setThanks(false); router.back(); } }]} />
     </Screen>
   );
 }

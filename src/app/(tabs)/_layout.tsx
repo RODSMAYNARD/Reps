@@ -10,9 +10,9 @@ const tab = (title: string, on: any, off: any) => ({
 export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border }, sceneStyle: { backgroundColor: colors.bg } }}>
-      <Tabs.Screen name="index" options={tab('Início', 'home', 'home-outline')} />
-      <Tabs.Screen name="treino" options={tab('Treino', 'barbell', 'barbell-outline')} />
-      <Tabs.Screen name="perfil" options={tab('Perfil', 'person', 'person-outline')} />
+      <Tabs.Screen name="index" options={tab('Home', 'home', 'home-outline')} />
+      <Tabs.Screen name="treino" options={tab('Workout', 'barbell', 'barbell-outline')} />
+      <Tabs.Screen name="perfil" options={tab('Profile', 'person', 'person-outline')} />
     </Tabs>
   );
 }

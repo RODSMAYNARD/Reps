@@ -1,3 +1,4 @@
+import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -22,21 +23,21 @@ export default function PickExercise() {
   const done = async () => { setBusy(true); const real = await ensureExercises(sel); setBusy(false); resolvePick(real); router.back(); };
   return (
     <Screen>
-      <Header left="cancel" title="Adicionar exercício" right={<HeaderAction label="Criar" onPress={() => router.push('/exercises/create')} />} />
-      <SearchBar value={q} onChangeText={setQ} placeholder="Buscar exercício" />
-      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'Todos os músculos' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
-      <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'Todo equipamento' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
-      <Text style={{ color: colors.muted, paddingHorizontal: 16, paddingBottom: 6, fontSize: 12 }}>{list.length} exercícios</Text>
+      <Header left="cancel" title="Add exercise" right={<HeaderAction label="Create" onPress={() => router.push('/exercises/create')} />} />
+      <SearchBar value={q} onChangeText={setQ} placeholder="Search exercises" />
+      <PillRow value={muscle} onChange={setMuscle} items={[{ id: 'all', label: 'All muscles' }, ...MUSCLES.map((m) => ({ id: m, label: m }))]} />
+      <PillRow value={equip} onChange={setEquip} items={[{ id: 'all', label: 'All equipment' }, ...EQUIPMENT.map((m) => ({ id: m, label: m }))]} />
+      <Text style={{ color: colors.muted, paddingHorizontal: 16, paddingBottom: 6, fontSize: 12 }}>{list.length} exercises</Text>
       <FlatList
         data={list}
         initialNumToRender={20}
         windowSize={7}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(e) => e.id}
-        ListEmptyComponent={<Empty text="Nenhum exercício encontrado." action={<Btn title="Criar exercício" variant="secondary" onPress={() => router.push('/exercises/create')} />} />}
+        ListEmptyComponent={<Empty text="No exercises found." action={<Btn title="Create exercise" variant="secondary" onPress={() => router.push('/exercises/create')} />} />}
         renderItem={({ item }) => (
           <Pressable onPress={() => toggle(item.id)} testID="pick-row" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: sel.includes(item.id) ? colors.primarySoft : colors.bg }}>
-            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="barbell-outline" size={22} color={colors.muted} /></View>
+            <ExerciseThumb catalogId={item.catalogId} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 16, color: colors.text }}>{item.name}</Text>
               <Text style={{ color: colors.muted, fontSize: 13 }}>{item.muscle} · {item.equipment}</Text>
@@ -45,7 +46,7 @@ export default function PickExercise() {
           </Pressable>
         )}
       />
-      <View style={{ padding: 16 }}><Btn title={sel.length ? `Adicionar ${sel.length} exercício(s)` : 'Selecione exercícios'} disabled={!sel.length} loading={busy} testID="pick-confirm" onPress={done} /></View>
+      <View style={{ padding: 16 }}><Btn title={sel.length ? `Add ${sel.length} exercise(s)` : 'Select exercises'} disabled={!sel.length} loading={busy} testID="pick-confirm" onPress={done} /></View>
     </Screen>
   );
 }
