@@ -72,6 +72,11 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Publicar: `workflow_run` com fileName `update.yml` (gitRef `main`) — NÃO precisa de build. Só JS/telas/textos chegam; pacote nativo novo muda o fingerprint e exige build novo (com autorização do Rodrigo).
 - O app baixa a atualização ao abrir e aplica na próxima abertura.
 
+## Notificações do treino (`src/components/WorkoutNotifier.tsx`, expo-notifications)
+- Com o treino ativo e o app em segundo plano: notificação fixa com exercício + "Set 1/3 - 24 kg x 12 reps" e botão "Complete Set"; durante o descanso: "Rest m:ss · Next: ..." com Skip/-15s/+15s. Alarme "Rest is over" agendado no sistema (toca mesmo com o app fechado; respeita Sounds).
+- LIMITE: sem serviço em primeiro plano o contador NÃO anda sozinho na notificação (só atualiza quando o app roda) e os botões só respondem enquanto o processo do app estiver vivo. Para contagem ao vivo + botões sempre confiáveis: serviço em primeiro plano nativo (ex.: Notifee) = build novo.
+- Não testado em aparelho ainda.
+
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR

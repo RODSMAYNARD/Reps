@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { WorkoutNotifier } from '../components/WorkoutNotifier';
 import { StoreProvider, useStore } from '../lib/store';
 import { colors } from '../lib/theme';
 
@@ -50,6 +51,7 @@ export default function RootLayout() {
       <StoreProvider>
         <StatusBar style="dark" />
         <Routes />
+        <WorkoutNotifier />
       </StoreProvider>
     </SafeAreaProvider>
   );
