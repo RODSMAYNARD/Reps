@@ -41,6 +41,7 @@ type Store = {
   setActiveTitle: (t: string) => void;
   addEntries: (ids: string[]) => void;
   removeEntry: (i: number) => void;
+  moveEntry: (from: number, to: number) => void;
   replaceEntry: (i: number, exerciseId: string) => void;
   patchEntry: (i: number, patch: Partial<ActiveEntry>) => void;
   addSet: (i: number) => void;
@@ -215,7 +216,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     startWorkout: (opts) => {
       const src = opts?.entries ?? opts?.routine?.exercises ?? [];
       const entries: ActiveEntry[] = src.map((e) => ({
-        exerciseId: e.exerciseId, notes: e.notes ?? '', restSec: e.restSec ?? 0, superset: e.superset ?? null,
+        uid: randomUUID(), exerciseId: e.exerciseId, notes: e.notes ?? '', restSec: e.restSec ?? 0, superset: e.superset ?? null,
         sets: (e.sets.length ? e.sets : ([{ type: 'normal', kg: null, reps: null }] as SetRow[])).map((s): ActiveSet => ({ ...s, done: false })),
       }));
       activeRef.current = { id: randomUUID(), title: opts?.title ?? opts?.routine?.title ?? 'Workout', startedAt: new Date().toISOString(), pausedAt: null, pausedMs: 0, entries, fromRoutineId: opts?.routine?.id ?? null };
@@ -223,8 +224,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (userId) AsyncStorage.setItem(`reps:active:${userId}`, JSON.stringify(activeRef.current)).catch(() => {});
     },
     setActiveTitle: (t) => setActive((a) => ({ ...a, title: t })),
-    addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => ({ exerciseId: id, notes: '', restSec: 0, sets: [newSet()] }))] })),
+    addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => ({ uid: randomUUID(), exerciseId: id, notes: '', restSec: 0, sets: [newSet()] }))] })),
     removeEntry: (i) => setActive((a) => ({ ...a, entries: a.entries.filter((_, k) => k !== i) })),
+    moveEntry: (from, to) => setActive((a) => { const list = [...a.entries]; const [it] = list.splice(from, 1); list.splice(to, 0, it); return { ...a, entries: list }; }),
     replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, exerciseId } : e)) })),
     patchEntry: (i, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...patch } : e)) })),
     addSet: (i) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: [...e.sets, { ...newSet(), kg: e.sets.at(-1)?.kg ?? null, reps: e.sets.at(-1)?.reps ?? null }] } : e)) })),
@@ -246,6 +248,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const a = activeRef.current;
       if (!a) return null;
       const entries: SavedEntry[] = a.entries
+        .filter((e) => !e.hidden)
         .map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, ...s }) => s) }))
         .filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }

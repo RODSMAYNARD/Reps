@@ -20,7 +20,7 @@ export type Exercise = { id: string; name: string; muscle: string; equipment: st
 
 export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null };
 export type ActiveSet = SetRow & { done: boolean };
-export type ActiveEntry = { exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
+export type ActiveEntry = { uid?: string; hidden?: boolean; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
 export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null };
 
 export type SavedEntry = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };

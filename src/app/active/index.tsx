@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
+import { ReorderList } from '../../components/ReorderList';
 import { NumberSheet, range } from '../../components/pickers';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
@@ -34,6 +35,9 @@ export default function ActiveWorkoutScreen() {
   const [cancelAsk, setCancelAsk] = useState(false);
   const [incomplete, setIncomplete] = useState(false);
   const [helpType, setHelpType] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [reordering, setReordering] = useState(false);
+  const [hiddenSheet, setHiddenSheet] = useState(false);
   const u = profile.units;
 
   if (!active)
@@ -43,9 +47,14 @@ export default function ActiveWorkoutScreen() {
 
   const exOf = (id: string): Exercise | undefined => exercises.find((e) => e.id === id);
   const elapsed = elapsedSec(active, now);
-  const doneSets = active.entries.flatMap((e) => e.sets.filter((s) => s.done));
+  const shown = active.entries.map((e, i) => ({ e, i })).filter((x) => !x.e.hidden);
+  const hiddenList = active.entries.map((e, i) => ({ e, i })).filter((x) => x.e.hidden);
+  const uidOf = (e: ActiveEntry, i: number) => e.uid ?? `${e.exerciseId}-${i}`;
+  const allCollapsed = shown.length > 0 && shown.every((x) => collapsed[uidOf(x.e, x.i)]);
+  const setAll = (v: boolean) => setCollapsed(Object.fromEntries(shown.map((x) => [uidOf(x.e, x.i), v])));
+  const doneSets = shown.flatMap((x) => x.e.sets.filter((s) => s.done));
   const volume = doneSets.reduce((t, s) => t + setVolume(s), 0);
-  const pending = active.entries.reduce((t, e) => t + e.sets.filter((s) => !s.done).length, 0);
+  const pending = shown.reduce((t, x) => t + x.e.sets.filter((s) => !s.done).length, 0);
 
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
   const goSave = () => router.push('/active/save');
@@ -65,25 +74,53 @@ export default function ActiveWorkoutScreen() {
         <IconButton name="timer-outline" onPress={() => setTimerSheet(true)} testID="open-timer" />
         <HeaderAction label="Finish" primary onPress={finish} />
       </>} />
-      <ScrollView contentContainerStyle={{ paddingBottom: rest ? 180 : 40 }} keyboardShouldPersistTaps="handled">
+      {reordering && (
+        <View style={{ flex: 1 }}>
+          <ReorderList
+            items={shown.map(({ e }) => { const ex = exOf(e.exerciseId); return { key: e.uid ?? e.exerciseId, title: ex?.name ?? 'Removed exercise', subtitle: `${e.sets.filter((s) => s.done).length}/${e.sets.length} sets`, catalogId: ex?.catalogId }; })}
+            onMove={(from, to) => st.moveEntry(shown[from].i, shown[to].i)}
+          />
+          <View style={{ padding: 16 }}><Btn title="Done" onPress={() => setReordering(false)} testID="reorder-done" /></View>
+        </View>
+      )}
+      {!reordering && <ScrollView contentContainerStyle={{ paddingBottom: rest ? 180 : 40 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable onPress={() => setDurSheet(true)} testID="duration"><Text style={{ color: colors.muted, fontSize: 13 }}>Duration</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDuration(elapsed)}</Text></Pressable>
           <Stat label="Volume" value={fmtVolume(volume, u)} />
           <Stat label="Sets" value={String(doneSets.length)} />
         </View>
 
-        {active.entries.length === 0 && <Empty text="Start by adding an exercise to your workout." />}
+        {shown.length > 1 && (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 18, paddingHorizontal: 16, paddingTop: 12 }}>
+            <Pressable onPress={() => setReordering(true)} testID="reorder-btn" hitSlop={8} style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+              <Ionicons name="swap-vertical" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Reorder</Text>
+            </Pressable>
+            <Pressable onPress={() => setAll(!allCollapsed)} testID="collapse-all" hitSlop={8} style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+              <Ionicons name={allCollapsed ? 'expand-outline' : 'contract-outline'} size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>{allCollapsed ? 'Expand all' : 'Collapse all'}</Text>
+            </Pressable>
+          </View>
+        )}
 
-        {active.entries.map((e, i) => {
+        {shown.length === 0 && <Empty text={hiddenList.length ? 'All exercises are hidden for this workout.' : 'Start by adding an exercise to your workout.'} />}
+
+        {shown.map(({ e, i }) => {
           const ex = exOf(e.exerciseId);
           const kind = ex?.kind ?? 'weight_reps';
+          const uid = uidOf(e, i);
+          const isCollapsed = !!collapsed[uid];
+          const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
-            <View key={`${e.exerciseId}-${i}`} style={{ paddingTop: 16 }} testID="entry">
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
-                <ExerciseThumb catalogId={ex?.catalogId} />
-                <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ flex: 1, color: colors.primary, fontSize: 17, fontWeight: '600' }}>{ex?.name ?? 'Removed exercise'}</Text>
+            <View key={uid} style={{ paddingTop: 16 }} testID="entry">
+              <Pressable onPress={isCollapsed ? toggle : undefined} onLongPress={() => setReordering(true)} delayLongPress={450} testID="entry-header" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
+                <ExerciseThumb catalogId={ex?.catalogId} size={isCollapsed ? 36 : 44} />
+                <View style={{ flex: 1 }}>
+                  <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: isCollapsed ? 16 : 17, fontWeight: '600' }}>{ex?.name ?? 'Removed exercise'}</Text>
+                  {isCollapsed && <Text style={{ color: colors.muted, fontSize: 13 }}>{e.sets.filter((s) => s.done).length}/{e.sets.length} sets</Text>}
+                </View>
+                <IconButton name={isCollapsed ? 'chevron-down' : 'chevron-up'} onPress={toggle} testID="entry-toggle" />
                 <IconButton name="ellipsis-vertical" onPress={() => setMenu(i)} testID="entry-menu" />
-              </View>
+              </Pressable>
+              {isCollapsed ? <View style={{ height: 8, borderBottomWidth: 1, borderBottomColor: colors.surface }} /> : <>
               <TextInput value={e.notes} onChangeText={(t) => st.patchEntry(i, { notes: t })} placeholder="Add notes here..." placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 10, color: colors.text }} />
               <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 10 }}>
                 <Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Rest Timer: {fmtRest(e.restSec)}</Text>
@@ -121,17 +158,23 @@ export default function ActiveWorkoutScreen() {
                 );
               })}
               <View style={{ paddingHorizontal: 16, paddingTop: 10 }}><Btn title="Add Set" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
+              </>}
             </View>
           );
         })}
 
+        {hiddenList.length > 0 && (
+          <Pressable onPress={() => setHiddenSheet(true)} testID="hidden-row" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16 }}>
+            <Ionicons name="eye-off-outline" size={20} color={colors.muted} /><Text style={{ flex: 1, color: colors.muted }}>{hiddenList.length} hidden exercise{hiddenList.length > 1 ? 's' : ''} (this workout only)</Text><Text style={{ color: colors.primary }}>Show</Text>
+          </Pressable>
+        )}
         <View style={{ padding: 16, gap: 10, marginTop: 16 }}>
           <Btn title="Add Exercise" icon="add" onPress={() => pickFor((ids) => st.addEntries(ids))} testID="add-exercise" />
           <Btn title="Cancel Workout" variant="ghost" onPress={() => setCancelAsk(true)} style={{ borderWidth: 0 }} />
         </View>
-      </ScrollView>
+      </ScrollView>}
 
-      {rest && (
+      {rest && !reordering && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, padding: 16, gap: 10 }}>
           <View style={{ height: 4, backgroundColor: colors.surfaceAlt, borderRadius: 2 }}><View style={{ height: 4, borderRadius: 2, backgroundColor: colors.primary, width: `${Math.min(100, (restLeft / rest.total) * 100)}%` }} /></View>
           <Text style={{ fontSize: 44, fontWeight: '300', textAlign: 'center', color: colors.text }} testID="rest-clock">{fmtClock(restLeft)}</Text>
@@ -175,6 +218,8 @@ export default function ActiveWorkoutScreen() {
           st.patchEntry(i, { superset: id }); if (active.entries[i + 1]) st.patchEntry(i + 1, { superset: id });
         }} />
         <ListRow icon="information-circle-outline" label="View Exercise" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
+        <ListRow icon="eye-off-outline" label="Hide for this workout" testID="hide-exercise" onPress={() => { st.patchEntry(menu!, { hidden: true }); setMenu(null); st.showToast('Hidden for this workout. Nothing was deleted.'); }} />
+        <ListRow icon="swap-vertical" label="Reorder exercises" onPress={() => { setMenu(null); setReordering(true); }} />
         <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { st.removeEntry(menu!); setMenu(null); }} />
       </Sheet>
 
@@ -193,6 +238,11 @@ export default function ActiveWorkoutScreen() {
         {[30, 60, 90, 120, 180, 300].map((s) => <ListRow key={s} icon="timer-outline" label={fmtRest(s)} last onPress={() => { st.startRest(s); setTimerSheet(false); }} />)}
       </Sheet>
 
+      <Sheet visible={hiddenSheet} onClose={() => setHiddenSheet(false)} title="Hidden exercises">
+        {hiddenList.map(({ e, i }) => (
+          <ListRow key={uidOf(e, i)} label={exOf(e.exerciseId)?.name ?? 'Removed exercise'} detail="Show" last onPress={() => { st.patchEntry(i, { hidden: false }); if (hiddenList.length <= 1) setHiddenSheet(false); }} />
+        ))}
+      </Sheet>
       <Dialog visible={cancelAsk} title="Cancel workout?" message="All progress in this workout will be lost." onClose={() => setCancelAsk(false)}
         actions={[{ label: 'Keep going' }, { label: 'Discard', danger: true, onPress: () => { setCancelAsk(false); st.discardActive(); router.back(); } }]} />
       <Dialog visible={incomplete} title="Incomplete sets" message={`${pending} set(s) without ✓ won't be saved. Finish anyway?`} onClose={() => setIncomplete(false)}

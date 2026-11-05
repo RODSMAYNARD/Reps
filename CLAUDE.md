@@ -23,6 +23,7 @@
 - `src/data/catalog.json` + `src/lib/catalog.ts` — catálogo de 1.324 exercícios embutido no app (texto do dataset MIT hasaneyldrm/exercises-dataset, traduzido para pt-BR por IA; SEM imagens/GIFs, que são © Gym visual). Gerado por `scripts/build-catalog.py`. O exercício do catálogo só vira linha em `exercises` (com `catalog_id`) quando é usado (`ensureExercises` no store); no app ele aparece com id `cat:<id>`
 - `src/lib/planner.ts` — gerador de planos (objetivo, dias, nível, equipamento → rotinas) usado em `routines/generate`
 - `src/lib/picker.ts` — canal para o seletor de exercícios devolver o resultado
+- `src/components/ReorderList.tsx` — arrastar para reordenar exercícios no treino ativo (PanResponder, sem libs nativas)
 - `src/components/ui.tsx` — Header, Btn, ListRow, Sheet, Dialog, gráficos etc.
 
 ## Comandos
@@ -38,6 +39,9 @@
 - Textos em português do Brasil; pesos guardados em kg e convertidos na tela
 - Reps em exercícios de duração = segundos
 - Fotos (progresso/treino) ficam só no aparelho (sem Storage ainda)
+
+## Treino ativo
+- Exercícios recolhíveis (um a um, `Collapse all/Expand all`), reordenáveis (botão Reorder ou segurar o cabeçalho) e ocultáveis só naquele treino (`hidden` na entrada; não conta no volume nem é salvo; some para a rotina original = nada é apagado)
 
 ## Só interface (sem backend real)
 Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, tema escuro (preferência salva, tema ainda não aplicado), importação de dados.
