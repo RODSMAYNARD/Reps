@@ -1,0 +1,14 @@
+name: Publish OTA update
+jobs:
+  update_preview:
+    name: Update Android test build (channel preview)
+    type: update
+    params:
+      branch: preview
+      message: Reps OTA update
+  update_production:
+    name: Update iOS TestFlight build (channel production)
+    type: update
+    params:
+      branch: production
+      message: Reps OTA update
