@@ -77,6 +77,10 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - LIMITE: sem serviço em primeiro plano o contador NÃO anda sozinho na notificação (só atualiza quando o app roda) e os botões só respondem enquanto o processo do app estiver vivo. Para contagem ao vivo + botões sempre confiáveis: serviço em primeiro plano nativo (ex.: Notifee) = build novo.
 - Não testado em aparelho ainda.
 
+## Próxima versão (aprovado pelo Rodrigo, NÃO fazer agora)
+- Wearables: smartwatch (Apple Watch e Wear OS), etc. — registrar treino no relógio, descanso e frequência cardíaca. Hoje só existe a tela de interface em `settings/integrations` e o cartão "Sync with your watch" no Início (sem backend real).
+- Considerar junto: Apple Saúde / Health Connect, e serviço em primeiro plano para a notificação do treino com contagem ao vivo.
+
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Internacionalização: hoje os textos estão fixos em inglês; criar camada de idiomas e reativar pt-BR
