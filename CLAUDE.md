@@ -49,7 +49,7 @@
 - Fotos (progresso/treino) ficam só no aparelho (sem Storage ainda)
 
 ## Desempenho dos exercícios (arquitetura)
-- Catálogo (texto) e miniaturas 96x96 (`assets/thumbs`, `src/data/thumbs.ts`) ficam DENTRO do app: listas e seletor não fazem rede.
+- Catálogo (texto) e miniaturas 96x96 ficam DENTRO do app: listas e seletor não fazem rede. As miniaturas vão em 4 folhas (`assets/thumb-sheets`, índice em `src/data/thumbs.ts`, recorte em `ExerciseThumb`), geradas de `assets/thumbs` por `scripts/build-thumb-sheets.py`: o EAS Update aceita no máximo 1000 arquivos por atualização (1.324 soltas estouravam).
 - **Escolher um exercício do catálogo é 100% local** (id `cat:<id>` no treino/rotina em andamento). A linha na tabela `exercises` só é criada ao SALVAR o treino ou a rotina (`ensureExercises` dentro de `finishActive`/`saveRoutine`). Telas usam `findExercise(id)` e `realExerciseId(id)` do store para achar o exercício (aceita id real ou `cat:`).
 - Único dado remoto de exercício: o GIF do detalhe (URL assinada do bucket privado `exercise-media`, 1 requisição ao abrir). Miniaturas e GIFs © Gym visual: SÓ TESTE, remover antes do lançamento.
 - Medido: adicionar exercício ~50-80 ms; salvar treino ~2 s.
