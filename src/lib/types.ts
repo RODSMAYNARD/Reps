@@ -19,9 +19,10 @@ export type Profile = {
 export type Exercise = { id: string; name: string; muscle: string; equipment: string; kind: ExerciseKind; catalogId?: string | null };
 
 export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null };
-export type ActiveSet = SetRow & { done: boolean };
+/** `typed`: o usuário digitou kg/reps (ou tocou em PREVIOUS); ao finalizar, séries digitadas e sem ✓ passam a valer, como no Hevy. */
+export type ActiveSet = SetRow & { done: boolean; typed?: boolean };
 export type ActiveEntry = { uid?: string; hidden?: boolean; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
-export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null; fromTrainer?: string | null };
+export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null; fromTrainer?: string | null; dateAt?: string | null };
 
 export type SavedEntry = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
 export type Workout = {

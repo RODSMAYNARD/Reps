@@ -7,10 +7,10 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
-import { NumberSheet, range } from '../../components/pickers';
+import { DurationSheet } from '../../components/DurationSheet';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
-import { fmtClock, fmtDuration, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
+import { fmtClock, fmtDurationLive, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
 import { setPickHandler } from '../../lib/picker';
 import { records, setVolume } from '../../lib/stats';
 import { elapsedSec, useNow, useStore } from '../../lib/store';
@@ -29,7 +29,6 @@ export default function ActiveWorkoutScreen() {
   const [durSheet, setDurSheet] = useState(false);
   const [timerSheet, setTimerSheet] = useState(false);
   const [cancelAsk, setCancelAsk] = useState(false);
-  const [incomplete, setIncomplete] = useState(false);
   const [helpType, setHelpType] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [reordering, setReordering] = useState(false);
@@ -59,7 +58,6 @@ export default function ActiveWorkoutScreen() {
   const setAll = (v: boolean) => setCollapsed(Object.fromEntries(shown.map((x) => [uidOf(x.e, x.i), v])));
   const doneSets = shown.flatMap((x) => x.e.sets.filter((s) => s.done));
   const volume = doneSets.reduce((t, s) => t + setVolume(s), 0);
-  const pending = shown.reduce((t, x) => t + x.e.sets.filter((s) => !s.done).length, 0);
 
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
   const addWarmups = (i: number) => {
@@ -73,7 +71,12 @@ export default function ActiveWorkoutScreen() {
     st.patchEntry(i, { sets: [...rows, ...e.sets.filter((x) => x.type !== 'warmup' || x.done || (x.kg ?? 0) > 0)] });
   };
   const goSave = () => router.push('/active/save');
-  const finish = () => (doneSets.length === 0 ? st.showToast('Complete at least one set.') : pending > 0 ? setIncomplete(true) : goSave());
+  const hasTyped = shown.some((x) => x.e.sets.some((s) => !s.done && s.typed && ((s.kg ?? 0) > 0 || (s.reps ?? 0) > 0)));
+  const finish = () => {
+    if (doneSets.length === 0 && !hasTyped) return st.showToast('Complete at least one set.');
+    st.completeTypedSets();
+    goSave();
+  };
   const restLeft = rest ? Math.max(0, Math.round((rest.endsAt - now) / 1000)) : 0;
   if (rest && restLeft <= 0) setTimeout(() => st.skipRest(), 0);
 
@@ -100,7 +103,7 @@ export default function ActiveWorkoutScreen() {
       )}
       {!reordering && <ScrollView contentContainerStyle={{ paddingBottom: rest ? 100 : 40 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <Pressable onPress={() => setDurSheet(true)} testID="duration" style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.muted, fontSize: 11 }}>Duration</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDuration(elapsed)}</Text></Pressable>
+          <Pressable onPress={() => setDurSheet(true)} testID="duration" style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.muted, fontSize: 11 }}>Duration</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDurationLive(elapsed)}</Text></Pressable>
           <View style={{ flex: 1 }}><Stat label="Volume" value={fmtVolume(volume, u)} /></View>
           <View style={{ flex: 1 }}><Stat label="Sets" value={String(doneSets.length)} /></View>
         </View>
@@ -174,15 +177,15 @@ export default function ActiveWorkoutScreen() {
                     </Pressable>
                     <Pressable
                       style={{ flex: 1.3, alignItems: 'center' }}
-                      onPress={() => prev && st.patchSet(i, j, { kg: prev.kg, reps: prev.reps })}>
+                      onPress={() => prev && st.patchSet(i, j, { kg: prev.kg, reps: prev.reps, typed: true })}>
                       <Text style={{ color: colors.faint, fontSize: 14 }}>{prev ? (kind === 'weight_reps' ? `${Math.round(toDisplayWeight(prev.kg ?? 0, u) * 10) / 10}${u.weight} × ${prev.reps}` : String(prev.reps)) : '-'}</Text>
                     </Pressable>
                     {kind === 'weight_reps' && (
                       <View style={{ flex: 1, paddingHorizontal: 6 }}>
-                        <NumInput decimal style={inputStyle(s.done)} testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u) })} />
+                        <NumInput decimal style={inputStyle(s.done)} testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u), typed: true })} />
                       </View>
                     )}
-                    <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v })} /></View>
+                    <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v, typed: true })} /></View>
                     <Pressable onPress={() => st.toggleSet(i, j)} testID="check" style={{ width: 38, alignItems: 'center' }}>
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.success : colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="checkmark" size={18} color={s.done ? '#fff' : colors.faint} />
@@ -263,14 +266,17 @@ export default function ActiveWorkoutScreen() {
         <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { st.removeEntry(menu!); setMenu(null); }} />
       </Sheet>
 
-      {/* duração */}
+      {/* duração: roda de horas/minutos, dia e hora de início, pausar cronômetro */}
       {durSheet && (
-        <Sheet visible onClose={() => setDurSheet(false)} title="Duration">
-          <ListRow label="Duration" detail={fmtDuration(elapsed)} last />
-          <NumberSheetInline minutes={Math.floor(elapsed / 60)} onChange={(m) => st.setElapsed(m * 60)} />
-          <ListRow label="Start" detail={new Date(active.startedAt).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} last />
-          <Btn title={active.pausedAt ? 'Resume timer' : 'Pause workout timer'} icon={active.pausedAt ? 'play' : 'pause'} onPress={() => { st.pauseToggle(); setDurSheet(false); }} style={{ marginTop: 12 }} />
-        </Sheet>
+        <DurationSheet
+          elapsed={elapsed}
+          start={new Date(active.dateAt ?? active.startedAt)}
+          paused={!!active.pausedAt}
+          onClose={() => setDurSheet(false)}
+          onElapsed={st.setElapsed}
+          onStart={(d) => st.setStartTime(d.toISOString())}
+          onTogglePause={() => { st.pauseToggle(); setDurSheet(false); }}
+        />
       )}
 
       {/* timer manual */}
@@ -285,27 +291,9 @@ export default function ActiveWorkoutScreen() {
       </Sheet>
       <Dialog visible={cancelAsk} title="Cancel workout?" message="All progress in this workout will be lost." onClose={() => setCancelAsk(false)}
         actions={[{ label: 'Keep going' }, { label: 'Discard', danger: true, onPress: () => { setCancelAsk(false); st.discardActive(); router.back(); } }]} />
-      <Dialog visible={incomplete} title="Incomplete sets" message={`${pending} set(s) without ✓ won't be saved. Finish anyway?`} onClose={() => setIncomplete(false)}
-        actions={[{ label: 'Back' }, { label: 'Finish', primary: true, onPress: () => { setIncomplete(false); goSave(); } }]} />
     </Screen>
   );
 }
-
-function NumberSheetInline({ minutes, onChange }: { minutes: number; onChange: (m: number) => void }) {
-  const vals = range(0, 360);
-  return (
-    <View style={{ maxHeight: 200 }}>
-      <ScrollView>
-        {vals.slice(Math.max(0, minutes - 3), minutes + 8).map((m) => (
-          <Pressable key={m} onPress={() => onChange(m)} style={{ alignItems: 'center', paddingVertical: 8, backgroundColor: m === minutes ? colors.surface : 'transparent', borderRadius: radius.sm }}>
-            <Text style={{ fontSize: 20, color: m === minutes ? colors.text : colors.faint }}>{m} min</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </View>
-  );
-}
-void NumberSheet;
 
 const isPR = (s: ActiveSet, heaviest: number) => s.done && s.type === 'normal' && heaviest > 0 && (s.kg ?? 0) > heaviest;
 const inputStyle = (done: boolean) => ({ borderWidth: 1, borderColor: done ? 'transparent' : colors.border, borderRadius: 8, paddingVertical: 6, fontWeight: done ? ('700' as const) : ('400' as const), fontSize: 17 });

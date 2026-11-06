@@ -63,6 +63,10 @@ type Store = {
   toggleSet: (i: number, j: number) => void;
   pauseToggle: () => void;
   setElapsed: (sec: number) => void;
+  /** Dia e hora em que o treino foi feito (a duração não muda). `null` volta a acompanhar o início do cronômetro. */
+  setStartTime: (iso: string | null) => void;
+  /** Ao finalizar: séries com kg/reps digitados e sem ✓ passam a contar como feitas (como no Hevy). */
+  completeTypedSets: () => void;
   discardActive: () => void;
   finishActive: (meta: { title: string; description: string; visibility: Workout['visibility']; date: string; durationSec: number; location?: string | null }) => Promise<Workout | null>;
   // descanso
@@ -359,6 +363,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     pauseToggle: () => setActive((a) => a.pausedAt
       ? { ...a, pausedMs: a.pausedMs + (Date.now() - new Date(a.pausedAt).getTime()), pausedAt: null }
       : { ...a, pausedAt: new Date().toISOString() }),
+    setStartTime: (iso) => setActive((a) => ({ ...a, dateAt: iso })),
+    completeTypedSets: () => setActive((a) => ({ ...a, entries: a.entries.map((e) => (e.hidden ? e : { ...e, sets: e.sets.map((s) => (!s.done && s.typed && ((s.kg ?? 0) > 0 || (s.reps ?? 0) > 0) ? { ...s, done: true } : s)) })) })),
     setElapsed: (sec) => setActive((a) => ({ ...a, pausedMs: 0, pausedAt: a.pausedAt ? new Date().toISOString() : null, startedAt: new Date(Date.now() - sec * 1000).toISOString() })),
     discardActive: () => { track('workout_discarded'); setActive(() => null); setRest(null); },
     finishActive: async (meta) => {
@@ -366,7 +372,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!a) return null;
       const entries: SavedEntry[] = a.entries
         .filter((e) => !e.hidden)
-        .map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, ...s }) => s) }))
+        .map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, typed: _t, ...s }) => s) }))
         .filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);

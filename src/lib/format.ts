@@ -27,6 +27,23 @@ export const fmtDuration = (sec: number) => {
   if (m > 0) return `${m}min ${Math.floor(sec % 60)}s`;
   return `${Math.floor(sec)}s`;
 };
+/** Duração com segundos sempre (tela do treino e folha Duration): "1h 10min 9s", "3min 17s", "12s". */
+export const fmtDurationLive = (sec: number) => {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.floor(sec % 60);
+  if (h > 0) return `${h}h ${m}min ${s}s`;
+  if (m > 0) return `${m}min ${s}s`;
+  return `${s}s`;
+};
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "6 Nov 2026, 12:06 AM" */
+export const fmtStartTime = (d: Date) => {
+  const h = d.getHours();
+  return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}, ${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+/** "06 Nov 2026" (roda de dias) */
+export const fmtDayWheel = (d: Date) => `${String(d.getDate()).padStart(2, '0')} ${MON[d.getMonth()]} ${d.getFullYear()}`;
 export const fmtRest = (sec: number) => {
   if (!sec) return 'OFF';
   const m = Math.floor(sec / 60);

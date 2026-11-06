@@ -4,7 +4,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Dialog, Header, HeaderAction, ListRow, Screen, Sheet, Stat } from '../../components/ui';
-import { fmtDuration, fmtVolume } from '../../lib/format';
+import { StartTimeWheels } from '../../components/WheelPicker';
+import { fmtDuration, fmtStartTime, fmtVolume } from '../../lib/format';
 import { setVolume } from '../../lib/stats';
 import { elapsedSec, useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
@@ -20,7 +21,6 @@ export default function SaveWorkout() {
   const [vis, setVis] = useState<Workout['visibility']>('everyone');
   const [visSheet, setVisSheet] = useState(false);
   const [whenSheet, setWhenSheet] = useState(false);
-  const [daysAgo, setDaysAgo] = useState(0);
   const [photo, setPhoto] = useState<string | null>(null);
   const [discard, setDiscard] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -28,15 +28,14 @@ export default function SaveWorkout() {
   const [place, setPlace] = useState(() => st.workouts.find((w) => w.location)?.location ?? '');
   const [locAsk, setLocAsk] = useState(false);
   const [locDraft, setLocDraft] = useState('');
-  const [nowTs] = useState(() => Date.now());
   if (!active) return null;
   const done = active.entries.flatMap((e) => e.sets.filter((s) => s.done));
   const dur = elapsedSec(active);
-  const when = new Date(nowTs - daysAgo * 86400000);
+  const when = new Date(active.dateAt ?? active.startedAt);
 
   const keyOf = (id: string) => { const c = st.findExercise(id)?.catalogId; return c ? `cat:${c}` : id; };
   const routine = active.fromRoutineId ? st.routines.find((r) => r.id === active.fromRoutineId) ?? null : null;
-  const performed = active.entries.filter((e) => !e.hidden).map((e) => ({ key: keyOf(e.exerciseId), sets: e.sets.filter((x) => x.done).map(({ done: _d, ...x }) => x) })).filter((e) => e.sets.length > 0);
+  const performed = active.entries.filter((e) => !e.hidden).map((e) => ({ key: keyOf(e.exerciseId), sets: e.sets.filter((x) => x.done).map(({ done: _d, typed: _t, ...x }) => x) })).filter((e) => e.sets.length > 0);
   const sameSets = (a: { kg: number | null; reps: number | null }[], b: { kg: number | null; reps: number | null }[]) => a.length === b.length && a.every((x, k) => (x.kg ?? 0) === (b[k].kg ?? 0) && (x.reps ?? 0) === (b[k].reps ?? 0));
   const changed = !!routine && performed.some((p) => { const r = routine.exercises.find((x) => keyOf(x.exerciseId) === p.key); return !r || !sameSets(r.sets, p.sets); });
 
@@ -87,7 +86,7 @@ export default function SaveWorkout() {
         <Pressable onPress={() => setWhenSheet(true)} style={row} testID="save-date">
           <Ionicons name="calendar-outline" size={28} color={colors.text} />
           <Text style={{ flex: 1, fontSize: 19, color: colors.text }}>Date</Text>
-          <Text style={{ color: colors.muted, fontSize: 16 }}>{when.toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</Text>
+          <Text style={{ color: colors.muted, fontSize: 16 }}>{fmtStartTime(when)}</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.muted} />
         </Pressable>
         <Pressable onPress={() => { setLocDraft(place); setLocAsk(true); }} style={row} testID="save-location">
@@ -106,8 +105,8 @@ export default function SaveWorkout() {
       <Sheet visible={visSheet} onClose={() => setVisSheet(false)} title="Who can see this">
         {VIS.map((v) => <ListRow key={v.id} label={v.label} last right={vis === v.id ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setVis(v.id); setVisSheet(false); }} />)}
       </Sheet>
-      <Sheet visible={whenSheet} onClose={() => setWhenSheet(false)} title="When was the workout?">
-        {[0, 1, 2, 3, 7].map((d) => <ListRow key={d} label={d === 0 ? 'Now' : d === 1 ? 'Yesterday' : `${d} days ago`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setWhenSheet(false); }} />)}
+      <Sheet visible={whenSheet} onClose={() => setWhenSheet(false)} title="Date">
+        <StartTimeWheels value={when} onChange={(d) => st.setStartTime(d.toISOString())} />
       </Sheet>
       <Dialog visible={locAsk} title="Location" onClose={() => setLocAsk(false)}
         actions={[{ label: 'Cancel', onPress: () => setLocAsk(false) }, { label: 'Save', primary: true, onPress: () => { setPlace(locDraft.trim()); setLocAsk(false); } }]}>
