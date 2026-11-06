@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { Btn, Card, Header, Pill, Screen } from '../../components/ui';
 import { CAT_BY_ID } from '../../lib/catalog';
 import { Gear, Goal, Level, PlannedRoutine, generatePlan } from '../../lib/planner';
@@ -17,7 +18,7 @@ function Group<T extends string | number>({ title, items, value, onChange }: { t
 }
 
 export default function GeneratePlan() {
-  const { allExercises: exercises, findExercise, saveRoutine, showToast } = useStore();
+  const { allExercises: exercises, saveRoutine, showToast } = useStore();
   const [goal, setGoal] = useState<Goal>('hypertrophy');
   const [days, setDays] = useState(3);
   const [level, setLevel] = useState<Level>('beginner');
@@ -25,7 +26,6 @@ export default function GeneratePlan() {
   const [seed, setSeed] = useState(1);
   const [plan, setPlan] = useState<{ name: string; routines: PlannedRoutine[] } | null>(null);
   const [busy, setBusy] = useState(false);
-  const nameOf = (id: string) => findExercise(id)?.name ?? '—';
 
   const make = (s: number) => { setSeed(s); setPlan(generatePlan({ goal, days, level, gear, seed: s }, exercises, (e) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.en : undefined))); };
   const save = async () => {
@@ -53,7 +53,7 @@ export default function GeneratePlan() {
               <Card key={i} style={{ gap: 6 }} testID="plan-routine">
                 <Text style={{ fontWeight: '700', fontSize: 16, color: colors.text }}>{r.title}</Text>
                 <Text style={{ color: colors.muted }}>{r.notes}</Text>
-                {r.exercises.map((e) => <Text key={e.exerciseId} style={{ color: colors.text }}>• {nameOf(e.exerciseId)}</Text>)}
+                {r.exercises.map((e) => <ExerciseLabel key={e.exerciseId} exerciseId={e.exerciseId} size={36} nameStyle={{ fontSize: 15 }} numberOfLines={1} />)}
                 {r.exercises.length === 0 && <Text style={{ color: colors.danger }}>No matching exercises. Add exercises or change your equipment.</Text>}
               </Card>
             ))}

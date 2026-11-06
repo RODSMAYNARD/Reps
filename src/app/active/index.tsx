@@ -1,3 +1,4 @@
+import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -287,7 +288,7 @@ export default function ActiveWorkoutScreen() {
 
       <Sheet visible={hiddenSheet} onClose={() => setHiddenSheet(false)} title="Hidden exercises">
         {hiddenList.map(({ e, i }) => (
-          <ListRow key={uidOf(e, i)} label={exOf(e.exerciseId)?.name ?? 'Removed exercise'} detail="Show" last onPress={() => { st.patchEntry(i, { hidden: false }); if (hiddenList.length <= 1) setHiddenSheet(false); }} />
+          <View key={uidOf(e, i)} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.exerciseId} right={<Text style={{ color: colors.primary, fontSize: 16 }} onPress={() => { st.patchEntry(i, { hidden: false }); if (hiddenList.length <= 1) setHiddenSheet(false); }}>Show</Text>} /></View>
         ))}
       </Sheet>
       <Dialog visible={cancelAsk} title="Cancel workout?" message="All progress in this workout will be lost." onClose={() => setCancelAsk(false)}

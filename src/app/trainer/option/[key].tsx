@@ -1,3 +1,4 @@
+import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { Ionicons } from '@expo/vector-icons';
 import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -47,7 +48,6 @@ export default function TrainerOption() {
     st.showToast('Program updated');
     router.back();
   };
-  const exName = (id: string) => st.findExercise(id)?.name ?? 'Exercise';
   const pickExcluded = () => { setPickHandler((ids) => commit({ ...draft, excluded: [...new Set([...draft.excluded, ...ids])] })); router.push('/exercises/pick'); };
 
   const right = IMMEDIATE.has(k)
@@ -132,7 +132,7 @@ export default function TrainerOption() {
 
         {k === 'excluded' && (draft.excluded.length === 0
           ? <Empty icon="ban-outline" text="No exercises excluded. Excluded exercises won't be recommended in your program." action={<Btn title="Add exercises to exclude" onPress={pickExcluded} testID="opt-add-big" />} />
-          : draft.excluded.map((id) => <ListRow key={id} label={exName(id)} right={<Ionicons name="close" size={22} color={colors.muted} />} onPress={() => commit({ ...draft, excluded: draft.excluded.filter((x) => x !== id) })} />))}
+          : draft.excluded.map((id) => <View key={id} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={id} right={<Ionicons name="close" size={24} color={colors.muted} onPress={() => commit({ ...draft, excluded: draft.excluded.filter((x) => x !== id) })} />} /></View>))}
 
         {k === 'injuries' && (draft.injuries.length === 0
           ? <Empty icon="bandage-outline" text="No injuries. Add your injuries to get safer, more personalized workout recommendations." action={<Btn title="Add Injury" icon="add" onPress={() => setInjSheet(true)} testID="opt-add-big" />} />

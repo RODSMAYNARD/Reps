@@ -1,3 +1,4 @@
+import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { Ionicons } from '@expo/vector-icons';
 import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -46,7 +47,6 @@ export default function EditWorkout() {
   const withDay = (d: Date) => { const x = new Date(d); x.setHours(t0.getHours(), t0.getMinutes(), 0, 0); return x.toISOString(); };
   const sameDay = (a: string, b: Date) => new Date(a).toDateString() === b.toDateString();
   const label = new Date(date).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-  const exName = (eid: string) => st.findExercise(eid)?.name ?? 'Exercise';
 
   return (
     <Screen>
@@ -66,8 +66,7 @@ export default function EditWorkout() {
         {entries.map((e, i) => (
           <View key={`${e.exerciseId}-${i}`} style={{ marginTop: 20 }} testID="edit-entry">
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ flex: 1, color: colors.primary, fontSize: 17, fontWeight: '600' }}>{exName(e.exerciseId)}</Text>
-              <Ionicons name="trash-outline" size={22} color={colors.danger} onPress={() => delEx(i)} />
+              <View style={{ flex: 1 }}><ExerciseLabel exerciseId={e.exerciseId} nameStyle={{ color: colors.primary, fontSize: 17, fontWeight: '600' }} right={<Ionicons name="trash-outline" size={22} color={colors.danger} onPress={() => delEx(i)} />} /></View>
             </View>
             {e.sets.map((x, j) => (
               <View key={j} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
