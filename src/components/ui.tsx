@@ -18,23 +18,24 @@ export function Screen({ children, edges = ['top', 'bottom'], style }: { childre
   );
 }
 
-export function Header({ title, left = 'back', onLeft, right, subtitle, leftNode }: {
-  title?: React.ReactNode; left?: 'back' | 'cancel' | 'down' | 'none'; onLeft?: () => void; right?: React.ReactNode; subtitle?: string; leftNode?: React.ReactNode;
+export function Header({ title, left = 'back', onLeft, right, subtitle, leftNode, titleAlign = 'center' }: {
+  title?: React.ReactNode; left?: 'back' | 'cancel' | 'down' | 'none'; onLeft?: () => void; right?: React.ReactNode; subtitle?: string; leftNode?: React.ReactNode; titleAlign?: 'center' | 'left';
 }) {
   const go = onLeft ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
+  const lefty = titleAlign === 'left';
   return (
     <View style={s.header}>
-      <View style={{ minWidth: 70, alignItems: 'flex-start' }}>
+      <View style={{ minWidth: lefty ? 0 : 70, alignItems: 'flex-start', marginRight: lefty ? 12 : 0 }}>
         {leftNode}
         {left === 'back' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable>}
         {left === 'down' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="chevron-down" size={26} color={colors.text} /></Pressable>}
         {left === 'cancel' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text></Pressable>}
       </View>
-      <View style={{ flex: 1, alignItems: 'center' }}>
+      <View style={{ flex: 1, alignItems: lefty ? 'flex-start' : 'center' }}>
         {typeof title === 'string' ? <Text numberOfLines={1} style={s.headerTitle}>{title}</Text> : title}
         {!!subtitle && <Text style={{ color: colors.muted, fontSize: 12 }}>{subtitle}</Text>}
       </View>
-      <View style={{ minWidth: 70, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', gap: 16 }}>{right}</View>
+      <View style={{ minWidth: lefty ? 0 : 70, alignItems: 'center', flexDirection: 'row', justifyContent: 'flex-end', gap: lefty ? 14 : 16 }}>{right}</View>
     </View>
   );
 }
@@ -231,8 +232,8 @@ export function Avatar({ name, size = 44, color = colors.surfaceAlt }: { name?: 
 
 export function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <View style={{ gap: 2 }}>
-      <Text style={{ color: colors.muted, fontSize: 13 }}>{label}</Text>
+    <View style={{ gap: 4 }}>
+      <Text style={{ color: colors.muted, fontSize: 11 }}>{label}</Text>
       <Text style={{ color: color ?? colors.text, fontSize: 16 }}>{value}</Text>
     </View>
   );
@@ -348,9 +349,9 @@ export function LineChart({ data, height = 150, unit = '' }: { data: { label: st
 
 const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, minHeight: 52, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.bg },
-  headerTitle: { fontSize: 17, fontWeight: '500', color: colors.text },
-  headerPill: { backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 8, borderRadius: radius.md },
-  btn: { minHeight: 48, paddingHorizontal: 18, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  headerTitle: { fontSize: 16, fontWeight: '400', color: colors.text },
+  headerPill: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.md },
+  btn: { minHeight: 40, paddingHorizontal: 18, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   field: { fontSize: 16, color: colors.text, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   search: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 12, height: 40 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 15, backgroundColor: colors.bg },
