@@ -5,7 +5,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { track } from './analytics';
 import { reportError } from './monitoring';
-import { records } from './stats';
+import { prFlags, records } from './stats';
 import { CYCLE_WEEKS, generateProgram, suggestSets } from './trainer';
 import { supabase } from './supabase';
 import {
@@ -384,9 +384,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const willBeDone = !cur.sets[j].done;
       setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, done: willBeDone } : s)) } : e)) }));
       if (willBeDone && prefsRef.current.livePR) {
-        const st0 = cur.sets[j];
         const rec = records(wkRef.current, (cur.exerciseId.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === cur.exerciseId.slice(4))?.id ?? cur.exerciseId : cur.exerciseId));
-        if ((st0.kg ?? 0) > 0 && st0.type !== 'warmup' && rec.heaviest > 0 && (st0.kg ?? 0) > rec.heaviest) showToast('New personal record!');
+        if (prFlags(rec, cur.sets.map((s, n) => (n === j ? { ...s, done: true } : s)))[j]) showToast('New personal record!');
       }
       if (willBeDone) track('set_completed', { type: cur.sets[j].type, has_weight: (cur.sets[j].kg ?? 0) > 0 });
       if (willBeDone && cur.restSec > 0) setRest({ endsAt: Date.now() + cur.restSec * 1000, total: cur.restSec });

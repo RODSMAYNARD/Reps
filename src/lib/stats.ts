@@ -6,6 +6,23 @@ export const workoutVolume = (w: Workout) => w.entries.reduce((t, e) => t + e.se
 export const workoutSets = (w: Workout) => w.entries.reduce((t, e) => t + e.sets.length, 0);
 export const oneRM = (kg: number, reps: number) => (reps <= 1 ? kg : kg * (1 + reps / 30));
 
+/** Séries do treino em andamento que batem recorde (peso, 1RM estimado ou volume da série), como no Hevy:
+ * cada série concluída é comparada ao histórico e às séries concluídas antes dela; as medalhas anteriores continuam.
+ * Sem histórico do exercício não há recorde para superar. */
+export function prFlags(rec: { heaviest: number; best1rm: number; bestSet: SetRow | null }, sets: { type: string; kg: number | null; reps: number | null; done: boolean }[]): boolean[] {
+  if (!rec.bestSet) return sets.map(() => false);
+  let heaviest = rec.heaviest, orm = rec.best1rm, vol = (rec.bestSet.kg ?? 0) * (rec.bestSet.reps ?? 0);
+  return sets.map((s) => {
+    if (!s.done || s.type === 'warmup') return false;
+    const kg = s.kg ?? 0, reps = s.reps ?? 0;
+    if (kg <= 0) return false;
+    const o = oneRM(kg, reps), v = kg * reps;
+    const hit = kg > heaviest || o > orm + 1e-9 || v > vol;
+    heaviest = Math.max(heaviest, kg); orm = Math.max(orm, o); vol = Math.max(vol, v);
+    return hit;
+  });
+}
+
 const emptyRecords = { heaviest: 0, best1rm: 0, bestSet: null as SetRow | null, bestSession: 0 };
 
 export function records(workouts: Workout[], exerciseId: string) {

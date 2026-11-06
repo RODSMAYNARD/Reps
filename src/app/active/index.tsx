@@ -15,7 +15,7 @@ import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, 
 import { SET_TYPES } from '../../lib/constants';
 import { fmtClock, fmtDurationLive, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
 import { setPickHandler } from '../../lib/picker';
-import { records, setVolume } from '../../lib/stats';
+import { prFlags, records, setVolume } from '../../lib/stats';
 import { elapsedSec, useNow, useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { ActiveEntry, ActiveSet, Exercise, Units } from '../../lib/types';
@@ -129,7 +129,7 @@ export default function ActiveWorkoutScreen() {
           const uid = uidOf(e, i);
           const isCollapsed = !!collapsed[uid];
           const prevSets = st.previousSets(e.exerciseId);
-          const heaviest = records(st.workouts, st.realExerciseId(e.exerciseId)).heaviest;
+          const prs = prFlags(records(st.workouts, st.realExerciseId(e.exerciseId)), e.sets);
           const isBarbell = /barbell/i.test(ex?.equipment ?? '');
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
@@ -174,7 +174,7 @@ export default function ActiveWorkoutScreen() {
                   <View key={j} testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
                     <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 38, alignItems: 'center', paddingVertical: 6 }} testID="set-type">
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.bg : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-                        {isPR(s, heaviest) ? <Ionicons name="ribbon" size={20} color="#F5C400" /> : <Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text>}
+                        {prs[j] ? <Ionicons name="ribbon" size={20} color="#F5C400" /> : <Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text>}
                       </View>
                     </Pressable>
                     <Pressable
@@ -288,7 +288,6 @@ export default function ActiveWorkoutScreen() {
   );
 }
 
-const isPR = (s: ActiveSet, heaviest: number) => s.done && s.type === 'normal' && heaviest > 0 && (s.kg ?? 0) > heaviest;
 const inputStyle = (done: boolean) => ({ borderWidth: 1, borderColor: done ? 'transparent' : colors.border, borderRadius: 8, paddingVertical: 6, fontWeight: done ? ('700' as const) : ('400' as const), fontSize: 17 });
 
 const h = { c: { color: colors.muted, fontSize: 12, textAlign: 'center' as const } };
