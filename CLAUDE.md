@@ -144,5 +144,5 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 
 ## Treino concluído (`active/done`, cards como no Hevy, 2026-11-06)
 - Carrossel de cards (foto do treino quando escolhida em `active/save`, lista + boneco, números, "You lifted… like a truck", números + lista, grade 2x2, boneco + números), fundo Light/Dark/Transparent, confete (`components/Confetti.tsx`, JS puro) e botão 🎉 que repete.
-- Boneco de músculos é desenho próprio em SVG (`components/BodyMap.tsx`, `regionsOf` converte músculo/target/secondary do catálogo em regiões). Comparação de peso = emojis (sem ilustrações do Hevy).
+- Boneco de músculos (`components/BodyMap.tsx`) usa o `react-native-body-highlighter` (MIT, só SVG, sem build novo; dorsais e costas altas acendem juntas); `regionsOf` converte músculo/target/secondary do catálogo em regiões. Comparação de peso = emojis (sem ilustrações do Hevy).
 - Compartilhar: Stories e More abrem a folha do sistema com a imagem (Stories direto no Instagram exige pacote nativo); Copy Text; Download (galeria); Send to AI (texto com séries para colar no ChatGPT/Claude); Twitter (X). **Workout Link = só interface** (não existe página web do treino).
