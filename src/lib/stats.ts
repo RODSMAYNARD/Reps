@@ -6,23 +6,34 @@ export const workoutVolume = (w: Workout) => w.entries.reduce((t, e) => t + e.se
 export const workoutSets = (w: Workout) => w.entries.reduce((t, e) => t + e.sets.length, 0);
 export const oneRM = (kg: number, reps: number) => (reps <= 1 ? kg : kg * (1 + reps / 30));
 
+const emptyRecords = { heaviest: 0, best1rm: 0, bestSet: null as SetRow | null, bestSession: 0 };
+
 export function records(workouts: Workout[], exerciseId: string) {
-  let heaviest = 0, best1rm = 0, bestSet: SetRow | null = null, bestSession = 0;
+  return recordsMap(workouts).get(exerciseId) ?? emptyRecords;
+}
+
+/** Mesmo cálculo de `records`, mas para todos os exercícios de uma vez (uma só passada pelos treinos).
+ * Usar em listas (ex.: biblioteca de exercícios) em vez de chamar `records` por linha — evita refazer
+ * o histórico inteiro a cada exercício renderizado. */
+export function recordsMap(workouts: Workout[]) {
+  const map = new Map<string, { heaviest: number; best1rm: number; bestSet: SetRow | null; bestSession: number }>();
   for (const w of workouts) {
-    const e = w.entries.find((x) => x.exerciseId === exerciseId);
-    if (!e) continue;
-    let session = 0;
-    for (const s of e.sets) {
-      if (s.type === 'warmup') continue;
-      const kg = s.kg ?? 0, reps = s.reps ?? 0;
-      heaviest = Math.max(heaviest, kg);
-      best1rm = Math.max(best1rm, oneRM(kg, reps));
-      if (!bestSet || kg * reps > (bestSet.kg ?? 0) * (bestSet.reps ?? 0)) bestSet = s;
-      session += kg * reps;
+    for (const e of w.entries) {
+      const r = map.get(e.exerciseId) ?? { heaviest: 0, best1rm: 0, bestSet: null as SetRow | null, bestSession: 0 };
+      let session = 0;
+      for (const s of e.sets) {
+        if (s.type === 'warmup') continue;
+        const kg = s.kg ?? 0, reps = s.reps ?? 0;
+        r.heaviest = Math.max(r.heaviest, kg);
+        r.best1rm = Math.max(r.best1rm, oneRM(kg, reps));
+        if (!r.bestSet || kg * reps > (r.bestSet.kg ?? 0) * (r.bestSet.reps ?? 0)) r.bestSet = s;
+        session += kg * reps;
+      }
+      r.bestSession = Math.max(r.bestSession, session);
+      map.set(e.exerciseId, r);
     }
-    bestSession = Math.max(bestSession, session);
   }
-  return { heaviest, best1rm, bestSet, bestSession };
+  return map;
 }
 
 export function exerciseSeries(workouts: Workout[], exerciseId: string, metric: 'heaviest' | 'orm' | 'setVolume' | 'sessionVolume' | 'reps') {
