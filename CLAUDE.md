@@ -131,3 +131,9 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - **Create Exercise** (`exercises/create` + `equipment`, `muscle` (`?multi=1` = outros músculos), `type`): rascunho em `lib/exerciseDraft.ts`, opções em `lib/exerciseOptions.ts`. Tipos: Weight & Reps, Bodyweight Reps, Weighted Bodyweight (`weighted_bodyweight`, coluna +KG), Assisted Bodyweight (`assisted_bodyweight`, -KG), Duration. **Duration & Weight, Distance & Duration e Weight & Distance aparecem como "Coming soon"**: o treino guarda só kg, reps e tempo (`workout_sets` não tem distância).
 - Supabase `exercises` ganhou as colunas `secondary_muscles text[]` e `target text` (migração `exercises_secondary_muscles_and_target`, aditiva). A imagem do exercício (Add Asset) fica só no aparelho (AsyncStorage `reps:exassets`, data URI).
 - Abas: Home, Workout, Trainer (`(tabs)/plano`), Exercises (`(tabs)/exercicios`), Profile. `Screen`/`Header` detectam `(tabs)` (`useInTabs`).
+
+## Banco (auditoria 2026-11-06, migração `integridade_indices_updated_at_distancia`)
+- CHECKs: `exercises.kind` (5 tipos), `workout_sets.set_type` (normal/warmup/failure/drop) e `reps >= 0`, `workouts.visibility` (everyone/followers/private) e `duration_sec >= 0`, `profiles.theme` (light/dark/system) e `sex` (male/female/null). **Novo valor no app = atualizar o CHECK junto** (migração).
+- Índices em `workout_sets.user_id` e `feedback.user_id`; `updated_at` com gatilho `set_updated_at` em workouts, routines, exercises, profiles; `username` único sem diferenciar maiúsculas (`profiles_username_uniq`, vazio não conta).
+- `workout_sets` ganhou `distance_m` e `duration_sec` (nulos, ainda NÃO usados pelo app: faltam ligar no store e liberar os tipos "Coming soon").
+- Reestruturação adiada (exige reescrever o store e migrar dados): `routines.exercises` (JSON) -> `routine_exercises`/`routine_sets`; tabela `workout_exercises` (notas, superset, descanso hoje em `workouts.meta`).
