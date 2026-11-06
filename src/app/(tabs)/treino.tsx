@@ -25,7 +25,7 @@ export default function Treino() {
     <Screen edges={['top']}>
       <Header title="Workout" left="none" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-        <Pressable onPress={() => router.push('/trainer')} testID="open-trainer" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.black, padding: 16, borderRadius: radius.md, marginBottom: 6 }}>
+        <Pressable onPress={() => router.navigate('/plano')} testID="open-trainer" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.black, padding: 16, borderRadius: radius.md, marginBottom: 6 }}>
           <Ionicons name="sparkles" size={26} color="#fff" />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: '#fff' }}>Trainer</Text>

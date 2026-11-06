@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleProp, StyleSheet, Switch, Text,
@@ -10,9 +10,13 @@ import { colors, radius } from '../lib/theme';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
+/** Verdadeiro quando a tela está desenhada dentro das abas: a barra de abas já cuida do rodapé e não existe "voltar". */
+export const useInTabs = () => (useSegments() as string[])[0] === '(tabs)';
+
 export function Screen({ children, edges = ['top', 'bottom'], style }: { children: React.ReactNode; edges?: ('top' | 'bottom')[]; style?: StyleProp<ViewStyle> }) {
+  const inTabs = useInTabs();
   return (
-    <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
+    <SafeAreaView edges={inTabs ? edges.filter((e) => e !== 'bottom') : edges} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
       {children}
     </SafeAreaView>
   );
@@ -23,13 +27,14 @@ export function Header({ title, left = 'back', onLeft, right, subtitle, leftNode
 }) {
   const go = onLeft ?? (() => (router.canGoBack() ? router.back() : router.replace('/')));
   const lefty = titleAlign === 'left';
+  const leftKind = useInTabs() && left === 'back' ? 'none' : left;
   return (
     <View style={s.header}>
       <View style={{ minWidth: lefty ? 0 : 70, alignItems: 'flex-start', marginRight: lefty ? 12 : 0 }}>
         {leftNode}
-        {left === 'back' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable>}
-        {left === 'down' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="chevron-down" size={26} color={colors.text} /></Pressable>}
-        {left === 'cancel' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text></Pressable>}
+        {leftKind === 'back' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable>}
+        {leftKind === 'down' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Ionicons name="chevron-down" size={26} color={colors.text} /></Pressable>}
+        {leftKind === 'cancel' && <Pressable onPress={go} hitSlop={12} testID="header-back"><Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text></Pressable>}
       </View>
       <View style={{ flex: 1, alignItems: lefty ? 'flex-start' : 'center' }}>
         {typeof title === 'string' ? <Text numberOfLines={1} style={s.headerTitle}>{title}</Text> : title}

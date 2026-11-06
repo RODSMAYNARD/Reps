@@ -46,7 +46,7 @@ export default function Perfil() {
         <View style={{ paddingHorizontal: 16, gap: 12 }}>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <Tile icon="trending-up-outline" label="Statistics" onPress={() => router.push('/profile/stats')} />
-            <Tile icon="barbell-outline" label="Exercises" onPress={() => router.push('/exercises')} />
+            <Tile icon="barbell-outline" label="Exercises" onPress={() => router.navigate('/exercicios')} />
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <Tile icon="body-outline" label="Measures" onPress={() => router.push('/profile/measures')} />

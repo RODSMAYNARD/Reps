@@ -31,7 +31,7 @@ export default function TrainerSetup() {
     st.saveTrainer(generateProgram(s, st.allExercises, enOf, 1, name));
     track('trainer_created', { split: s.split, goal: s.goal, days: s.frequency, level: s.level, duration: s.duration, preset: s.preset, focus: s.focus });
     setBusy(false);
-    router.replace('/trainer');
+    router.dismissTo('/plano');
   };
   return (
     <Screen>

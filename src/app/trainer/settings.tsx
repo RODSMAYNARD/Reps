@@ -44,9 +44,9 @@ export default function ProgramSettings() {
         <ListRow icon="mail-outline" label="Send Feedback" onPress={() => router.push('/settings/feature-request')} last />
       </ScrollView>
       <Dialog visible={ask === 'restart'} title="Restart program?" message="Your progress in this program goes back to week 1 and the workouts are rebuilt." onClose={() => setAsk(null)}
-        actions={[{ label: 'Cancel' }, { label: 'Restart', primary: true, onPress: () => { setAsk(null); apply(s, true); track('trainer_restarted'); st.showToast('Program restarted'); router.dismissTo('/trainer'); } }]} />
+        actions={[{ label: 'Cancel' }, { label: 'Restart', primary: true, onPress: () => { setAsk(null); apply(s, true); track('trainer_restarted'); st.showToast('Program restarted'); router.dismissTo('/plano'); } }]} />
       <Dialog visible={ask === 'delete'} title="Delete program?" message="Your program is removed. Workouts you already logged are kept." onClose={() => setAsk(null)}
-        actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: () => { setAsk(null); st.saveTrainer(null); track('trainer_deleted'); router.dismissTo('/trainer'); } }]} />
+        actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: () => { setAsk(null); st.saveTrainer(null); track('trainer_deleted'); router.dismissTo('/plano'); } }]} />
     </Screen>
   );
 }
