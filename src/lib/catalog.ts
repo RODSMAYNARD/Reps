@@ -40,7 +40,7 @@ export function searchExercises(list: Exercise[], q: string, muscle: string, equ
 }
 
 /** Grupos musculares do filtro (alvo fino do catálogo quando existir). */
-const target = (e: Exercise) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.t : undefined);
+const target = (e: Exercise) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.t : e.target ?? undefined);
 export const MUSCLE_FILTERS: { title: string; items: { id: string; label: string; icon: string; match: (e: Exercise) => boolean }[] }[] = [
   { title: 'Upper Body', items: [
     { id: 'abs', label: 'Abdominals', icon: 'body-outline', match: (e) => e.muscle === 'Abs' },
@@ -77,7 +77,7 @@ export const EQUIPMENT_FILTERS: { id: string; label: string; icon: string; value
   { id: 'machine', label: 'Machine', icon: 'grid-outline', values: ['Machine'] },
   { id: 'cable', label: 'Cable', icon: 'git-merge-outline', values: ['Cable'] },
   { id: 'band', label: 'Resistance Band', icon: 'reorder-two-outline', values: ['Band'] },
-  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal-circle-outline', values: ['Other'] },
+  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal-circle-outline', values: ['Other', 'Plate', 'Suspension band'] },
 ];
 const MUSCLE_BY_ID = new Map(MUSCLE_FILTERS.flatMap((g) => g.items).map((i) => [i.id, i]));
 

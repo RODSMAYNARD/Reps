@@ -1,5 +1,5 @@
 export type SetType = 'warmup' | 'normal' | 'failure' | 'drop';
-export type ExerciseKind = 'weight_reps' | 'reps' | 'duration';
+export type ExerciseKind = 'weight_reps' | 'reps' | 'duration' | 'weighted_bodyweight' | 'assisted_bodyweight';
 export type Units = { weight: 'kg' | 'lbs'; distance: 'km' | 'mi'; body: 'cm' | 'in' };
 
 export type Profile = {
@@ -16,7 +16,8 @@ export type Profile = {
   onboarded: boolean;
 };
 
-export type Exercise = { id: string; name: string; muscle: string; equipment: string; kind: ExerciseKind; catalogId?: string | null };
+/** `target`: músculo específico (mesmos nomes do catálogo: Lats, Traps...); `secondary`: outros músculos trabalhados; `assetUri`: imagem (só no aparelho). */
+export type Exercise = { id: string; name: string; muscle: string; equipment: string; kind: ExerciseKind; catalogId?: string | null; target?: string | null; secondary?: string[]; assetUri?: string | null };
 
 export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null };
 /** `typed`: o usuário digitou kg/reps (ou tocou em PREVIOUS); ao finalizar, séries digitadas e sem ✓ passam a valer, como no Hevy. */

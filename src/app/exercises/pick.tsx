@@ -38,7 +38,7 @@ export default function PickExercise() {
         ListEmptyComponent={<Empty text="No exercises found." action={<Btn title="Create exercise" variant="secondary" onPress={() => router.push('/exercises/create')} />} />}
         renderItem={({ item }) => (
           <Pressable onPress={() => toggle(item.id)} testID="pick-row" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: sel.includes(item.id) ? colors.primarySoft : colors.bg }}>
-            <ExerciseThumb catalogId={item.catalogId} />
+            <ExerciseThumb catalogId={item.catalogId} uri={item.assetUri} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 16, color: colors.text }}>{item.name}</Text>
               <Text style={{ color: colors.muted, fontSize: 13 }}>{item.muscle} · {item.equipment}</Text>

@@ -5,11 +5,11 @@ import { useMedia } from '../lib/media';
 import { colors } from '../lib/theme';
 
 /** Round exercise thumbnail. Bundled inside the app as a native resource (require, instant, zero decode cost); dumbbell fallback. */
-export function ExerciseThumb({ catalogId, size = 44 }: { catalogId?: string | null; size?: number }) {
+export function ExerciseThumb({ catalogId, uri, size = 44 }: { catalogId?: string | null; uri?: string | null; size?: number }) {
   const src = catalogId ? THUMBS[catalogId] : undefined;
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-      {src ? <Image source={src} style={{ width: size, height: size }} /> : <Ionicons name="barbell-outline" size={size / 2} color={colors.muted} />}
+      {src ? <Image source={src} style={{ width: size, height: size }} /> : uri ? <Image source={{ uri }} style={{ width: size, height: size }} /> : <Ionicons name="barbell-outline" size={size / 2} color={colors.muted} />}
     </View>
   );
 }

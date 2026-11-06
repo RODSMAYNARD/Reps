@@ -137,9 +137,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   const load = useCallback(async (uid: string, email: string) => {
-    const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id').order('created_at');
+    const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id,target,secondary_muscles').order('created_at');
     if (ex.error) return setError(ex.error.message);
-    setExercises(ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id }; }));
+    const assets = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}') as Record<string, string>;
+    setExercises(ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id, target: r.target ?? null, secondary: r.secondary_muscles ?? [], assetUri: assets[r.id] ?? null }; }));
 
     const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'athlete';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
@@ -288,9 +289,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     },
 
     addExercise: async (x) => {
-      const { data, error: e } = await supabase.from('exercises').insert({ name: x.name.trim(), muscle: x.muscle, equipment: x.equipment, kind: x.kind }).select('id,name,muscle,equipment,kind').single();
+      const { data, error: e } = await supabase.from('exercises').insert({ name: x.name.trim(), muscle: x.muscle, equipment: x.equipment, kind: x.kind, target: x.target ?? null, secondary_muscles: x.secondary ?? [] }).select('id,name,muscle,equipment,kind').single();
       if (e) { fail(e.message); return null; }
-      const row = { ...(data as Exercise), catalogId: null };
+      const row: Exercise = { ...(data as Exercise), catalogId: null, target: x.target ?? null, secondary: x.secondary ?? [], assetUri: x.assetUri ?? null };
+      if (x.assetUri) {
+        const map = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}');
+        map[row.id] = x.assetUri;
+        AsyncStorage.setItem('reps:exassets', JSON.stringify(map)).catch(() => {});
+      }
       setExercises((l) => [...l, row]);
       return row;
     },

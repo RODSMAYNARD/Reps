@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { ExerciseFilterBar } from '../../components/ExerciseFilterBar';
-import { Empty, Header, IconButton, Screen, SearchBar } from '../../components/ui';
+import { Empty, Header, HeaderAction, Screen, SearchBar } from '../../components/ui';
 import { filterExercises } from '../../lib/catalog';
 import { fmtWeight } from '../../lib/format';
 import { recordsMap } from '../../lib/stats';
@@ -20,7 +20,7 @@ export default function Library() {
   const rmap = useMemo(() => recordsMap(workouts), [workouts]);
   return (
     <Screen>
-      <Header title="Exercises" right={<IconButton name="add" size={28} onPress={() => router.push('/exercises/create')} testID="create-exercise" />} />
+      <Header title="Exercises" right={<HeaderAction label="Create" onPress={() => router.push('/exercises/create')} />} />
       <SearchBar value={q} onChangeText={setQ} placeholder="Search exercises" />
       <ExerciseFilterBar list={allExercises} q={dq} muscles={muscles} equipment={equip} onChange={(m, e) => { setMuscles(m); setEquip(e); }} />
       <FlatList
@@ -35,7 +35,7 @@ export default function Library() {
           const r = rmap.get(item.id);
           return (
             <Pressable onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: item.id } })} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}>
-              <ExerciseThumb catalogId={item.catalogId} />
+              <ExerciseThumb catalogId={item.catalogId} uri={item.assetUri} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, color: colors.text }}>{item.name}</Text>
                 <Text style={{ color: colors.muted, fontSize: 13 }}>{item.muscle} · {item.equipment}</Text>

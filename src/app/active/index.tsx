@@ -8,6 +8,7 @@ import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
 import { DurationSheet } from '../../components/DurationSheet';
+import { hasWeight, weightHeader } from '../../lib/exerciseOptions';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
 import { fmtClock, fmtDurationLive, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
@@ -133,7 +134,7 @@ export default function ActiveWorkoutScreen() {
           return (
             <View key={uid} style={{ paddingTop: 16 }} testID="entry">
               <Pressable onPress={isCollapsed ? toggle : undefined} onLongPress={() => setReordering(true)} delayLongPress={450} testID="entry-header" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
-                <ExerciseThumb catalogId={ex?.catalogId} size={isCollapsed ? 36 : 44} />
+                <ExerciseThumb catalogId={ex?.catalogId} uri={ex?.assetUri} size={isCollapsed ? 36 : 44} />
                 <View style={{ flex: 1 }}>
                   <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: isCollapsed ? 16 : 17, fontWeight: '600' }}>{ex?.name ?? 'Removed exercise'}</Text>
                   {isCollapsed && <Text style={{ color: colors.muted, fontSize: 13 }}>{e.sets.filter((s) => s.done).length}/{e.sets.length} sets</Text>}
@@ -159,9 +160,9 @@ export default function ActiveWorkoutScreen() {
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
                 <Text style={[h.c, { width: 38 }]}>SET</Text>
                 <Text style={[h.c, { flex: 1.3 }]}>PREVIOUS</Text>
-                {kind === 'weight_reps' && (isBarbell && st.wprefs.plateCalc
-                  ? <Pressable onPress={() => setPlate(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="plate-calc" hitSlop={8}><Ionicons name="calculator-outline" size={14} color={colors.primary} /><Text style={h.c}>{u.weight.toUpperCase()}</Text></Pressable>
-                  : <Text style={[h.c, { flex: 1 }]}>{u.weight.toUpperCase()}</Text>)}
+                {hasWeight(kind) && (isBarbell && st.wprefs.plateCalc
+                  ? <Pressable onPress={() => setPlate(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="plate-calc" hitSlop={8}><Ionicons name="calculator-outline" size={14} color={colors.primary} /><Text style={h.c}>{weightHeader(kind, u.weight)}</Text></Pressable>
+                  : <Text style={[h.c, { flex: 1 }]}>{weightHeader(kind, u.weight)}</Text>)}
                 <Text style={[h.c, { flex: 1 }]}>{kind === 'duration' ? 'SEC' : 'REPS'}</Text>
                 <Text style={[h.c, { width: 38 }]}>✓</Text>
               </View>
@@ -178,9 +179,9 @@ export default function ActiveWorkoutScreen() {
                     <Pressable
                       style={{ flex: 1.3, alignItems: 'center' }}
                       onPress={() => prev && st.patchSet(i, j, { kg: prev.kg, reps: prev.reps, typed: true })}>
-                      <Text style={{ color: colors.faint, fontSize: 14 }}>{prev ? (kind === 'weight_reps' ? `${Math.round(toDisplayWeight(prev.kg ?? 0, u) * 10) / 10}${u.weight} × ${prev.reps}` : String(prev.reps)) : '-'}</Text>
+                      <Text style={{ color: colors.faint, fontSize: 14 }}>{prev ? (hasWeight(kind) ? `${Math.round(toDisplayWeight(prev.kg ?? 0, u) * 10) / 10}${u.weight} × ${prev.reps}` : String(prev.reps)) : '-'}</Text>
                     </Pressable>
-                    {kind === 'weight_reps' && (
+                    {hasWeight(kind) && (
                       <View style={{ flex: 1, paddingHorizontal: 6 }}>
                         <NumInput decimal style={inputStyle(s.done)} testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u), typed: true })} />
                       </View>
