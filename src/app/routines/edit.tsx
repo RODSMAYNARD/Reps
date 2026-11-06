@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { NumInput } from '../../components/NumInput';
 import { Banner, Btn, Dialog, Header, HeaderAction, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
@@ -46,8 +47,7 @@ export default function EditRoutine() {
         {items.map((e, i) => (
           <View key={i} style={{ paddingTop: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
-              <Text style={{ flex: 1, color: colors.primary, fontSize: 17, fontWeight: '600' }}>{nameOf(e.exerciseId)?.name ?? 'Removed exercise'}</Text>
-              <IconButton name="trash-outline" color={colors.danger} onPress={() => setItems((l) => l.filter((_, k) => k !== i))} />
+              <View style={{ flex: 1 }}><ExerciseLabel exerciseId={e.exerciseId} nameStyle={{ color: colors.primary, fontSize: 17, fontWeight: '600' }} right={<IconButton name="trash-outline" color={colors.danger} onPress={() => setItems((l) => l.filter((_, k) => k !== i))} />} /></View>
             </View>
             <TextInput value={e.notes} onChangeText={(t) => setItems((l) => l.map((x, k) => (k === i ? { ...x, notes: t } : x)))} placeholder="Routine notes" placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 8, color: colors.text }} />
             <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 }}><Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Rest: {fmtRest(e.restSec)}</Text></Pressable>

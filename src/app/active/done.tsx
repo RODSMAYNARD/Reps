@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { Linking, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { Btn, Screen } from '../../components/ui';
 import { fmtDuration, fmtVolume, fmtWeight } from '../../lib/format';
@@ -82,10 +83,7 @@ export default function WorkoutDone() {
           {w.entries.map((e, k) => {
             const t = top(e.sets);
             return (
-              <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ flex: 1, color: colors.text, fontSize: 15 }} numberOfLines={1}>{e.sets.length} × {st.findExercise(e.exerciseId)?.name ?? 'Exercise'}</Text>
-                <Text style={{ color: colors.muted, fontSize: 14 }}>{t.kg ? `${fmtWeight(t.kg, profile.units)} × ${t.reps}` : `${t.reps} reps`}</Text>
-              </View>
+              <ExerciseLabel key={k} exerciseId={e.exerciseId} size={36} prefix={`${e.sets.length} × `} nameStyle={{ fontSize: 15 }} numberOfLines={1} right={<Text style={{ color: colors.muted, fontSize: 14 }}>{t.kg ? `${fmtWeight(t.kg, profile.units)} × ${t.reps}` : `${t.reps} reps`}</Text>} />
             );
           })}
         </View>

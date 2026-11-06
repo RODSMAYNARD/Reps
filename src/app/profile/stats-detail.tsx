@@ -1,7 +1,8 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { BarChart, Card, Empty, Header, ListRow, PillRow, Screen, Stat } from '../../components/ui';
+import { ExerciseLabel } from '../../components/ExerciseLabel';
+import { BarChart, Card, Empty, Header, PillRow, Screen, Stat } from '../../components/ui';
 import { MUSCLES } from '../../lib/constants';
 import { fmtDuration, fmtVolume, fmtWeight } from '../../lib/format';
 import { muscleDistribution, records, workoutSets, workoutVolume } from '../../lib/stats';
@@ -47,8 +48,8 @@ export default function StatsDetail() {
             <View key={g} style={{ width: '31%', aspectRatio: 1, borderRadius: radius.md, backgroundColor: `rgba(10,132,255,${0.08 + (v / 100) * 0.92})`, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontWeight: '700', color: v > 40 ? '#fff' : colors.text }}>{g}</Text><Text style={{ color: v > 40 ? '#fff' : colors.muted }}>{v}%</Text></View>); })}
         </View><Text style={{ color: colors.muted, padding: 16 }}>Darker means more sets for that group ({MUSCLES.length} muscles grouped into 6 regions).</Text></View>)}
-        {type === 'main' && (<View>{mainEx.length === 0 && <Empty text="Complete workouts to see your most frequent exercises." />}{mainEx.map(({ e, n }, i) => <ListRow key={e.id} label={`${i + 1}. ${e.name}`} detail={`${n} sets`} onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.id } })} />)}</View>)}
-        {type === 'leaderboard' && (<View>{exercises.filter((e) => e.kind === 'weight_reps').map((e) => { const r = records(workouts, e.id); return <ListRow key={e.id} label={e.name} detail={r.best1rm ? fmtWeight(r.best1rm, u) : '—'} onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.id } })} />; })}</View>)}
+        {type === 'main' && (<View>{mainEx.length === 0 && <Empty text="Complete workouts to see your most frequent exercises." />}{mainEx.map(({ e, n }, i) => <View key={e.id} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.id} prefix={`${i + 1}. `} right={<Text style={{ color: colors.muted }}>{n} sets</Text>} /></View>)}</View>)}
+        {type === 'leaderboard' && (<View>{exercises.filter((e) => e.kind === 'weight_reps').map((e) => { const r = records(workouts, e.id); return <View key={e.id} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.id} right={<Text style={{ color: colors.muted }}>{r.best1rm ? fmtWeight(r.best1rm, u) : '—'}</Text>} /></View>; })}</View>)}
         {type === 'monthly' && (
           <View style={{ padding: 16, gap: 14 }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>

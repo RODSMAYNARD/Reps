@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { WorkoutMenu } from '../../../components/WorkoutMenu';
 import { Avatar, Header, IconButton, ListRow, Screen, Section, Stat } from '../../../components/ui';
 import { fmtDateTime, fmtDuration, fmtVolume, fmtWeight } from '../../../lib/format';
@@ -19,7 +20,6 @@ export default function WorkoutDetail() {
   if (!w) return <Screen><Header title="Workout detail" /></Screen>;
   const u = profile.units;
   const dist = muscleDistribution([w], exercises);
-  const nameOf = (eid: string) => exercises.find((e) => e.id === eid)?.name ?? 'Removed exercise';
   return (
     <Screen>
       <Header title="Workout detail" right={<>
@@ -54,7 +54,7 @@ export default function WorkoutDetail() {
         {w.entries.map((e, i) => (
           <View key={i} style={{ paddingBottom: 10 }}>
             {e.superset != null && <Text style={{ alignSelf: 'flex-start', marginLeft: 16, backgroundColor: colors.purple, color: '#fff', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' }}>Superset</Text>}
-            <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: 16, fontWeight: '600', padding: 16, paddingBottom: 6 }}>{nameOf(e.exerciseId)}</Text>
+            <View style={{ padding: 16, paddingBottom: 6 }}><ExerciseLabel exerciseId={e.exerciseId} nameStyle={{ color: colors.primary, fontWeight: '600' }} /></View>
             {e.notes ? <Text style={{ paddingHorizontal: 16, color: colors.muted }}>{e.notes}</Text> : null}
             <View style={{ flexDirection: 'row', paddingHorizontal: 16 }}><Text style={{ width: 50, color: colors.muted, fontSize: 12 }}>SET</Text><Text style={{ color: colors.muted, fontSize: 12 }}>WEIGHT & REPS</Text></View>
             {e.sets.map((s, j) => <View key={j} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: j % 2 ? colors.surface : colors.bg }}><Text style={{ width: 50, fontWeight: '600', color: s.type === 'warmup' ? colors.warn : colors.text }}>{s.type === 'warmup' ? 'W' : s.type === 'failure' ? 'F' : s.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((x) => x.type === 'normal').length}</Text><Text style={{ color: colors.text }}>{fmtWeight(s.kg ?? 0, u)} × {s.reps} reps</Text></View>)}

@@ -7,12 +7,12 @@ import { workoutVolume } from '../lib/stats';
 import { useStore } from '../lib/store';
 import { colors } from '../lib/theme';
 import { Workout } from '../lib/types';
+import { ExerciseLabel } from './ExerciseLabel';
 import { Avatar, Stat } from './ui';
 
 export function WorkoutCard({ w, onMenu }: { w: Workout; onMenu?: () => void }) {
-  const { exercises, profile } = useStore();
+  const { profile } = useStore();
   const [liked, setLiked] = useState(false);
-  const name = (id: string) => exercises.find((e) => e.id === id)?.name ?? 'Removed exercise';
   const shown = w.entries.slice(0, 3);
   return (
     <Pressable onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} testID="workout-card" style={{ padding: 16, gap: 10, borderBottomWidth: 8, borderBottomColor: colors.surface, backgroundColor: colors.bg }}>
@@ -33,7 +33,7 @@ export function WorkoutCard({ w, onMenu }: { w: Workout; onMenu?: () => void }) 
         <Stat label="Sets" value={String(w.entries.reduce((t, e) => t + e.sets.length, 0))} />
       </View>
       <View style={{ gap: 4 }}>
-        {shown.map((e) => <Text key={e.exerciseId} style={{ color: colors.text }}>{e.sets.length} × {name(e.exerciseId)}</Text>)}
+        {shown.map((e) => <ExerciseLabel key={e.exerciseId} exerciseId={e.exerciseId} size={36} prefix={`${e.sets.length} × `} nameStyle={{ fontSize: 15 }} numberOfLines={1} />)}
         {w.entries.length > 3 && <Text style={{ color: colors.muted }}>See {w.entries.length - 3} more exercise(s)</Text>}
       </View>
       <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>
