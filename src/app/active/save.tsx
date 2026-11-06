@@ -51,7 +51,7 @@ export default function SaveWorkout() {
       await st.saveRoutine({ ...routine, exercises });
     }
     setBusy(false);
-    if (w) { st.showToast('Workout saved!'); router.replace({ pathname: '/active/done', params: { id: w.id } }); }
+    if (w) { st.showToast('Workout saved!'); router.replace({ pathname: '/active/done', params: photo ? { id: w.id, photo } : { id: w.id } }); }
   };
   const onSave = () => (changed ? setUpdAsk(true) : save());
   const pickPhoto = async () => {
