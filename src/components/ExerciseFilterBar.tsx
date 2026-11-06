@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { track } from '../lib/analytics';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { EQUIPMENT_FILTERS, MUSCLE_FILTERS, filterExercises } from '../lib/catalog';
 import { colors, radius } from '../lib/theme';
@@ -36,7 +36,8 @@ export function ExerciseFilterBar({ list, q, muscles, equipment, onChange }: { l
   const mNames = new Map(MUSCLE_FILTERS.flatMap((g) => g.items).map((i) => [i.id, i.label]));
   const eNames = new Map(EQUIPMENT_FILTERS.map((i) => [i.id, i.label]));
   const show = (w: 'muscle' | 'equip') => { setDm(muscles); setDe(equipment); setOpen(w); };
-  const count = filterExercises(list, q, dm, de).length;
+  // Só conta com a folha aberta (antes refazia a busca inteira a cada renderização da tela).
+  const count = useMemo(() => (open ? filterExercises(list, q, dm, de).length : 0), [open, list, q, dm, de]);
   const toggle = (arr: string[], set: (v: string[]) => void) => (id: string) => set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
   const apply = () => { track('exercise_filters_applied', { muscles: dm.length, equipment: de.length, results: count }); onChange(dm, de); setOpen(null); };
   const clear = () => { if (open === 'muscle') setDm([]); else setDe([]); };

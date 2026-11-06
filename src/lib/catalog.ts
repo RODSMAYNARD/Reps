@@ -12,6 +12,20 @@ export const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g
 
 export const catToExercise = (c: CatItem): Exercise => ({ id: catKey(c), name: c.n, muscle: c.m, equipment: c.e, kind: c.k, catalogId: c.id });
 
+// Chave de ordenação e texto de busca calculados uma vez por exercício. No Android (Hermes),
+// `localeCompare(x, 'en')` passa pelo Intl a cada comparação e ordenar 1.324 nomes levava segundos.
+const keys = new WeakMap<Exercise, { sort: string; hay: string }>();
+const keyOf = (e: Exercise) => {
+  let k = keys.get(e);
+  if (!k) {
+    const c = e.catalogId ? CAT_BY_ID.get(e.catalogId) : undefined;
+    k = { sort: e.name.toLowerCase(), hay: norm(e.name + ' ' + (c?.pt?.n ?? '')) };
+    keys.set(e, k);
+  }
+  return k;
+};
+const byName = (a: Exercise, b: Exercise) => { const x = keyOf(a).sort, y = keyOf(b).sort; return x < y ? -1 : x > y ? 1 : 0; };
+
 export function searchExercises(list: Exercise[], q: string, muscle: string, equipment: string): Exercise[] {
   const terms = norm(q).split(/\s+/).filter(Boolean);
   return list
@@ -19,11 +33,10 @@ export function searchExercises(list: Exercise[], q: string, muscle: string, equ
       if (muscle !== 'all' && e.muscle !== muscle) return false;
       if (equipment !== 'all' && e.equipment !== equipment) return false;
       if (!terms.length) return true;
-      const c = e.catalogId ? CAT_BY_ID.get(e.catalogId) : undefined;
-      const hay = norm(e.name + ' ' + (c?.pt?.n ?? ''));
+      const hay = keyOf(e).hay;
       return terms.every((t) => hay.includes(t));
     })
-    .sort((a, b) => a.name.localeCompare(b.name, 'en'));
+    .sort(byName);
 }
 
 /** Grupos musculares do filtro (alvo fino do catálogo quando existir). */
