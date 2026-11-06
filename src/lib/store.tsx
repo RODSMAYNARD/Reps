@@ -20,6 +20,27 @@ export const elapsedSec = (a: ActiveWorkout, now = Date.now()) => {
   return Math.max(0, Math.floor((end - new Date(a.startedAt).getTime() - a.pausedMs) / 1000));
 };
 
+const byPosition = <T extends { position: number }>(rows: T[] | null | undefined) => [...(rows ?? [])].sort((a, b) => a.position - b.position);
+
+/** Grava treino + exercícios + séries numa transação (função `save_workout` no banco). `meta` continua sendo gravado para o app antigo ainda instalado. */
+const saveWorkoutRpc = (w: { id: string; date: string; title: string; description: string; durationSec: number; visibility: Workout['visibility']; routineId: string | null; location: string | null; fromTrainer: boolean }, entries: SavedEntry[]) =>
+  supabase.rpc('save_workout', {
+    p_workout: {
+      id: w.id, performed_at: w.date, title: w.title, description: w.description, duration_sec: w.durationSec, visibility: w.visibility,
+      routine_id: w.routineId, location: w.location, from_trainer: w.fromTrainer,
+      meta: {
+        notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
+        rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
+        superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
+        routineId: w.routineId, location: w.location, trainer: w.fromTrainer || undefined,
+      },
+    },
+    p_entries: entries.map((e) => ({
+      exercise_id: e.exerciseId, notes: e.notes, rest_sec: e.restSec, superset: e.superset ?? null,
+      sets: e.sets.map((s) => ({ set_type: s.type, weight: s.kg ?? 0, reps: s.reps ?? 0 })),
+    })),
+  });
+
 const newSet = (prev?: ActiveSet): ActiveSet => ({ type: 'normal', kg: null, reps: null, done: false, ...(prev ? {} : {}) });
 
 type RestTimer = { endsAt: number; total: number } | null;
@@ -152,25 +173,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setProfile({ ...EMPTY_PROFILE, username: fallbackName });
     }
 
-    const wk = await supabase.from('workouts').select('id,performed_at,title,description,duration_sec,visibility,meta,workout_sets(exercise_id,position,reps,weight,set_type)').order('performed_at', { ascending: false });
+    const wk = await supabase.from('workouts')
+      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,workout_sets(position,reps,weight,set_type))')
+      .order('performed_at', { ascending: false });
     if (wk.error) return setError(wk.error.message);
-    setWorkouts(wk.data.map((w: any) => {
-      const sets = [...w.workout_sets].sort((a: any, b: any) => a.position - b.position);
-      const order: string[] = [];
-      const by = new Map<string, SetRow[]>();
-      sets.forEach((s: any) => {
-        if (!by.has(s.exercise_id)) { by.set(s.exercise_id, []); order.push(s.exercise_id); }
-        by.get(s.exercise_id)!.push({ type: s.set_type, kg: Number(s.weight), reps: s.reps });
-      });
-      const meta = w.meta ?? {};
-      return {
-        id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
-        routineId: meta.routineId ?? null, location: meta.location ?? null, fromTrainer: !!meta.trainer, entries: order.map((id) => ({ exerciseId: id, notes: meta.notes?.[id] ?? '', restSec: meta.rest?.[id] ?? 0, superset: meta.superset?.[id] ?? null, sets: by.get(id)! })),
-      } as Workout;
-    }));
+    setWorkouts(wk.data.map((w: any) => ({
+      id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
+      routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
+      entries: byPosition(w.workout_exercises).map((e: any) => ({
+        exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset,
+        sets: byPosition(e.workout_sets).map((s: any): SetRow => ({ type: s.set_type, kg: Number(s.weight), reps: s.reps })),
+      })),
+    } as Workout)));
 
-    const rt = await supabase.from('routines').select('id,title,notes,exercises').order('created_at', { ascending: false });
-    if (!rt.error) setRoutines(rt.data as Routine[]);
+    const rt = await supabase.from('routines')
+      .select('id,title,notes,routine_exercises(exercise_id,position,notes,rest_sec,superset,routine_sets(position,set_type,weight,reps))')
+      .order('created_at', { ascending: false });
+    if (!rt.error) setRoutines(rt.data.map((r: any): Routine => ({
+      id: r.id, title: r.title, notes: r.notes,
+      exercises: byPosition(r.routine_exercises).map((e: any) => ({
+        exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset,
+        sets: byPosition(e.routine_sets).map((s: any): SetRow => ({ type: s.set_type, kg: s.weight == null ? null : Number(s.weight), reps: s.reps })),
+      })),
+    })));
     const ms = await supabase.from('measurements').select('id,measured_on,values,photo_uri').order('measured_on', { ascending: false });
     if (!ms.error) setMeasurements(ms.data.map((m: any) => ({ id: m.id, date: m.measured_on, values: m.values, photoUri: m.photo_uri })));
 
@@ -384,20 +409,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
       const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((id, k) => [id, realIds[k]]));
       entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
-      const meta2 = {
-        notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
-        rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
-        superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
-        routineId: a.fromRoutineId ?? null,
-        location: meta.location || null,
-        trainer: a.fromTrainer ? true : undefined,
-      };
-      const w = await supabase.from('workouts').insert({ id: a.id, performed_at: meta.date, title: meta.title || 'Workout', description: meta.description, duration_sec: meta.durationSec, visibility: meta.visibility, meta: meta2 });
+      const w = await saveWorkoutRpc({ id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, routineId: a.fromRoutineId ?? null, location: meta.location || null, fromTrainer: !!a.fromTrainer }, entries);
       if (w.error) { reportError(w.error, { where: 'save-workout' }); fail(w.error.message); return null; }
-      let pos = 0;
-      const rows = entries.flatMap((e) => e.sets.map((s) => ({ workout_id: a.id, exercise_id: e.exerciseId, position: pos++, reps: s.reps ?? 0, weight: s.kg ?? 0, set_type: s.type })));
-      const s = await supabase.from('workout_sets').insert(rows);
-      if (s.error) { await supabase.from('workouts').delete().eq('id', a.id); fail(s.error.message); return null; }
       const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null, location: meta.location || null };
       if (a.fromTrainer) { saved.fromTrainer = true; advanceTrainer(a.fromTrainer); }
       track('workout_finished', {
@@ -423,20 +436,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
       const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((x, k) => [x, realIds[k]]));
       entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
-      const meta = {
-        notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
-        rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
-        superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
-        routineId: old.routineId ?? null, location: patch.location || null, trainer: old.fromTrainer ? true : undefined,
-      };
-      const u = await supabase.from('workouts').update({ performed_at: patch.date, title: patch.title || 'Workout', description: patch.description, duration_sec: patch.durationSec, visibility: patch.visibility, meta }).eq('id', id);
-      if (u.error) { fail(u.error.message); return false; }
-      const d = await supabase.from('workout_sets').delete().eq('workout_id', id);
-      if (d.error) { fail(d.error.message); return false; }
-      let pos = 0;
-      const rows = entries.flatMap((e) => e.sets.map((x) => ({ workout_id: id, exercise_id: e.exerciseId, position: pos++, reps: x.reps ?? 0, weight: x.kg ?? 0, set_type: x.type })));
-      const ins = await supabase.from('workout_sets').insert(rows);
-      if (ins.error) { fail(ins.error.message); return false; }
+      const u = await saveWorkoutRpc({ id, date: patch.date, title: patch.title || 'Workout', description: patch.description, durationSec: patch.durationSec, visibility: patch.visibility, routineId: old.routineId ?? null, location: patch.location || null, fromTrainer: !!old.fromTrainer }, entries);
+      if (u.error) { reportError(u.error, { where: 'update-workout' }); fail(u.error.message); return false; }
       setWorkouts((l) => l.map((w) => (w.id === id ? { ...w, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries } : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
       return true;
     },
@@ -450,12 +451,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const uniq = [...new Set(r.exercises.map((e) => e.exerciseId))];
       const realIds = await ensure(uniq);
       const idMap = new Map(uniq.map((id, k) => [id, realIds[k]]));
+      // O gatilho `routines_sync_children` monta routine_exercises/routine_sets na mesma transação; a coluna JSON fica para o app antigo.
       const row = { title: r.title.trim() || 'Routine', notes: r.notes, exercises: r.exercises.map((e) => ({ ...e, exerciseId: idMap.get(e.exerciseId) ?? e.exerciseId })) as RoutineExercise[] };
       const q = r.id ? supabase.from('routines').update(row).eq('id', r.id) : supabase.from('routines').insert(row);
-      const { data, error: e } = await q.select('id,title,notes,exercises').single();
-      if (e) { fail(e.message); return null; }
-      setRoutines((l) => (r.id ? l.map((x) => (x.id === r.id ? (data as Routine) : x)) : [data as Routine, ...l]));
-      return data as Routine;
+      const { data, error: e } = await q.select('id').single();
+      if (e) { reportError(e, { where: 'save-routine' }); fail(e.message); return null; }
+      const saved: Routine = { id: data.id, ...row };
+      setRoutines((l) => (r.id ? l.map((x) => (x.id === r.id ? saved : x)) : [saved, ...l]));
+      return saved;
     },
     deleteRoutine: async (id) => {
       const { error: e } = await supabase.from('routines').delete().eq('id', id);
