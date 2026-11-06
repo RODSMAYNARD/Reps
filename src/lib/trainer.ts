@@ -1,4 +1,4 @@
-import { randomUUID } from 'expo-crypto';
+import { randomUUID } from './uuid';
 import { STAPLES } from './planner';
 import { Exercise, TrainerExercise, TrainerGoal, TrainerProgram, TrainerSettings, TrainerSplit, TrainerWorkout } from './types';
 

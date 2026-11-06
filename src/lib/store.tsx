@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
-import { randomUUID } from 'expo-crypto';
+import { randomUUID } from './uuid';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { track } from './analytics';
