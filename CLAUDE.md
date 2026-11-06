@@ -114,3 +114,13 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 
 ## Regras do dono (builds)
 - NÃO disparar builds (Android/iOS) nem enviar ao TestFlight sem autorização expressa do Rodrigo na mensagem. Implementar, validar (`tsc`, lint) e commitar; perguntar antes de buildar.
+
+## Proporções do treino ativo (medidas em 2026-11-06)
+- Referência: Hevy. Mobbin só tem a versão iPhone (fluxo "Logging a workout", 21 telas, https://mobbin.com/apps/hevy-ios-cf2a2ec4-b4c9-4a33-96b3-c316e7165a3b/2e8aa5bb-1d4e-46e1-a60c-43919883fbb7/flows); chips, selos e campos com borda só existem no Hevy do Android (prints do Rodrigo). Medidas batem: espaço entre linhas = 12,5% da largura da tela nos dois; números 17 pt.
+- Valores aplicados (pt): selo da série e check 35, campo kg/reps ~35 de altura (padding 6, borda 1), linha 47, chip Rest/Note ~36 (ícone 18, fonte 15, padding 10x9), botão `Btn` minHeight 40, rótulos de Duration/Volume/Sets 11, título do cabeçalho 16 normal (à esquerda no treino ativo: `titleAlign="left"`), barra de descanso: relógio 32, botões 38 de altura.
+- Sem faixa cinza alternada nas linhas (como no Hevy do Android).
+
+## Ver mudanças ao vivo (build de desenvolvimento)
+- OTA não serve para as telas com `ExerciseThumb` (1.324 miniaturas > limite de 1000 arquivos por atualização): cada mudança visual precisava de build novo (~18 min).
+- Alternativa: build `development` (perfil já existe no `eas.json`, expo-dev-client instalado) + `npx expo start --dev-client --lan --port 8091` neste computador, sem `CI=1` (CI desliga o reload). Celular na mesma rede Wi-Fi; no app: "Enter URL manually" → `http://<IP do PC>:8091`. Túnel (`--tunnel`) é bloqueado pelo modo automático.
+- O app em modo desenvolvimento é mais lento: serve para visual/tamanhos, nunca para medir velocidade (usar build `preview`).
