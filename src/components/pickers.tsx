@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { fmtRest } from '../lib/format';
-import { colors } from '../lib/theme';
 import { Btn, Sheet, WheelPicker } from './ui';
 import { WheelPicker as Wheel } from './WheelPicker';
 
@@ -29,24 +28,22 @@ export function OptionSheet<T extends string>({ visible, title, options, onPick,
 
 export const range = (from: number, to: number, step = 1) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => Math.round((from + i * step) * 10) / 10);
 
-const REST_MIN = Array.from({ length: 100 }, (_, m) => `${m} min`);
-const REST_SEC = Array.from({ length: 60 }, (_, s) => `${String(s).padStart(2, '0')} s`);
+// Uma roda só: de 5 em 5 s até 5 min, de 15 em 15 s até 15 min, depois minuto a minuto até 99 min.
+const REST_VALUES = [...range(0, 300, 5), ...range(315, 900, 15), ...range(960, 99 * 60, 60)];
+const REST_LABELS = REST_VALUES.map((v) => (v ? fmtRest(v) : 'Off'));
+const nearestRest = (sec: number) => REST_VALUES.reduce((b, v, i) => (Math.abs(v - sec) < Math.abs(REST_VALUES[b] - sec) ? i : b), 0);
 
-/** Descanso livre: roda de minutos (0–99) e de segundos (0–59). 0:00 = desligado. Montar só quando aberto (estado parte do valor atual). */
+/** Descanso livre numa roda só (0 = desligado). Montar só quando aberto (estado parte do valor atual). */
 export function RestSheet({ title = 'Rest Timer', value, confirm = 'Done', onDone, onClose }: {
   title?: string; value: number; confirm?: string; onDone: (sec: number) => void; onClose: () => void;
 }) {
-  const [m, setM] = useState(Math.min(99, Math.floor(value / 60)));
-  const [s, setS] = useState(value % 60);
-  const total = m * 60 + s;
+  const [i, setI] = useState(() => nearestRest(value));
   return (
     <Sheet visible onClose={onClose} title={title}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24 }} testID="rest-wheels">
-        <Wheel items={REST_MIN} index={m} flex={1} onChange={setM} />
-        <Wheel items={REST_SEC} index={s} flex={1} onChange={setS} />
+      <View style={{ paddingHorizontal: 24 }} testID="rest-wheel">
+        <Wheel items={REST_LABELS} index={i} onChange={setI} />
       </View>
-      <Text style={{ textAlign: 'center', color: colors.muted, marginTop: 8 }}>{total ? fmtRest(total) : 'Off'}</Text>
-      <Btn title={confirm} onPress={() => { onDone(total); onClose(); }} style={{ marginTop: 12 }} testID="rest-done" />
+      <Btn title={confirm} onPress={() => { onDone(REST_VALUES[i]); onClose(); }} style={{ marginTop: 12 }} testID="rest-done" />
     </Sheet>
   );
 }
