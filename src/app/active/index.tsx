@@ -9,6 +9,7 @@ import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
 import { DurationSheet } from '../../components/DurationSheet';
+import { RestSheet } from '../../components/pickers';
 import { hasWeight, weightHeader } from '../../lib/exerciseOptions';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
@@ -19,7 +20,6 @@ import { elapsedSec, useNow, useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { ActiveEntry, ActiveSet, Exercise, Units } from '../../lib/types';
 
-const REST_OPTIONS = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 
 export default function ActiveWorkoutScreen() {
   const st = useStore();
@@ -242,14 +242,7 @@ export default function ActiveWorkoutScreen() {
       <Dialog visible={!!helpType} message={helpType ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setHelpType(null) }]} />
 
       {/* descanso do exercício */}
-      <Sheet visible={restSheet !== null} onClose={() => setRestSheet(null)} title="Rest Timer">
-        <ScrollView style={{ maxHeight: 320 }}>
-          {REST_OPTIONS.map((sec) => (
-            <ListRow key={sec} label={sec ? fmtRest(sec) : 'Off'} last right={restSheet !== null && active.entries[restSheet]?.restSec === sec ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined}
-              onPress={() => { st.patchEntry(restSheet!, { restSec: sec }); setRestSheet(null); }} />
-          ))}
-        </ScrollView>
-      </Sheet>
+      {restSheet !== null && <RestSheet value={active.entries[restSheet]?.restSec ?? 0} onDone={(sec) => st.patchEntry(restSheet, { restSec: sec })} onClose={() => setRestSheet(null)} />}
 
       {/* menu do exercício */}
       <Sheet visible={menu !== null} onClose={() => setMenu(null)}>
@@ -282,9 +275,7 @@ export default function ActiveWorkoutScreen() {
       )}
 
       {/* timer manual */}
-      <Sheet visible={timerSheet} onClose={() => setTimerSheet(false)} title="Rest Timer">
-        {[30, 60, 90, 120, 180, 300].map((s) => <ListRow key={s} icon="timer-outline" label={fmtRest(s)} last onPress={() => { st.startRest(s); setTimerSheet(false); }} />)}
-      </Sheet>
+      {timerSheet && <RestSheet value={st.wprefs.defaultRestSec || 90} confirm="Start" onDone={(sec) => sec && st.startRest(sec)} onClose={() => setTimerSheet(false)} />}
 
       <Sheet visible={hiddenSheet} onClose={() => setHiddenSheet(false)} title="Hidden exercises">
         {hiddenList.map(({ e, i }) => (

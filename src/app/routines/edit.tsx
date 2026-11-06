@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { NumInput } from '../../components/NumInput';
+import { RestSheet } from '../../components/pickers';
 import { Banner, Btn, Dialog, Header, HeaderAction, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
 import { fmtRest, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
@@ -12,7 +13,6 @@ import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 import { RoutineExercise, SetRow } from '../../lib/types';
 
-const RESTS = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 
 export default function EditRoutine() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -76,9 +76,7 @@ export default function EditRoutine() {
         {SET_TYPES.map((t) => <ListRow key={t.type} label={t.label} last onPress={() => { patchSet(typeSheet!.i, typeSheet!.j, { type: t.type }); setTypeSheet(null); }} />)}
         <ListRow icon="close" label="Remove set" danger last onPress={() => { const { i, j } = typeSheet!; setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: x.sets.filter((_, n) => n !== j) } : x))); setTypeSheet(null); }} />
       </Sheet>
-      <Sheet visible={restSheet !== null} onClose={() => setRestSheet(null)} title="Rest timer">
-        <ScrollView style={{ maxHeight: 320 }}>{RESTS.map((sec) => <ListRow key={sec} label={sec ? fmtRest(sec) : 'Off'} last onPress={() => { setItems((l) => l.map((x, k) => (k === restSheet ? { ...x, restSec: sec } : x))); setRestSheet(null); }} />)}</ScrollView>
-      </Sheet>
+      {restSheet !== null && <RestSheet value={items[restSheet]?.restSec ?? 0} onDone={(sec) => setItems((l) => l.map((x, k) => (k === restSheet ? { ...x, restSec: sec } : x)))} onClose={() => setRestSheet(null)} />}
       <Dialog visible={cancelAsk} title="Discard routine?" message="What you've entered will be lost." onClose={() => setCancelAsk(false)} actions={[{ label: 'Keep editing' }, { label: 'Discard', danger: true, onPress: () => { setCancelAsk(false); router.back(); } }]} />
     </Screen>
   );

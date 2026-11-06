@@ -2,11 +2,9 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
 import { Header, HeaderAction, ListRow, Screen, Toggle } from '../../components/ui';
-import { NumberSheet } from '../../components/pickers';
+import { RestSheet } from '../../components/pickers';
 import { fmtRest } from '../../lib/format';
 import { useStore } from '../../lib/store';
-
-const REST_VALUES = Array.from({ length: 61 }, (_, i) => i * 5);
 
 export default function WorkoutSettings() {
   const { wprefs: p, setWprefs } = useStore();
@@ -26,7 +24,7 @@ export default function WorkoutSettings() {
         <Toggle label="Inline Timer" subtitle="Duration exercises have a built-in stopwatch for tracking time for each set." value={p.inlineTimer} onChange={(v) => setWprefs({ inlineTimer: v })} />
         <Toggle label="Live Personal Record Notification" subtitle="Notifies you when you achieve a Personal Record upon checking the set." value={p.livePR} onChange={(v) => setWprefs({ livePR: v })} />
       </ScrollView>
-      <NumberSheet visible={restOpen} title="Rest Timer" values={REST_VALUES} selected={p.defaultRestSec} format={(v) => (v ? fmtRest(v) : 'Off')} onDone={(v) => setWprefs({ defaultRestSec: v })} onClose={() => setRestOpen(false)} />
+      {restOpen && <RestSheet value={p.defaultRestSec} onDone={(v) => setWprefs({ defaultRestSec: v })} onClose={() => setRestOpen(false)} />}
     </Screen>
   );
 }
