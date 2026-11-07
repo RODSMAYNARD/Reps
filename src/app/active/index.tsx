@@ -252,7 +252,7 @@ export default function ActiveWorkoutScreen() {
         const hint = wk === 'assisted_bodyweight' ? 'Input the assistance weight (for example the machine counterweight). It is subtracted from your body weight.'
           : wk === 'weighted_bodyweight' ? 'Input the extra weight added to your body weight (belt, vest or dumbbell).'
           : /barbell/i.test(eq) ? 'Input the total weight on the bar, including the bar itself.'
-          : /dumbbell/i.test(eq) ? 'Input the weight of one dumbbell.'
+          : /dumbbell/i.test(eq) ? 'We recommend inputting the total combined weight lifted in one rep of the exercise. For dumbbell exercises, input the combined weight of both dumbbells.'
           : 'Input the total weight lifted in one rep of the exercise as indicated by the machine setting.';
         return (
           <>
