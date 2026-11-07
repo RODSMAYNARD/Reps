@@ -38,7 +38,7 @@ const saveWorkoutRpc = (w: { id: string; date: string; title: string; descriptio
       },
     },
     p_entries: entries.map((e) => ({
-      exercise_id: e.exerciseId, notes: e.notes, rest_sec: e.restSec, superset: e.superset ?? null,
+      exercise_id: e.exerciseId, notes: e.notes, rest_sec: e.restSec, superset: e.superset ?? null, weight_unit: e.unit ?? null,
       sets: e.sets.map((s) => ({ set_type: s.type, weight: s.kg ?? 0, reps: s.reps ?? 0 })),
     })),
   });
@@ -155,7 +155,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const key = kind === 'exercise' ? pinKey(exerciseId) : routineId ? `${routineId}:${pinKey(exerciseId)}` : null;
     if (!key) return;
     if (texts.length) map[key] = texts; else delete map[key];
-    if (userId) AsyncStorage.setItem(`reps:pinned:${userId}`, JSON.stringify(pinnedRef.current)).catch(() => {});
+    if (userId) {
+      AsyncStorage.setItem(`reps:pinned:${userId}`, JSON.stringify(pinnedRef.current)).catch(() => {});
+      const scope = kind;
+      (texts.length
+        ? supabase.from('pinned_notes').upsert({ user_id: userId, scope, key, texts }, { onConflict: 'user_id,scope,key' })
+        : supabase.from('pinned_notes').delete().eq('user_id', userId).eq('scope', scope).eq('key', key)).then(() => {}, () => {});
+    }
   }, [userId, pinKey]);
   /** Regrava as notas fixadas do exercício a partir da lista atual das notas dele. */
   const syncPins = useCallback((e: ActiveEntry, list: EntryNote[], routineId?: string | null) => {
@@ -222,25 +228,25 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
 
     const wk = await supabase.from('workouts')
-      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,workout_sets(position,reps,weight,set_type))')
+      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type))')
       .order('performed_at', { ascending: false });
     if (wk.error) return setError(wk.error.message);
     setWorkouts(wk.data.map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
-        exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset,
+        exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
         sets: byPosition(e.workout_sets).map((s: any): SetRow => ({ type: s.set_type, kg: Number(s.weight), reps: s.reps })),
       })),
     } as Workout)));
 
     const rt = await supabase.from('routines')
-      .select('id,title,notes,routine_exercises(exercise_id,position,notes,rest_sec,superset,routine_sets(position,set_type,weight,reps))')
+      .select('id,title,notes,routine_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,routine_sets(position,set_type,weight,reps))')
       .order('created_at', { ascending: false });
     if (!rt.error) setRoutines(rt.data.map((r: any): Routine => ({
       id: r.id, title: r.title, notes: r.notes,
       exercises: byPosition(r.routine_exercises).map((e: any) => ({
-        exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset,
+        exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
         sets: byPosition(e.routine_sets).map((s: any): SetRow => ({ type: s.set_type, kg: s.weight == null ? null : Number(s.weight), reps: s.reps })),
       })),
     })));
@@ -255,6 +261,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setWprefsState(prefsRef.current);
     const pn = await AsyncStorage.getItem(`reps:pinned:${uid}`);
     pinnedRef.current = pn ? { exercise: {}, routine: {}, ...JSON.parse(pn) } : { exercise: {}, routine: {} };
+    // o banco é a fonte: o que existe lá vence o cache; o que só existe no aparelho (de antes) sobe
+    const pnr = await supabase.from('pinned_notes').select('scope,key,texts');
+    if (!pnr.error) {
+      const remote: { exercise: Record<string, string[]>; routine: Record<string, string[]> } = { exercise: {}, routine: {} };
+      pnr.data.forEach((r: any) => { remote[r.scope as 'exercise' | 'routine'][r.key] = r.texts; });
+      const rows = (['exercise', 'routine'] as const).flatMap((scope) => Object.entries(pinnedRef.current[scope]).filter(([k]) => !remote[scope][k]).map(([key, texts]) => ({ user_id: uid, scope, key, texts })));
+      if (rows.length) supabase.from('pinned_notes').upsert(rows, { onConflict: 'user_id,scope,key' }).then(() => {}, () => {});
+      pinnedRef.current = { exercise: { ...pinnedRef.current.exercise, ...remote.exercise }, routine: { ...pinnedRef.current.routine, ...remote.routine } };
+    }
     const raw = await AsyncStorage.getItem(`reps:active:${uid}`);
     activeRef.current = raw ? JSON.parse(raw) : null;
     setActiveState(activeRef.current);
@@ -384,7 +399,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     startWorkout: (opts) => {
       const src = opts?.entries ?? opts?.routine?.exercises ?? [];
       const entries: ActiveEntry[] = src.map((e) => ({
-        uid: randomUUID(), exerciseId: e.exerciseId, ...noteFields(startNotes(e.exerciseId, e.notes ?? '', opts)), restSec: e.restSec ?? 0, superset: e.superset ?? null,
+        uid: randomUUID(), unit: e.unit, exerciseId: e.exerciseId, ...noteFields(startNotes(e.exerciseId, e.notes ?? '', opts)), restSec: e.restSec ?? 0, superset: e.superset ?? null,
         sets: (e.sets.length ? e.sets : ([{ type: 'normal', kg: null, reps: null }] as SetRow[])).map((s, j): ActiveSet => {
           // campos vazios/zerados vêm preenchidos com o que foi feito da última vez
           const last = lastSetsOf(e.exerciseId, opts?.routine?.id);
@@ -501,7 +516,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!a) return null;
       const entries: SavedEntry[] = a.entries
         .filter((e) => !e.hidden)
-        .map((e) => ({ exerciseId: e.exerciseId, notes: workoutText(notesOf(e)), restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, typed: _t, ...s }) => s) }))
+        .map((e) => ({ unit: e.unit, exerciseId: e.exerciseId, notes: workoutText(notesOf(e)), restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, typed: _t, ...s }) => s) }))
         .filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);

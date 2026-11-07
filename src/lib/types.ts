@@ -30,7 +30,7 @@ export type EntryNote = { id: string; text: string; kind: NoteKind };
 export type ActiveEntry = { uid?: string; hidden?: boolean; unit?: Units['weight']; noteKind?: NoteKind; noteList?: EntryNote[]; swappedFrom?: string; madeMain?: boolean; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
 export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null; fromTrainer?: string | null; dateAt?: string | null };
 
-export type SavedEntry = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
+export type SavedEntry = { unit?: Units['weight']; exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
 export type Workout = {
   id: string;
   date: string;
@@ -44,7 +44,7 @@ export type Workout = {
   fromTrainer?: boolean;
 };
 
-export type RoutineExercise = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
+export type RoutineExercise = { unit?: Units['weight']; exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
 export type Routine = { id: string; title: string; notes: string; exercises: RoutineExercise[] };
 
 export type Measurement = { id: string; date: string; values: Record<string, number>; photoUri: string | null };

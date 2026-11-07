@@ -17,7 +17,7 @@ export function WorkoutMenu({ id, onClose, extra, onDeleted }: { id: string | nu
     if (!w) return;
     track('workout_menu_action', { action: 'save_routine' });
     onClose();
-    const r = await st.saveRoutine({ title: w.title, notes: '', exercises: w.entries.map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, sets: e.sets, superset: e.superset })) });
+    const r = await st.saveRoutine({ title: w.title, notes: '', exercises: w.entries.map((e) => ({ unit: e.unit, exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, sets: e.sets, superset: e.superset })) });
     if (r) st.showToast('Saved as routine');
   };
   const copy = () => {
