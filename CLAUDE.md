@@ -69,6 +69,11 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Preferências em `store.wprefs` (AsyncStorage `reps:wprefs:<uid>`). Funcionam: descanso padrão (novos exercícios), valores anteriores (qualquer treino / mesma rotina; o treino guarda `routineId` em `meta`), calculadora de aquecimento (menu ⋮ do exercício; fórmula e arredondamentos), manter tela ligada (`expo-keep-awake`), calculadora de anilhas (ícone ao lado de KG em exercícios de barra), aviso de recorde pessoal ao marcar a série.
 - Só interface (toggle salvo, sem efeito ainda): Sounds, RPE Tracking, Smart Superset Scrolling, Inline Timer.
 
+## Calculadora de anilhas (`components/PlateSheet.tsx`, `lib/plates.ts`)
+- Abre por KG no cabeçalho do exercício > Weight Input > Plate Calculator (exercícios de barra). Como no Hevy: barra desenhada com as anilhas de um lado, "Closest possible weight is X" em vermelho quando não fecha, Available Equipment (anilhas ligadas/desligadas, barra Standard/Short/EZ/No bar) e Manage (lista, + Custom Plate).
+- Cálculo (`solvePlates`): anilhas ilimitadas de cada tipo, peso montável mais próximo do alvo (empate: o mais leve), com menos anilhas; troco mínimo por programação dinâmica em centésimos (o método guloso erra com anilhas personalizadas). Pesquisado: sem pacote TS/RN padrão; `plate-calculator` (npm) também devolve o peso mais próximo.
+- Preferências por unidade em `wprefs.plateSets` (kg e lbs separados); barras EZ: 7,5 kg / 15 lbs (valor nosso, confirmar com o Hevy).
+
 ## Atualizações pelo ar (OTA)
 - `expo-updates` + `runtimeVersion: fingerprint`; canais: development/preview/production (eas.json). Android de teste = canal `preview`; iOS TestFlight = `production`.
 - Publicar: `workflow_run` com fileName `update.yml` (gitRef `main`) — NÃO precisa de build. Só JS/telas/textos chegam; pacote nativo novo muda o fingerprint e exige build novo (com autorização do Rodrigo).

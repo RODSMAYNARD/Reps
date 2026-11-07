@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
 import { DurationSheet } from '../../components/DurationSheet';
 import { RestSheet } from '../../components/pickers';
+import { PlateSheet } from '../../components/PlateSheet';
 import { hasWeight, weightHeader } from '../../lib/exerciseOptions';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
@@ -228,7 +229,13 @@ export default function ActiveWorkoutScreen() {
         </View>
       )}
 
-      <PlateSheet key={plate ?? 'x'} visible={plate !== null} onClose={() => setPlate(null)} kg={plate !== null ? active.entries[plate]?.sets.at(-1)?.kg ?? 0 : 0} u={plate !== null && active.entries[plate]?.unit ? { ...u, weight: active.entries[plate].unit! } : u} />
+      {plate !== null && active.entries[plate] && (() => {
+        const pe = active.entries[plate];
+        const pu = pe.unit ?? u.weight;
+        const next = pe.sets.find((s) => !s.done && s.type !== 'warmup') ?? pe.sets.at(-1);
+        const target = Math.round(toDisplayWeight(next?.kg ?? 0, { ...u, weight: pu }) * 100) / 100;
+        return <PlateSheet visible onClose={() => setPlate(null)} target={target} unit={pu} sets={st.wprefs.plateSets[pu]} onChange={(s) => st.setWprefs({ plateSets: { ...st.wprefs.plateSets, [pu]: s } })} />;
+      })()}
 
       {/* Weight Input: unidade só deste exercício neste treino */}
       {wsheet !== null && active.entries[wsheet] && (() => {
@@ -315,33 +322,3 @@ export default function ActiveWorkoutScreen() {
 const inputStyle = (done: boolean) => ({ borderWidth: 1, borderColor: done ? 'transparent' : colors.border, borderRadius: 8, paddingVertical: 6, fontWeight: done ? ('700' as const) : ('400' as const), fontSize: 17 });
 
 const h = { c: { color: colors.muted, fontSize: 12, textAlign: 'center' as const } };
-
-const PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
-const PLATES_LB = [45, 35, 25, 10, 5, 2.5];
-function PlateSheet({ visible, onClose, kg, u }: { visible: boolean; onClose: () => void; kg: number; u: Units }) {
-  const [txt, setTxt] = useState<number | null>(null);
-  const shown = txt ?? Math.round(toDisplayWeight(kg, u) * 10) / 10;
-  const bar = u.weight === 'kg' ? 20 : 45;
-  const plates = u.weight === 'kg' ? PLATES_KG : PLATES_LB;
-  let side = Math.max(0, (shown - bar) / 2);
-  const used: number[] = [];
-  for (const p of plates) while (side + 1e-9 >= p) { used.push(p); side -= p; }
-  return (
-    <Sheet visible={visible} onClose={onClose} title="Plate Calculator">
-      <View style={{ gap: 12, paddingBottom: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ color: colors.muted }}>Target weight ({u.weight})</Text>
-          <View style={{ width: 110, backgroundColor: colors.surface, borderRadius: radius.sm }}><NumInput decimal value={shown} onChange={(v) => setTxt(v)} /></View>
-        </View>
-        <Text style={{ color: colors.muted }}>Bar: {bar} {u.weight}</Text>
-        {shown < bar ? <Text style={{ color: colors.danger }}>The target is lighter than the bar.</Text> : (
-          <View style={{ gap: 6 }}>
-            <Text style={{ color: colors.text, fontWeight: '700' }}>Each side</Text>
-            <Text style={{ color: colors.text, fontSize: 20 }}>{used.length ? used.join(' + ') : 'Just the bar'}</Text>
-            {side > 0.01 && <Text style={{ color: colors.warn }}>{Math.round(side * 100) / 100} {u.weight} per side can&apos;t be made with standard plates.</Text>}
-          </View>
-        )}
-      </View>
-    </Sheet>
-  );
-}

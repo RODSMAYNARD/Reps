@@ -1,3 +1,4 @@
+import { DEFAULT_PLATE_SETS, type PlateSet } from './plates';
 export type SetType = 'warmup' | 'normal' | 'failure' | 'drop';
 export type ExerciseKind = 'weight_reps' | 'reps' | 'duration' | 'weighted_bodyweight' | 'assisted_bodyweight';
 export type Units = { weight: 'kg' | 'lbs'; distance: 'km' | 'mi'; body: 'cm' | 'in' };
@@ -48,12 +49,12 @@ export type WarmupRow = { pct: number; reps: number };
 export type WorkoutPrefs = {
   sounds: boolean; defaultRestSec: number; prevMode: 'any' | 'routine';
   warmupCalc: boolean; warmupFormula: WarmupRow[]; plateRounding: number; dumbbellRounding: number;
-  keepAwake: boolean; plateCalc: boolean; rpe: boolean; smartSuperset: boolean; inlineTimer: boolean; livePR: boolean;
+  keepAwake: boolean; plateCalc: boolean; plateSets: Record<Units['weight'], PlateSet>; rpe: boolean; smartSuperset: boolean; inlineTimer: boolean; livePR: boolean;
 };
 export const DEFAULT_WARMUP: WarmupRow[] = [{ pct: 40, reps: 5 }, { pct: 60, reps: 5 }, { pct: 80, reps: 3 }];
 export const DEFAULT_WPREFS: WorkoutPrefs = {
   sounds: true, defaultRestSec: 90, prevMode: 'any', warmupCalc: false, warmupFormula: DEFAULT_WARMUP, plateRounding: 5, dumbbellRounding: 1,
-  keepAwake: false, plateCalc: true, rpe: false, smartSuperset: false, inlineTimer: true, livePR: true,
+  keepAwake: false, plateCalc: true, plateSets: DEFAULT_PLATE_SETS, rpe: false, smartSuperset: false, inlineTimer: true, livePR: true,
 };
 
 export type TrainerLevel = 'beginner' | 'intermediate' | 'advanced';
