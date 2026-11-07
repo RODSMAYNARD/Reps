@@ -435,6 +435,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     saveProfile: async (patch) => {
       const next = { ...profile, ...patch };
+      // onboarding concluído pela primeira vez: pede o e-mail de boas-vindas (o servidor só envia uma vez e só se o Resend estiver configurado)
+      if (patch.onboarded && !profile.onboarded) supabase.functions.invoke('send-email', { body: { type: 'welcome' } }).then(() => {}, () => {});
       setProfile(next);
       const { error: e } = await supabase.from('profiles').upsert({
         user_id: userId!, username: next.username, display_name: next.displayName, bio: next.bio, link: next.link, sex: next.sex, birth_year: next.birthYear,
