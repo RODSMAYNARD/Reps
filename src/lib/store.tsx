@@ -79,6 +79,9 @@ type Store = {
   removeEntry: (i: number) => void;
   moveEntry: (from: number, to: number) => void;
   /** Notas do exercício no treino ativo: texto, tipo (treino / fixada no exercício / fixada na rotina) e apagar. */
+  /** Notas fixadas do exercício (tela do exercício > How to). */
+  pinnedNotes: (exerciseId: string) => string[];
+  setPinnedNotes: (exerciseId: string, texts: string[]) => void;
   addNote: (i: number) => string;
   setNote: (i: number, id: string, text: string) => void;
   setNoteKind: (i: number, id: string, kind: NoteKind) => void;
@@ -415,6 +418,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return { uid: randomUUID(), exerciseId: id, ...noteFields(pins), restSec: prefsRef.current.defaultRestSec, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
     })] })),
     removeEntry: (i) => setActive((a) => ({ ...a, entries: a.entries.filter((_, k) => k !== i) })),
+    pinnedNotes: (exerciseId) => readPins('exercise', exerciseId),
+    setPinnedNotes: (exerciseId, texts) => writePins('exercise', exerciseId, null, texts.filter((x) => x.trim())),
     addNote: (i) => {
       const e = activeRef.current?.entries[i];
       if (!e) return '';
@@ -557,7 +562,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
       if (e) fail(e.message);
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, syncPins, startNotes]);
+  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes]);
 
   useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

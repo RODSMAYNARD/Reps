@@ -4,13 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
 import { DurationSheet } from '../../components/DurationSheet';
 import { BodyMap, regionsOf, type Region } from '../../components/BodyMap';
 import { RestSheet } from '../../components/pickers';
+import { NoteInput } from '../../components/NoteInput';
 import { PlateIcon } from '../../components/PlateIcon';
 import { notesOf } from '../../lib/notes';
 import { PlateSheet } from '../../components/PlateSheet';
@@ -196,9 +197,9 @@ export default function ActiveWorkoutScreen() {
                 </Pressable>
               </View>
               {notesOf(e).map((n) => (
-                <View key={n.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingVertical: 6 }}>
+                <View key={n.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 2 }}>
                   <Pressable onPress={() => setNoteSheet({ i, id: n.id })} hitSlop={10} testID="note-type" style={{ height: 24, justifyContent: 'center' }}><Ionicons name={NOTE_KINDS.find((k) => k.kind === n.kind)!.icon} size={22} color={colors.text} /></Pressable>
-                  <TextInput value={n.text} autoFocus={focusNote === n.id} onChangeText={(txt) => st.setNote(i, n.id, txt)} onBlur={() => { if (!n.text.trim()) st.deleteNote(i, n.id); }} placeholder="Add a session note" placeholderTextColor={colors.faint} multiline textAlignVertical="top" underlineColorAndroid="transparent" style={[{ flex: 1, color: colors.text, fontSize: 17, lineHeight: 24, padding: 0, margin: 0, borderWidth: 0, backgroundColor: 'transparent', includeFontPadding: false }, NO_OUTLINE]} testID="note-input" />
+                  <NoteInput value={n.text} autoFocus={focusNote === n.id} onChangeText={(txt) => st.setNote(i, n.id, txt)} onBlur={() => { if (!n.text.trim()) st.deleteNote(i, n.id); }} />
                 </View>
               ))}
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
@@ -430,9 +431,6 @@ const HELP = {
   time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
   complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
 };
-
-/** No navegador (versão web) o campo ganha um contorno preto ao focar; aqui não queremos nada em volta. */
-const NO_OUTLINE = { outlineStyle: 'none', outlineWidth: 0 } as object;
 
 const NOTE_KINDS = [
   { kind: 'exercise' as const, icon: 'pin-outline' as const, label: 'Pinned Exercise Note', text: 'Appears every time you log this exercise. Hidden from workout posts.' },

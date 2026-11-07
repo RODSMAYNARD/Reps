@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, Share, Text, View } from 'react-native';
+import { NoteInput } from '../../components/NoteInput';
 import { ExerciseGif } from '../../components/ExerciseThumb';
 import { CAT_BY_ID } from '../../lib/catalog';
 import { Btn, Card, Dialog, Header, IconButton, LineChart, ListRow, PillRow, Screen, Section, Sheet, TopTabs } from '../../components/ui';
@@ -15,12 +17,16 @@ const HOWTO = ['Set up with a neutral posture and a braced core.', 'Move with co
 
 export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { findExercise, workouts, profile, removeExercise } = useStore();
+  const { findExercise, workouts, profile, removeExercise, pinnedNotes, setPinnedNotes } = useStore();
+  const [pins, setPins] = useState<string[] | null>(null);
+  const [focusPin, setFocusPin] = useState<number | null>(null);
   const [tab, setTab] = useState('summary');
   const [metric, setMetric] = useState('heaviest');
   const [menu, setMenu] = useState(false);
   const [del, setDel] = useState(false);
   const ex = findExercise(id);
+  const pinList = pins ?? (ex ? pinnedNotes(ex.id) : []);
+  const savePins = (next: string[]) => { setPins(next); if (ex) setPinnedNotes(ex.id, next); };
   if (!ex) return <Screen><Header title="Exercise" /></Screen>;
   const cat = ex.catalogId ? CAT_BY_ID.get(ex.catalogId) : undefined;
   const u = profile.units;
@@ -80,6 +86,25 @@ export default function ExerciseDetail() {
             <Text style={{ color: colors.muted }}>{ex.muscle} · {ex.equipment}</Text>
             {cat && <Text style={{ color: colors.text }}>Target: <Text style={{ fontWeight: '600' }}>{cat.t}</Text>{cat.s.length ? `\nSecondary: ${cat.s.join(', ')}` : ''}</Text>}
             {(cat ? cat.i : HOWTO).map((t, i) => <Text key={i} style={{ color: colors.text, fontSize: 16 }}>{i + 1}. {t}</Text>)}
+          </View>
+        )}
+        {tab === 'how' && (
+          <View style={{ backgroundColor: colors.surface }}>
+            <View style={{ height: 14 }} />
+            <View style={{ backgroundColor: colors.bg }}>
+              <Section title="Pinned exercise notes" right={<Text style={{ color: colors.primary, fontSize: 16 }} onPress={() => { setFocusPin(pinList.length); setPins([...pinList, '']); }} testID="add-pinned-note">Add Note</Text>} />
+              <View style={{ paddingHorizontal: 16, paddingBottom: 24, gap: 8 }}>
+                {pinList.length === 0 && <Text style={{ color: colors.faint }}>Notes you pin to this exercise show up every time you log it.</Text>}
+                {pinList.map((txt, k) => (
+                  <View key={k} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                    <View style={{ height: 24, justifyContent: 'center' }}><Ionicons name="pin-outline" size={22} color={colors.text} /></View>
+                    <NoteInput value={txt} placeholder="Add a pinned note" autoFocus={focusPin === k}
+                      onChangeText={(v) => savePins(pinList.map((x, n) => (n === k ? v : x)))}
+                      onBlur={() => { if (!txt.trim()) savePins(pinList.filter((_, n) => n !== k)); }} />
+                  </View>
+                ))}
+              </View>
+            </View>
           </View>
         )}
         {tab === 'rank' && (
