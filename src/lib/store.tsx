@@ -62,7 +62,11 @@ type Store = {
   signIn: (e: string, p: string) => Promise<string | null>;
   signUp: (e: string, p: string) => Promise<string | null>;
   resetPassword: (e: string) => Promise<string | null>;
+  /** Conclui a recuperação: confere o código de 6 dígitos do e-mail e define a nova senha. Devolve a mensagem de erro, ou null. */
+  completePasswordReset: (email: string, code: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  /** Apaga a conta e todos os dados (Edge Function `delete-account`), limpa o aparelho e sai. Devolve a mensagem de erro, ou null. */
+  deleteAccount: () => Promise<string | null>;
   // perfil
   saveProfile: (patch: Partial<Profile>) => Promise<boolean>;
   /** true quando a carga inicial dos dados falhou (rede/servidor): a raiz mostra "tentar de novo" em vez de cair no onboarding. */
@@ -373,7 +377,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return data.session ? null : 'Account created. Confirm the email we sent and then sign in.';
     },
     resetPassword: async (email) => (await supabase.auth.resetPasswordForEmail(email)).error?.message ?? null,
+    completePasswordReset: async (email, code, password) => {
+      const v = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'recovery' });
+      if (v.error) return v.error.message;
+      const u = await supabase.auth.updateUser({ password });
+      return u.error?.message ?? null;
+    },
     signOut: async () => { track('logout'); await supabase.auth.signOut(); },
+    deleteAccount: async () => {
+      const uid = userId;
+      const r = await supabase.functions.invoke('delete-account', { method: 'POST' });
+      if (r.error || r.data?.error) return r.data?.error ?? r.error?.message ?? 'Could not delete the account.';
+      track('account_deleted');
+      if (uid) await AsyncStorage.multiRemove(['reps:active:', 'reps:trainer:', 'reps:wprefs:', 'reps:pinned:', 'reps:report-dismissed:'].map((k) => k + uid)).catch(() => {});
+      await AsyncStorage.removeItem('reps:exassets').catch(() => {});
+      await supabase.auth.signOut().catch(() => {});
+      return null;
+    },
 
     saveProfile: async (patch) => {
       const next = { ...profile, ...patch };
