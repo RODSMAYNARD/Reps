@@ -48,6 +48,7 @@ export default function ActiveWorkoutScreen() {
   const [plate, setPlate] = useState<number | null>(null);
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
+  const [hidePop, setHidePop] = useState(false);
   const [swapOpen, setSwapOpen] = useState<Record<string, boolean>>({});
   const [noteSheet, setNoteSheet] = useState<{ i: number; id: string } | null>(null);
   const [focusNote, setFocusNote] = useState<string | null>(null);
@@ -411,6 +412,8 @@ export default function ActiveWorkoutScreen() {
         ))}
         <ListRow icon="close" label="Remove Set" danger last onPress={() => { st.removeSet(setSheet!.i, setSheet!.j); setSetSheet(null); }} />
       </Sheet>
+      {/* explicação do "Hide only for this workout": pop-over no centro (o menu fecha antes, para nada ficar empilhado) */}
+      <Dialog visible={hidePop} title={HELP.hide.title} message={HELP.hide.text} onClose={() => setHidePop(false)} actions={[{ label: 'Got it!', primary: true, onPress: () => setHidePop(false) }]} />
       <Dialog visible={!!helpType} message={helpType ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setHelpType(null) }]} />
 
       {/* descanso do exercício */}
@@ -431,7 +434,7 @@ export default function ActiveWorkoutScreen() {
         {st.wprefs.warmupCalc && <ListRow icon="flame-outline" label="Add warm-up sets" testID="add-warmup" onPress={() => { const i = menu!; setMenu(null); addWarmups(i); }} />}
         <ListRow icon="information-circle-outline" label="View Exercise" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
         <ListRow icon="eye-off-outline" label="Hide only for this workout" testID="hide-exercise"
-          after={<Pressable onPress={() => setHelp(HELP.hide)} hitSlop={12} testID="hide-help"><Ionicons name="help-circle-outline" size={20} color={colors.faint} /></Pressable>}
+          after={<Pressable onPress={() => { setMenu(null); setHidePop(true); }} hitSlop={12} testID="hide-help"><Ionicons name="help-circle-outline" size={20} color={colors.faint} /></Pressable>}
           onPress={() => { const i = menu; setMenu(null); if (i !== null) { st.patchEntry(i, { hidden: true }); st.showToast('Hidden only for this workout. Nothing was deleted.'); } }} />
         <ListRow icon="remove-circle-outline" label="Reduce sets" testID="reduce-sets" onPress={() => { const i = menu!; setMenu(null); const n = active.entries[i].sets.length; if (n > 1) st.removeSet(i, n - 1); else st.showToast('An exercise needs at least one set.'); }} />
         <ListRow icon="swap-vertical" label="Reorder exercises" onPress={() => { setMenu(null); setReordering(true); }} />
