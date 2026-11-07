@@ -1,15 +1,19 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Badge, ExerciseLines } from '../../components/TrainerParts';
 import { Btn, Dialog, Empty, Header, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { dayKey, startOfWeek } from '../../lib/stats';
+import { useGate } from '../../lib/gate';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { CYCLE_WEEKS } from '../../lib/trainer';
 
 export default function TrainerHome() {
   const st = useStore();
+  const allowed = useGate();
+  useEffect(() => { allowed('trainer'); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { trainer, workouts, active } = st;
   const [menu, setMenu] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);

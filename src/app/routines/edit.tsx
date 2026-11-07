@@ -9,6 +9,7 @@ import { Banner, Btn, Dialog, Header, HeaderAction, IconButton, ListRow, Screen,
 import { SET_TYPES } from '../../lib/constants';
 import { fmtRest, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
 import { setPickHandler } from '../../lib/picker';
+import { useGate } from '../../lib/gate';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 import { RoutineExercise, SetRow } from '../../lib/types';
@@ -32,7 +33,8 @@ export default function EditRoutine() {
   const patchSet = (i: number, j: number, p: Partial<SetRow>) => setItems((l) => l.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, ...p } : s)) } : e)));
   const valid = title.trim().length > 0 && items.length > 0;
   const add = () => { setPickHandler((ids) => setItems((l) => [...l, ...ids.map((eid): RoutineExercise => ({ exerciseId: eid, notes: '', restSec: 90, sets: [{ type: 'normal', kg: null, reps: null }] }))])); router.push('/exercises/pick'); };
-  const save = async () => { const r = await saveRoutine({ id: existing?.id, title, notes: existing?.notes ?? '', exercises: items }); if (r) { if (existing) items.forEach((e) => setRoutinePins(existing.id, e.exerciseId, [pins[e.exerciseId] ?? '']));  showToast('Routine saved'); router.back(); } };
+  const allowed = useGate();
+  const save = async () => { if (!existing && !allowed('routines', routines.length)) return; const r = await saveRoutine({ id: existing?.id, title, notes: existing?.notes ?? '', exercises: items }); if (r) { if (existing) items.forEach((e) => setRoutinePins(existing.id, e.exerciseId, [pins[e.exerciseId] ?? '']));  showToast('Routine saved'); router.back(); } };
   const dirty = existing ? JSON.stringify({ t: title, i: items }) !== JSON.stringify({ t: existing.title, i: existing.exercises }) : !!title || items.length > 0;
 
   return (

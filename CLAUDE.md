@@ -194,3 +194,5 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Apagar conta: Settings > Delete Account → Edge Function `delete-account` (service role no servidor; tabelas apagam em cascata; limpa `progress-photos/<uid>`). Também limpa AsyncStorage do usuário.
 - Migrações: `unidade_por_exercicio_e_notas_fixadas`, `user_state_e_fotos_de_progresso` (tabela `user_state` trainer+wprefs com RLS; bucket `progress-photos` com policies por pasta do usuário).
 - Confirmações: remover exercício (treino e rotina), apagar rotina, pular treino do Trainer, sair do editor de rotina com mudanças. Exportar = arquivo CSV/JSON real (`settings/export`).
+- Editar exercício criado: ⋮ do detalhe > Edit exercise (reusa `exercises/create?id=`, `store.updateExercise`); salvar tem trava de duplo toque.
+- Pro: `lib/gate.ts` (`useGate`, `FREE_LIMITS`: 4 rotinas no grátis; Trainer e Gerar plano exigem Pro) protegido por `FEATURES.proGating` (DESLIGADO: ligar só quando os produtos existirem nas lojas e no RevenueCat). Textos "Preview mode" do paywall só aparecem em `__DEV__`.

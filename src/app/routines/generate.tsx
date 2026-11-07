@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { Btn, Card, Header, Pill, Screen } from '../../components/ui';
 import { CAT_BY_ID } from '../../lib/catalog';
 import { Gear, Goal, Level, PlannedRoutine, generatePlan } from '../../lib/planner';
+import { useGate } from '../../lib/gate';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
@@ -18,6 +19,9 @@ function Group<T extends string | number>({ title, items, value, onChange }: { t
 }
 
 export default function GeneratePlan() {
+  const allowed = useGate();
+  useEffect(() => { allowed('generate'); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { allExercises: exercises, saveRoutine, showToast } = useStore();
   const [goal, setGoal] = useState<Goal>('hypertrophy');
   const [days, setDays] = useState(3);

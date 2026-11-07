@@ -75,6 +75,8 @@ type Store = {
   // exercícios
   addExercise: (x: Omit<Exercise, 'id'>) => Promise<Exercise | null>;
   removeExercise: (id: string) => Promise<void>;
+  /** Edita um exercício criado pelo usuário (os do catálogo não mudam). */
+  updateExercise: (id: string, x: Omit<Exercise, 'id'>) => Promise<boolean>;
   // treino ativo
   startWorkout: (opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string; trainerUid?: string }) => void;
   trainer: TrainerProgram | null;
@@ -453,6 +455,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
       setExercises((l) => [...l, row]);
       return row;
+    },
+    updateExercise: async (id, x) => {
+      const { error: e } = await supabase.from('exercises').update({ name: x.name.trim(), muscle: x.muscle, equipment: x.equipment, kind: x.kind, target: x.target ?? null, secondary_muscles: x.secondary ?? [] }).eq('id', id);
+      if (e) { fail(e.message); return false; }
+      const map = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}');
+      if (x.assetUri) map[id] = x.assetUri; else delete map[id];
+      AsyncStorage.setItem('reps:exassets', JSON.stringify(map)).catch(() => {});
+      setExercises((l) => l.map((r) => (r.id === id ? { ...r, name: x.name.trim(), muscle: x.muscle, equipment: x.equipment, kind: x.kind, target: x.target ?? null, secondary: x.secondary ?? [], assetUri: x.assetUri ?? null } : r)));
+      return true;
     },
     removeExercise: async (id) => {
       const { error: e } = await supabase.from('exercises').delete().eq('id', id);

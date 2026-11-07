@@ -50,7 +50,7 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
     setBusy(false);
     setExit(false);
     if (r === 'ok') { setDlg('Welcome to Reps Pro! 🎉'); return; }
-    if (r === 'preview') setDlg('Preview mode: real purchases turn on as soon as the store products and RevenueCat keys are configured. Prices shown here are examples.');
+    if (r === 'preview') setDlg(__DEV__ ? 'Preview mode: real purchases turn on as soon as the store products and RevenueCat keys are configured. Prices shown here are examples.' : "Purchases aren't available right now. Please try again later.");
     if (r === 'error') setDlg('The purchase could not be completed. You were not charged.');
   };
   const leave = () => {
@@ -111,7 +111,7 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
         <View style={{ alignItems: 'center', gap: 8, paddingTop: 6 }}>
           <Text style={{ color: colors.muted }}>Problems with your subscription?</Text>
           <TextLink title="Contact us" onPress={() => Linking.openURL('mailto:rodrigo.maynard@gmail.com')} />
-          <TextLink title="Restore purchases" onPress={async () => { const r = await restore(); setDlg(r === 'ok' ? 'Purchases restored. Welcome back!' : r === 'none' ? 'No purchases found to restore.' : r === 'preview' ? 'Preview mode: nothing to restore yet.' : 'Could not restore purchases. Try again.'); }} />
+          <TextLink title="Restore purchases" onPress={async () => { const r = await restore(); setDlg(r === 'ok' ? 'Purchases restored. Welcome back!' : r === 'none' ? 'No purchases found to restore.' : r === 'preview' ? (__DEV__ ? 'Preview mode: nothing to restore yet.' : 'Nothing to restore right now.') : 'Could not restore purchases. Try again.'); }} />
         </View>
       </ScrollView>
 

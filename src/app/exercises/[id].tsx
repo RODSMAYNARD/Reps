@@ -115,7 +115,7 @@ export default function ExerciseDetail() {
         )}
       </ScrollView>
       <Sheet visible={menu} onClose={() => setMenu(false)}>
-        {ex.id.startsWith('cat:') ? <ListRow icon="information-circle-outline" label="Catalog exercise (can't be deleted)" last /> : <ListRow icon="trash-outline" label="Delete exercise" danger last onPress={() => { setMenu(false); setDel(true); }} />}
+        {ex.id.startsWith('cat:') ? <ListRow icon="information-circle-outline" label="Catalog exercise (can't be deleted)" last /> : <><ListRow icon="create-outline" label="Edit exercise" testID="edit-exercise" onPress={() => { setMenu(false); router.push({ pathname: '/exercises/create', params: { id: ex.id } }); }} /><ListRow icon="trash-outline" label="Delete exercise" danger last onPress={() => { setMenu(false); setDel(true); }} /></>}
       </Sheet>
       <Dialog visible={del} title="Delete exercise?" message="It will also be removed from workouts and routines where it appears." onClose={() => setDel(false)}
         actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); await removeExercise(ex.id); router.back(); } }]} />

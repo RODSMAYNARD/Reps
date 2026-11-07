@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
-import { useEffect } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Header, HeaderAction, Screen } from '../../components/ui';
 import { EQUIPMENT_OPTIONS, MUSCLE_OPTIONS, kindLabel } from '../../lib/exerciseOptions';
@@ -23,9 +23,16 @@ function Row({ label, value, optional, onPress, testID }: { label: string; value
 
 /** Criar exercício: nome, imagem, equipamento, músculo principal, outros músculos e tipo — cada escolha abre a própria tela. */
 export default function CreateExercise() {
-  const { addExercise, showToast } = useStore();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { addExercise, updateExercise, findExercise, showToast } = useStore();
   const d = useDraft();
-  useEffect(() => { resetDraft(); }, []);
+  const [saving, setSaving] = useState(false);
+  const editing = id ? findExercise(id) : undefined;
+  useEffect(() => {
+    resetDraft();
+    if (editing) patchDraft({ name: editing.name, equipment: editing.equipment, muscle: (MUSCLE_OPTIONS.find((m) => !!editing.target && m.target === editing.target) ?? MUSCLE_OPTIONS.find((m) => !m.target && m.muscle === editing.muscle))?.label ?? editing.muscle, secondary: editing.secondary ?? [], kind: editing.kind, assetUri: editing.assetUri ?? null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const pickAsset = async () => {
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.4, base64: true });
@@ -39,14 +46,18 @@ export default function CreateExercise() {
     if (!d.equipment) return showToast('Select the equipment.');
     if (!muscle) return showToast('Select the primary muscle group.');
     if (!d.kind) return showToast('Select the exercise type.');
-    const e = await addExercise({ name: d.name, muscle: muscle.muscle, target: muscle.target ?? null, equipment: d.equipment, kind: d.kind, secondary: d.secondary, assetUri: d.assetUri });
-    if (e) { showToast('Exercise created'); router.back(); }
+    if (saving) return;
+    setSaving(true);
+    const x = { name: d.name, muscle: muscle.muscle, target: muscle.target ?? null, equipment: d.equipment, kind: d.kind, secondary: d.secondary, assetUri: d.assetUri };
+    const ok = editing ? await updateExercise(editing.id, x) : !!(await addExercise(x));
+    setSaving(false);
+    if (ok) { showToast(editing ? 'Exercise updated' : 'Exercise created'); router.back(); }
   };
 
   const equipLabel = EQUIPMENT_OPTIONS.find((o) => o.value === d.equipment)?.label;
   return (
     <Screen>
-      <Header title="Create Exercise" right={<HeaderAction label="Save" primary onPress={save} />} />
+      <Header title={editing ? 'Edit Exercise' : 'Create Exercise'} right={<HeaderAction label="Save" primary disabled={saving} onPress={save} />} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         <View style={{ alignItems: 'center', paddingTop: 24, paddingBottom: 12, gap: 10 }}>
           <Pressable onPress={pickAsset} testID="ex-asset" style={{ width: 96, height: 96, borderRadius: 48, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>

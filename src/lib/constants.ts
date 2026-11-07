@@ -68,7 +68,7 @@ export const DEMO_ATHLETES = [
 ];
 
 /** Recursos que ainda não têm backend: ficam ESCONDIDOS (e não "Coming soon") até existirem. Ligar uma bandeira só depois de implementar de verdade. */
-export const FEATURES = { social: false, watch: false, integrations: false, coach: false, dataImport: false, workoutLink: false };
+export const FEATURES = { social: false, watch: false, integrations: false, coach: false, dataImport: false, workoutLink: false, proGating: false };
 
 /** E-mail de suporte (troque aqui quando houver um endereço próprio). */
 export const SUPPORT_EMAIL = 'rodrigo.maynard@gmail.com';
