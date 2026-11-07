@@ -39,6 +39,7 @@ export default function ActiveWorkoutScreen() {
   const [plate, setPlate] = useState<number | null>(null);
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
+  const [help, setHelp] = useState<{ title: string; text: string } | null>(null);
   const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
   const keepAwake = st.wprefs.keepAwake && !!active;
   useEffect(() => {
@@ -162,11 +163,11 @@ export default function ActiveWorkoutScreen() {
               </View>
               {(noteOpen[uid] || !!e.notes) && <TextInput value={e.notes} onChangeText={(t) => st.patchEntry(i, { notes: t })} placeholder="Add notes here..." placeholderTextColor={colors.faint} multiline style={{ marginHorizontal: 16, marginBottom: 6, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10, color: colors.text, fontSize: 16 }} testID="note-input" />}
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
-                <Text style={[h.c, { width: 38 }]}>SET</Text>
-                <Text style={[h.c, { flex: 1.3 }]}>PREVIOUS</Text>
+                <Pressable onPress={() => setHelp(HELP.sets)} hitSlop={6} style={{ width: 38 }} testID="help-set"><Text style={h.c}>SET</Text></Pressable>
+                <Pressable onPress={() => setHelp(HELP.previous)} hitSlop={6} style={{ flex: 1.3 }} testID="help-previous"><Text style={h.c}>PREVIOUS</Text></Pressable>
                 {hasWeight(kind) && <Pressable onPress={() => setWsheet(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="weight-header" hitSlop={8}><Ionicons name="barbell-outline" size={14} color={colors.muted} /><Text style={h.c}>{weightHeader(kind, eu.weight)}</Text></Pressable>}
-                <Text style={[h.c, { flex: 1 }]}>{kind === 'duration' ? 'SEC' : 'REPS'}</Text>
-                <Text style={[h.c, { width: 38 }]}>✓</Text>
+                <Pressable onPress={() => setHelp(kind === 'duration' ? HELP.time : HELP.reps)} hitSlop={6} style={{ flex: 1 }} testID="help-reps"><Text style={h.c}>{kind === 'duration' ? 'SEC' : 'REPS'}</Text></Pressable>
+                <Pressable onPress={() => setHelp(HELP.complete)} hitSlop={6} style={{ width: 38 }} testID="help-complete"><Text style={h.c}>✓</Text></Pressable>
               </View>
               {e.sets.map((s, j) => {
                 const lb = label(e, s, j);
@@ -237,12 +238,22 @@ export default function ActiveWorkoutScreen() {
         return <PlateSheet visible onClose={() => setPlate(null)} target={target} unit={pu} sets={st.wprefs.plateSets[pu]} onChange={(s) => st.setWprefs({ plateSets: { ...st.wprefs.plateSets, [pu]: s } })} />;
       })()}
 
+      <Sheet visible={!!help} onClose={() => setHelp(null)} title={help?.title}>
+        <Text style={{ color: colors.text, fontSize: 17, lineHeight: 24, paddingHorizontal: 16, paddingBottom: 16 }}>{help?.text}</Text>
+        <View style={{ paddingHorizontal: 16 }}><Btn title="Got it!" onPress={() => setHelp(null)} testID="help-ok" /></View>
+      </Sheet>
+
       {/* Weight Input: unidade só deste exercício neste treino */}
       {wsheet !== null && active.entries[wsheet] && (() => {
         const we = active.entries[wsheet];
         const wex = exOf(we.exerciseId);
         const eq = wex?.equipment ?? '';
-        const hint = /barbell/i.test(eq) ? 'Input the total weight on the bar, including the bar itself.' : /dumbbell/i.test(eq) ? 'Input the weight of one dumbbell.' : 'Input the total weight lifted in one rep of the exercise as indicated by the machine setting.';
+        const wk = wex?.kind;
+        const hint = wk === 'assisted_bodyweight' ? 'Input the assistance weight (for example the machine counterweight). It is subtracted from your body weight.'
+          : wk === 'weighted_bodyweight' ? 'Input the extra weight added to your body weight (belt, vest or dumbbell).'
+          : /barbell/i.test(eq) ? 'Input the total weight on the bar, including the bar itself.'
+          : /dumbbell/i.test(eq) ? 'Input the weight of one dumbbell.'
+          : 'Input the total weight lifted in one rep of the exercise as indicated by the machine setting.';
         return (
           <>
             <Sheet visible={!unitSheet} onClose={() => setWsheet(null)} title="Weight Input">
@@ -320,5 +331,14 @@ export default function ActiveWorkoutScreen() {
 }
 
 const inputStyle = (done: boolean) => ({ borderWidth: 1, borderColor: done ? 'transparent' : colors.border, borderRadius: 8, paddingVertical: 6, fontWeight: done ? ('700' as const) : ('400' as const), fontSize: 17 });
+
+/** Explicações que abrem ao tocar no cabeçalho de cada coluna (como no Hevy). O KG abre o Weight Input, que muda por tipo de exercício. */
+const HELP = {
+  sets: { title: 'Sets', text: 'Sets are used to indicate in which cycle of the exercise you are in. The options are: warm up, normal, failure and drop set.' },
+  previous: { title: 'Previous', text: 'In the "Previous" column, you will find your past performance of that exercise on that specific set.' },
+  reps: { title: 'Repetitions', text: 'Repetitions indicate how many times you performed that exercise per set. You should only log completed reps.' },
+  time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
+  complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
+};
 
 const h = { c: { color: colors.muted, fontSize: 12, textAlign: 'center' as const } };
