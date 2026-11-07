@@ -3,7 +3,7 @@ import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { ReorderList } from '../../components/ReorderList';
 import { DurationSheet } from '../../components/DurationSheet';
 import { BodyMap, regionsOf, type Region } from '../../components/BodyMap';
 import { RestSheet } from '../../components/pickers';
+import { PlateIcon } from '../../components/PlateIcon';
 import { PlateSheet } from '../../components/PlateSheet';
 import { hasWeight, weightHeader } from '../../lib/exerciseOptions';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
@@ -43,6 +44,7 @@ export default function ActiveWorkoutScreen() {
   const [noteSheet, setNoteSheet] = useState<number | null>(null);
   const [statsOff, setStatsOff] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [kgFocus, setKgFocus] = useState<{ i: number; j: number } | null>(null);
   const [plateJ, setPlateJ] = useState<number | null>(null);
   const [ssPick, setSsPick] = useState<number | null>(null);
@@ -81,9 +83,9 @@ export default function ActiveWorkoutScreen() {
     const entry = active?.entries[i];
     if (!entry || kgFocus?.i !== i || kgFocus.j !== j || !st.wprefs.plateCalc || !/barbell/i.test(exOf(entry.exerciseId)?.equipment ?? '')) return null;
     return (
-      <Pressable testID="kg-calculator" onPress={() => { setPlateJ(j); setPlate(i); }}
+      <Pressable testID="kg-calculator" focusable={false} onPress={() => { setPlateJ(j); setPlate(i); }}
         style={{ position: 'absolute', left: 8, top: 2, zIndex: 10, elevation: 6, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 }}>
-        <Ionicons name="calculator-outline" size={22} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Calculator</Text>
+        <PlateIcon size={24} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Calculator</Text>
       </Pressable>
     );
   };
@@ -222,7 +224,7 @@ export default function ActiveWorkoutScreen() {
                     </Pressable>
                     {hasWeight(kind) && (
                       <View style={{ flex: 1, paddingHorizontal: 6 }}>
-                        <NumInput decimal style={inputStyle(s.done)} testID="kg" onFocus={() => setKgFocus({ i, j })} onBlur={() => setKgFocus((f) => (f && f.i === i && f.j === j ? null : f))} value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, eu), typed: true })} />
+                        <NumInput decimal style={inputStyle(s.done)} testID="kg" onFocus={() => { if (blurTimer.current) clearTimeout(blurTimer.current); setKgFocus({ i, j }); }} onBlur={() => { blurTimer.current = setTimeout(() => setKgFocus((f) => (f && f.i === i && f.j === j ? null : f)), 600); }} value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, eu), typed: true })} />
                       </View>
                     )}
                     <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v, typed: true })} /></View>
