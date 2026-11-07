@@ -40,7 +40,7 @@ export default function ExerciseDetail() {
   return (
     <Screen>
       <Header title={ex.name} right={<><IconButton name="share-outline" onPress={() => Share.share({ message: `${ex.name} on Reps` })} /><IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} /></>} />
-      <TopTabs value={tab} onChange={setTab} items={[{ id: 'summary', label: 'Summary' }, { id: 'history', label: 'History' }, { id: 'how', label: 'How to' }, { id: 'rank', label: 'Leaderboard' }]} />
+      <TopTabs value={tab} onChange={setTab} items={[{ id: 'summary', label: 'Summary' }, { id: 'history', label: 'History' }, { id: 'how', label: 'How to' }]} />
       <ScrollView>
         {tab === 'summary' && (
           <View>

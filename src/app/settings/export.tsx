@@ -1,27 +1,42 @@
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
-import { Share, Text, View } from 'react-native';
-import { Btn, Dialog, Header, Screen } from '../../components/ui';
+import { Text, View } from 'react-native';
+import { Btn, Header, Screen } from '../../components/ui';
 import { fmtDate } from '../../lib/format';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
+const csv = (rows: (string | number)[][]) => rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+
 export default function ExportData() {
-  const { workouts, exercises, profile } = useStore();
-  const [imp, setImp] = useState(false);
-  const exportCsv = async () => {
-    const head = 'date,workout,exercise,set,type,weight_kg,reps';
-    const rows = workouts.flatMap((w) => w.entries.flatMap((e) => e.sets.map((s, i) => [fmtDate(w.date), w.title, exercises.find((x) => x.id === e.exerciseId)?.name ?? '', i + 1, s.type, s.kg ?? 0, s.reps ?? 0].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))));
-    await Share.share({ title: 'My workouts', message: [head, ...rows].join('\n') });
+  const { workouts, exercises, routines, measurements, profile, showToast } = useStore();
+  const [busy, setBusy] = useState(false);
+  /** Grava o arquivo no aparelho e abre a folha de compartilhar (salvar em Arquivos, e-mail, etc.). Pesos sempre em kg. */
+  const share = async (name: string, text: string, mime: string) => {
+    setBusy(true);
+    try {
+      const uri = `${FileSystem.cacheDirectory}${name}`;
+      await FileSystem.writeAsStringAsync(uri, text);
+      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: mime, dialogTitle: name });
+      else showToast('Sharing is not available on this device.');
+    } catch { showToast('Could not create the file.'); }
+    setBusy(false);
   };
+  const exportCsv = () => {
+    const rows: (string | number)[][] = [['date', 'workout', 'exercise', 'set', 'type', 'weight_kg', 'reps']];
+    workouts.forEach((w) => w.entries.forEach((e) => e.sets.forEach((s, i) => rows.push([fmtDate(w.date), w.title, exercises.find((x) => x.id === e.exerciseId)?.name ?? '', i + 1, s.type, s.kg ?? 0, s.reps ?? 0]))));
+    return share('reps-workouts.csv', csv(rows), 'text/csv');
+  };
+  const exportAll = () => share('reps-data.json', JSON.stringify({ exportedAt: new Date().toISOString(), profile, workouts, routines, measurements, exercises: exercises.map((e) => ({ id: e.id, name: e.name, muscle: e.muscle, equipment: e.equipment, kind: e.kind })) }, null, 2), 'application/json');
   return (
     <Screen>
-      <Header title="Export & Import Data" />
+      <Header title="Export Data" />
       <View style={{ padding: 16, gap: 14 }}>
-        <Text style={{ color: colors.muted }}>Export your entire history ({workouts.length} workouts, unit {profile.units.weight === 'kg' ? 'kg' : 'kg (converted on screen)'}) as a CSV file.</Text>
-        <Btn title="Export workouts (CSV)" icon="share-outline" onPress={exportCsv} testID="export-csv" />
-        <Btn title="Import data" variant="secondary" icon="download-outline" onPress={() => setImp(true)} />
+        <Text style={{ color: colors.muted }}>Your data is yours. Weights are exported in kg.</Text>
+        <Btn title={`Workouts (CSV, ${workouts.length})`} icon="share-outline" onPress={exportCsv} loading={busy} testID="export-csv" />
+        <Btn title="Everything (JSON)" variant="secondary" icon="download-outline" onPress={exportAll} loading={busy} testID="export-json" />
       </View>
-      <Dialog visible={imp} title="Coming soon" message="File import is coming in a future version." actions={[{ label: 'Ok', primary: true, onPress: () => setImp(false) }]} />
     </Screen>
   );
 }

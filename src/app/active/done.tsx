@@ -248,7 +248,6 @@ export default function WorkoutDone() {
           <ShareBtn label="Copy Text" onPress={() => { track('card_shared', { card, target: 'copy_text' }); Clipboard.setStringAsync(text).then(() => st.showToast('Copied!')).catch(() => {}); }}><Ionicons name="copy-outline" size={24} color={colors.text} /></ShareBtn>
           <ShareBtn label="Download" onPress={download}><Ionicons name="download-outline" size={26} color={colors.text} /></ShareBtn>
           <ShareBtn label="Send to AI" onPress={() => { track('card_shared', { card, target: 'ai' }); Share.share({ message: aiText }).catch(() => {}); }}><Ionicons name="sparkles-outline" size={24} color={colors.text} /></ShareBtn>
-          <ShareBtn label="Workout Link" onPress={() => st.showToast('Workout links are coming soon.')}><Ionicons name="link-outline" size={26} color={colors.text} /></ShareBtn>
           <ShareBtn label="Twitter" onPress={() => { track('card_shared', { card, target: 'x' }); Linking.openURL(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`).catch(() => {}); }} bg="#000"><Ionicons name="logo-x" size={26} color="#fff" /></ShareBtn>
         </ScrollView>
 

@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, Share, Text, View } from 'react-native';
 import { fmtDuration, fmtVolume, timeAgo } from '../lib/format';
 import { workoutVolume } from '../lib/stats';
@@ -12,7 +11,6 @@ import { Avatar, Stat } from './ui';
 
 export function WorkoutCard({ w, onMenu }: { w: Workout; onMenu?: () => void }) {
   const { profile } = useStore();
-  const [liked, setLiked] = useState(false);
   const shown = w.entries.slice(0, 3);
   return (
     <Pressable onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} testID="workout-card" style={{ padding: 16, gap: 10, borderBottomWidth: 8, borderBottomColor: colors.surface, backgroundColor: colors.bg }}>
@@ -37,11 +35,6 @@ export function WorkoutCard({ w, onMenu }: { w: Workout; onMenu?: () => void }) 
         {w.entries.length > 3 && <Text style={{ color: colors.muted }}>See {w.entries.length - 3} more exercise(s)</Text>}
       </View>
       <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>
-        <Pressable onPress={() => setLiked(!liked)} hitSlop={8} style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-          <Ionicons name={liked ? 'thumbs-up' : 'thumbs-up-outline'} size={22} color={liked ? colors.primary : colors.text} />
-          {liked && <Text style={{ color: colors.primary }}>1</Text>}
-        </Pressable>
-        <Pressable onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} hitSlop={8}><Ionicons name="chatbubble-outline" size={22} color={colors.text} /></Pressable>
         <Pressable onPress={() => Share.share({ message: `${w.title} — ${fmtDuration(w.durationSec)}, ${fmtVolume(workoutVolume(w), profile.units)} on Reps` })} hitSlop={8}><Ionicons name="share-outline" size={22} color={colors.text} /></Pressable>
       </View>
     </Pressable>

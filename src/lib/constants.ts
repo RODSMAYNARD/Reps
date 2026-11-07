@@ -66,3 +66,9 @@ export const DEMO_ATHLETES = [
   { id: 'a1', name: 'Marina Costa', tag: 'Featured' }, { id: 'a2', name: 'Lucas Prado', tag: 'Featured' },
   { id: 'a3', name: 'Bia Nogueira', tag: 'Featured' }, { id: 'a4', name: 'Rafa Lima', tag: 'Featured' },
 ];
+
+/** Recursos que ainda não têm backend: ficam ESCONDIDOS (e não "Coming soon") até existirem. Ligar uma bandeira só depois de implementar de verdade. */
+export const FEATURES = { social: false, watch: false, integrations: false, coach: false, dataImport: false, workoutLink: false };
+
+/** E-mail de suporte (troque aqui quando houver um endereço próprio). */
+export const SUPPORT_EMAIL = 'rodrigo.maynard@gmail.com';

@@ -7,6 +7,7 @@ import { Avatar, BarChart, Dialog, Header, HeaderAction, IconButton, PillRow, Sc
 import { fmtDuration } from '../../lib/format';
 import { startOfWeek, weeklySeries } from '../../lib/stats';
 import { useStore } from '../../lib/store';
+import { FEATURES } from '../../lib/constants';
 import { colors } from '../../lib/theme';
 
 export default function Perfil() {
@@ -30,7 +31,7 @@ export default function Perfil() {
           <View style={{ flex: 1, gap: 8 }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{name}</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              {[['Workouts', String(workouts.length), '/profile/calendar'], ['Followers', '0', '/feed/friends'], ['Following', '0', '/feed/friends']].map(([l, v, to]) => (
+              {[['Workouts', String(workouts.length), '/profile/calendar'], ...(FEATURES.social ? [['Followers', '0', '/feed/friends'], ['Following', '0', '/feed/friends']] : [])].map(([l, v, to]) => (
                 <Text key={l} onPress={() => router.push(to as never)} style={{ color: colors.muted }}>{l}{'\n'}<Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{v}</Text></Text>
               ))}
             </View>

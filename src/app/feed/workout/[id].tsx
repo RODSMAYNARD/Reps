@@ -1,7 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ScrollView, Share, Text, View } from 'react-native';
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { WorkoutMenu } from '../../../components/WorkoutMenu';
 import { Avatar, Header, IconButton, ListRow, Screen, Section, Stat } from '../../../components/ui';
@@ -12,11 +11,10 @@ import { colors } from '../../../lib/theme';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { workouts, exercises, profile, showToast } = useStore();
+  const { workouts, exercises, profile } = useStore();
   const w = workouts.find((x) => x.id === id);
   const [menu, setMenu] = useState(false);
   const [more, setMore] = useState(false);
-  const [liked, setLiked] = useState(false);
   if (!w) return <Screen><Header title="Workout detail" /></Screen>;
   const u = profile.units;
   const dist = muscleDistribution([w], exercises);
@@ -36,8 +34,6 @@ export default function WorkoutDetail() {
           {!!w.description && <Text style={{ color: colors.text }}>{w.description}</Text>}
           <View style={{ flexDirection: 'row', gap: 28 }}><Stat label="Time" value={fmtDuration(w.durationSec)} /><Stat label="Volume" value={fmtVolume(workoutVolume(w), u)} /><Stat label="Sets" value={String(workoutSets(w))} /></View>
           <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>
-            <Pressable onPress={() => setLiked(!liked)}><Ionicons name={liked ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={liked ? colors.primary : colors.text} /></Pressable>
-            <Ionicons name="chatbubble-outline" size={24} color={colors.text} onPress={() => showToast('Comments are coming with the social features.')} />
           </View>
         </View>
         <Section title="Muscle distribution" />
