@@ -39,6 +39,7 @@ export default function ActiveWorkoutScreen() {
   const [plate, setPlate] = useState<number | null>(null);
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
+  const [ssPick, setSsPick] = useState<number | null>(null);
   const [help, setHelp] = useState<{ title: string; text: string } | null>(null);
   const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
   const keepAwake = st.wprefs.keepAwake && !!active;
@@ -243,6 +244,26 @@ export default function ActiveWorkoutScreen() {
         <View style={{ paddingHorizontal: 16 }}><Btn title="Got it!" onPress={() => setHelp(null)} testID="help-ok" /></View>
       </Sheet>
 
+      {/* superset: o usuário escolhe com qual exercício juntar */}
+      <Sheet visible={ssPick !== null} onClose={() => setSsPick(null)} title="Superset with...">
+        <ScrollView style={{ maxHeight: 360 }}>
+          {ssPick !== null && active.entries[ssPick] && active.entries.map((x, j) => ({ x, j })).filter(({ x, j }) => j !== ssPick && !x.hidden && (x.superset == null || x.superset !== active.entries[ssPick].superset)).map(({ x, j }) => (
+            <ListRow key={uidOf(x, j)} label={exOf(x.exerciseId)?.name ?? 'Exercise'} detail={x.superset != null ? 'In a superset' : undefined} last testID="superset-option"
+              onPress={() => {
+                const i = ssPick; setSsPick(null);
+                const list = active.entries;
+                const id = list[i].superset ?? x.superset ?? (Math.max(0, ...list.map((y) => y.superset ?? 0)) + 1);
+                const old = x.superset;
+                list.forEach((y, k) => { if (k === i || k === j || (old != null && y.superset === old)) st.patchEntry(k, { superset: id }); });
+                if (old != null) return; // juntou dois grupos: não mexe na ordem
+                const own = list[i].superset;
+                const last = Math.max(...list.map((y, k) => (k === i || (own != null && y.superset === own) ? k : -1)));
+                if (j !== last + 1) st.moveEntry(j, j > last ? last + 1 : last);
+              }} />
+          ))}
+        </ScrollView>
+      </Sheet>
+
       {/* Weight Input: unidade só deste exercício neste treino */}
       {wsheet !== null && active.entries[wsheet] && (() => {
         const we = active.entries[wsheet];
@@ -289,13 +310,14 @@ export default function ActiveWorkoutScreen() {
       {/* menu do exercício */}
       <Sheet visible={menu !== null} onClose={() => setMenu(null)}>
         <ListRow icon="swap-horizontal-outline" label="Replace Exercise" onPress={() => { const i = menu!; setMenu(null); pickFor((ids) => ids[0] && st.replaceEntry(i, ids[0]), true); }} />
-        <ListRow icon="link-outline" label={menu !== null && active.entries[menu]?.superset != null ? 'Remove from superset' : 'Superset with next'} onPress={() => {
-          const i = menu!; setMenu(null);
-          const cur = active.entries[i];
-          if (cur.superset != null) return st.patchEntry(i, { superset: null });
-          const id = (Math.max(0, ...active.entries.map((x) => x.superset ?? 0)) + 1);
-          st.patchEntry(i, { superset: id }); if (active.entries[i + 1]) st.patchEntry(i + 1, { superset: id });
-        }} />
+        <ListRow icon="link-outline" label={menu !== null && active.entries[menu]?.superset != null ? 'Add to this superset' : 'Add to superset'} testID="superset-add" onPress={() => { setSsPick(menu); setMenu(null); }} />
+        {menu !== null && active.entries[menu]?.superset != null && <ListRow icon="unlink-outline" label="Remove from superset" onPress={() => {
+          const i = menu; setMenu(null);
+          const gid = active.entries[i].superset;
+          st.patchEntry(i, { superset: null });
+          const rest = active.entries.map((x, k) => ({ x, k })).filter(({ x, k }) => k !== i && x.superset === gid);
+          if (rest.length === 1) st.patchEntry(rest[0].k, { superset: null });
+        }} />}
         {st.wprefs.warmupCalc && <ListRow icon="flame-outline" label="Add warm-up sets" testID="add-warmup" onPress={() => { const i = menu!; setMenu(null); addWarmups(i); }} />}
         <ListRow icon="information-circle-outline" label="View Exercise" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
         <ListRow icon="eye-off-outline" label="Hide for this workout" testID="hide-exercise" onPress={() => { st.patchEntry(menu!, { hidden: true }); setMenu(null); st.showToast('Hidden for this workout. Nothing was deleted.'); }} />
