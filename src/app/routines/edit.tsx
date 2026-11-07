@@ -22,8 +22,7 @@ export default function EditRoutine() {
   const [items, setItems] = useState<RoutineExercise[]>(existing?.exercises ?? []);
   const [hint, setHint] = useState(!existing);
   /** Nota fixada da rotina por exercício (só aparece com a rotina já salva; fica no aparelho). */
-  const [pins, setPins] = useState<Record<string, string>>(() => Object.fromEntries((existing?.exercises ?? []).map((e) => [e.exerciseId, routinePins(existing!.id, e.exerciseId).join('
-')])));
+  const [pins, setPins] = useState<Record<string, string>>(() => Object.fromEntries((existing?.exercises ?? []).map((e) => [e.exerciseId, routinePins(existing!.id, e.exerciseId).join('\n')])));
   const [typeSheet, setTypeSheet] = useState<{ i: number; j: number } | null>(null);
   const [restSheet, setRestSheet] = useState<number | null>(null);
   const [cancelAsk, setCancelAsk] = useState(false);
