@@ -195,9 +195,9 @@ export default function ActiveWorkoutScreen() {
                 </Pressable>
               </View>
               {(noteOpen[uid] || !!e.notes) && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 6, minHeight: 36 }}>
-                  <Pressable onPress={() => setNoteSheet(i)} hitSlop={10} testID="note-type"><Ionicons name={NOTE_KINDS.find((n) => n.kind === (e.noteKind ?? 'workout'))!.icon} size={22} color={colors.text} /></Pressable>
-                  <TextInput value={e.notes} autoFocus={!e.notes} onChangeText={(t) => st.setNote(i, t)} placeholder="Add a session note" placeholderTextColor={colors.faint} multiline numberOfLines={1} textAlignVertical="center" style={{ flex: 1, color: colors.text, fontSize: 16, lineHeight: 22, paddingVertical: 0, paddingTop: 0, minHeight: 28, includeFontPadding: false }} testID="note-input" />
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 6 }}>
+                  <Pressable onPress={() => setNoteSheet(i)} hitSlop={10} testID="note-type" style={{ height: 28, justifyContent: 'center' }}><Ionicons name={NOTE_KINDS.find((n) => n.kind === (e.noteKind ?? 'workout'))!.icon} size={22} color={colors.text} /></Pressable>
+                  <TextInput value={e.notes} autoFocus={!e.notes} onChangeText={(t) => st.setNote(i, t)} placeholder="Add a session note" placeholderTextColor={colors.faint} multiline numberOfLines={1} textAlignVertical="center" style={[{ flex: 1, color: colors.text, fontSize: 16, lineHeight: 28, minHeight: 28, padding: 0, margin: 0, borderWidth: 0, backgroundColor: 'transparent', includeFontPadding: false }, NO_OUTLINE]} underlineColorAndroid="transparent" testID="note-input" />
                 </View>
               )}
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
@@ -429,6 +429,9 @@ const HELP = {
   time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
   complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
 };
+
+/** No navegador (versão web) o campo ganha um contorno preto ao focar; aqui não queremos nada em volta. */
+const NO_OUTLINE = { outlineStyle: 'none', outlineWidth: 0 } as object;
 
 const NOTE_KINDS = [
   { kind: 'exercise' as const, icon: 'pin-outline' as const, label: 'Pinned Exercise Note', text: 'Appears every time you log this exercise. Hidden from workout posts.' },
