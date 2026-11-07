@@ -77,6 +77,11 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 ## Relógio do treino (botão do alarme no cabeçalho, `components/ClockSheet.tsx`)
 - Folha "Clock" (ícone de sliders abre Timer Settings): aba **Timer** (anel com a contagem, -15s/+15s, Start/Cancel; usa o mesmo temporizador de descanso do store, então a barra de descanso embaixo também aparece) e aba **Stopwatch** (MM:SS:CC, Start/Stop/Resume/Reset). Com o cronômetro andando/pausado com valor, o título do cabeçalho mostra o tempo em azul.
 
+## Swap (troca de exercício no treino, 2026-11-07)
+- Botão **Swap** (esquerda) ao lado de **Add Set** (direita) em cada exercício do treino ativo. Abre `components/SwapPanel.tsx`: cartões com foto (alinhados pelo topo): o original (com ✓ quando é o atual) e 3-4 opções do MESMO alvo muscular (`lib/substitutes.ts`: alvo do catálogo, parecença do nome sem palavras de equipamento, preferência leve por equipamento de academia, no máximo 2 do mesmo equipamento; a primeira é "Closest match"). ⓘ explica (folha "Got it!").
+- Tocar numa opção chama `store.swapEntry` (troca só neste treino, guarda `ActiveEntry.swappedFrom`, séries não feitas usam o histórico do novo exercício; tocar no original desfaz). O exercício mostra "Swapped today · was X".
+- ⋮ > **Make main exercise** (só aparece se houve troca): troca o original pelo novo na ROTINA de origem (`saveRoutine`), definitivamente. Só funciona em treino iniciado de rotina (Trainer não, por enquanto). Texto das justificativas é genérico por equipamento (sem citar estudos).
+
 ## Menu do exercício e séries (treino ativo)
 - ⋮ do exercício: Replace, Add to superset, View Exercise, **Hide only for this workout** (com ícone "?" que explica: some só neste treino, nada é apagado, na próxima vez aparece normal), **Reduce sets** (tira a última série; interpretação nossa do pedido, confirmar com o Rodrigo), Reorder, Remove.
 - Séries: deslizar a linha para a esquerda mostra "Delete" vermelho (`components/SwipeRow.tsx`, PanResponder puro).

@@ -87,6 +87,8 @@ type Store = {
   setNoteKind: (i: number, id: string, kind: NoteKind) => void;
   deleteNote: (i: number, id: string) => void;
   replaceEntry: (i: number, exerciseId: string) => void;
+  /** Troca o exercício só neste treino (guarda o original em `swappedFrom`; trocar de volta para o original limpa). */
+  swapEntry: (i: number, exerciseId: string) => void;
   patchEntry: (i: number, patch: Partial<ActiveEntry>) => void;
   addSet: (i: number) => void;
   patchSet: (i: number, j: number, patch: Partial<ActiveSet>) => void;
@@ -452,6 +454,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       syncPins(e, list, a.fromRoutineId);
     },
     moveEntry: (from, to) => setActive((a) => { const list = [...a.entries]; const [it] = list.splice(from, 1); list.splice(to, 0, it); return { ...a, entries: list }; }),
+    swapEntry: (i, id) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => {
+      if (k !== i || e.exerciseId === id) return e;
+      const original = e.swappedFrom ?? e.exerciseId;
+      const last = lastSetsOf(id, a.fromRoutineId);
+      // séries ainda não feitas passam a usar o histórico do novo exercício (ou ficam sem peso, para não herdar o do outro)
+      const sets = e.sets.map((s, j): ActiveSet => {
+        if (s.done) return s;
+        const p = last.length ? last[Math.min(j, last.length - 1)] : null;
+        return p ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, typed: false } : { ...s, kg: null, typed: false };
+      });
+      return { ...e, exerciseId: id, swappedFrom: id === original ? undefined : original, sets };
+    }) })),
     replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, exerciseId } : e)) })),
     patchEntry: (i, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...patch } : e)) })),
     addSet: (i) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: [...e.sets, { ...newSet(), kg: e.sets.at(-1)?.kg ?? null, reps: e.sets.at(-1)?.reps ?? null }] } : e)) })),

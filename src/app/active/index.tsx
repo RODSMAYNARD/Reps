@@ -14,6 +14,7 @@ import { ClockSheet, fmtStopwatch, swMs, type Stopwatch } from '../../components
 import { RestSheet } from '../../components/pickers';
 import { NoteInput } from '../../components/NoteInput';
 import { PlateIcon } from '../../components/PlateIcon';
+import { SwapPanel } from '../../components/SwapPanel';
 import { SwipeRow } from '../../components/SwipeRow';
 import { notesOf } from '../../lib/notes';
 import { PlateSheet } from '../../components/PlateSheet';
@@ -47,6 +48,7 @@ export default function ActiveWorkoutScreen() {
   const [plate, setPlate] = useState<number | null>(null);
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
+  const [swapOpen, setSwapOpen] = useState<Record<string, boolean>>({});
   const [noteSheet, setNoteSheet] = useState<{ i: number; id: string } | null>(null);
   const [focusNote, setFocusNote] = useState<string | null>(null);
   const [statsOff, setStatsOff] = useState(false);
@@ -106,6 +108,21 @@ export default function ActiveWorkoutScreen() {
     const inc = /dumbbell/i.test(eq) ? st.wprefs.dumbbellRounding : st.wprefs.plateRounding;
     const rows = st.wprefs.warmupFormula.map((r) => ({ type: 'warmup' as const, kg: Math.max(inc, Math.round((base * r.pct) / 100 / inc) * inc), reps: r.reps, done: false }));
     st.patchEntry(i, { sets: [...rows, ...e.sets.filter((x) => x.type !== 'warmup' || x.done || (x.kg ?? 0) > 0)] });
+  };
+  /** Ids de catálogo dos OUTROS exercícios do treino: não são oferecidos como troca. */
+  const swapExclude = (i: number) => new Set(active.entries.flatMap((x, k) => (k === i ? [] : [exOf(x.exerciseId)?.catalogId ?? ''])).filter(Boolean) as string[]);
+  /** Deixa a variação como exercício principal da rotina (troca definitiva do original por ela). */
+  const makeMain = async (i: number) => {
+    const e = active.entries[i];
+    if (!e?.swappedFrom) return;
+    if (!active.fromRoutineId) return st.showToast('Start this workout from a routine to change its main exercise.');
+    const r = st.routines.find((x) => x.id === active.fromRoutineId);
+    if (!r) return st.showToast('Routine not found.');
+    const from = st.realExerciseId(e.swappedFrom);
+    const idx = r.exercises.findIndex((x) => st.realExerciseId(x.exerciseId) === from);
+    if (idx < 0) return st.showToast('The original exercise is no longer in this routine.');
+    const saved = await st.saveRoutine({ id: r.id, title: r.title, notes: r.notes, exercises: r.exercises.map((x, k) => (k === idx ? { ...x, exerciseId: e.exerciseId } : x)) });
+    if (saved) { st.patchEntry(i, { swappedFrom: undefined }); st.showToast(`${exOf(e.exerciseId)?.name ?? 'Exercise'} is now the main exercise in ${r.title}.`); }
   };
   const goSave = () => router.push('/active/save');
   const hasTyped = shown.some((x) => x.e.sets.some((s) => !s.done && s.typed && ((s.kg ?? 0) > 0 || (s.reps ?? 0) > 0)));
@@ -182,6 +199,7 @@ export default function ActiveWorkoutScreen() {
                 <View style={{ flex: 1 }}>
                   <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: isCollapsed ? 16 : 17, fontWeight: '600' }}>{ex?.name ?? 'Removed exercise'}</Text>
                   {isCollapsed && <Text style={{ color: colors.muted, fontSize: 13 }}>{e.sets.filter((s) => s.done).length}/{e.sets.length} sets</Text>}
+                  {!!e.swappedFrom && <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>Swapped today · was {exOf(e.swappedFrom)?.name ?? 'original'}</Text>}
                 </View>
                 <IconButton name={isCollapsed ? 'chevron-down' : 'chevron-up'} onPress={toggle} testID="entry-toggle" />
                 <IconButton name="ellipsis-vertical" onPress={() => setMenu(i)} testID="entry-menu" />
@@ -243,7 +261,13 @@ export default function ActiveWorkoutScreen() {
                   </View></SwipeRow>
                 );
               })}
-              <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>{calcChip(i, e.sets.length - 1)}<Btn title="Add Set" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
+              <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>{calcChip(i, e.sets.length - 1)}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <Btn title="Swap" icon="swap-horizontal" variant="secondary" style={{ flex: 1 }} onPress={() => setSwapOpen((o) => ({ ...o, [uid]: !o[uid] }))} testID="swap-btn" />
+                  <Btn title="Add Set" icon="add" variant="secondary" style={{ flex: 1 }} onPress={() => st.addSet(i)} testID="add-set" />
+                </View>
+              </View>
+              {swapOpen[uid] && <SwapPanel currentId={e.exerciseId} originalId={e.swappedFrom ?? e.exerciseId} exclude={swapExclude(i)} onPick={(id) => st.swapEntry(i, id)} onInfo={() => setHelp(HELP.swap)} />}
               </>}
             </View>
           );
@@ -383,6 +407,7 @@ export default function ActiveWorkoutScreen() {
       {/* menu do exercício */}
       <Sheet visible={menu !== null} onClose={() => setMenu(null)}>
         <ListRow icon="swap-horizontal-outline" label="Replace Exercise" onPress={() => { const i = menu!; setMenu(null); pickFor((ids) => ids[0] && st.replaceEntry(i, ids[0]), true); }} />
+        {menu !== null && !!active.entries[menu]?.swappedFrom && <ListRow icon="star-outline" label="Make main exercise" subtitle="Replaces the original in this routine for good" testID="make-main" onPress={() => { const i = menu; setMenu(null); makeMain(i); }} />}
         <ListRow icon="link-outline" label={menu !== null && active.entries[menu]?.superset != null ? 'Add to this superset' : 'Add to superset'} testID="superset-add" onPress={() => { setSsPick(menu); setMenu(null); }} />
         {menu !== null && active.entries[menu]?.superset != null && <ListRow icon="unlink-outline" label="Remove from superset" onPress={() => {
           const i = menu; setMenu(null);
@@ -437,6 +462,7 @@ const HELP = {
   reps: { title: 'Repetitions', text: 'Repetitions indicate how many times you performed that exercise per set. You should only log completed reps.' },
   time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
   hide: { title: 'Hide only for this workout', text: 'Hides this exercise only in the workout you are doing now. Nothing is deleted: it is not counted in the volume and is not saved with this workout. The next time you do this workout or routine, the exercise appears normally. To bring it back now, tap the hidden exercises row at the bottom of the list.' },
+  swap: { title: 'Swap', text: 'Is the gym packed, or do you just want to change the stimulus a little? Pick another exercise that trains the same muscle and use it instead, only in this workout. Your routine does not change, and next time the original comes back. To keep the new exercise for good, open the ⋮ menu of the exercise and choose "Make main exercise".' },
   complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
 };
 
