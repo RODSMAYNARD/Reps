@@ -15,7 +15,7 @@ import {
 } from './types';
 
 export const DEFAULT_UNITS: Units = { weight: 'kg', distance: 'km', body: 'cm' };
-const EMPTY_PROFILE: Profile = { username: '', displayName: '', bio: '', link: '', sex: null, birthYear: null, weightKg: null, units: DEFAULT_UNITS, theme: 'light', isPrivate: false, onboarded: false };
+const EMPTY_PROFILE: Profile = { username: '', displayName: '', bio: '', link: '', sex: null, birthYear: null, weightKg: null, units: DEFAULT_UNITS, theme: 'system', isPrivate: false, onboarded: false };
 
 export const elapsedSec = (a: ActiveWorkout, now = Date.now()) => {
   const end = a.pausedAt ? new Date(a.pausedAt).getTime() : now;
@@ -82,6 +82,9 @@ type Store = {
   /** Notas fixadas do exercício (tela do exercício > How to). */
   pinnedNotes: (exerciseId: string) => string[];
   setPinnedNotes: (exerciseId: string, texts: string[]) => void;
+  /** Notas fixadas DESTA rotina para o exercício (aparecem sempre que o treino é iniciado dela). */
+  routinePins: (routineId: string, exerciseId: string) => string[];
+  setRoutinePins: (routineId: string, exerciseId: string, texts: string[]) => void;
   addNote: (i: number) => string;
   setNote: (i: number, id: string, text: string) => void;
   setNoteKind: (i: number, id: string, kind: NoteKind) => void;
@@ -420,6 +423,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return { uid: randomUUID(), exerciseId: id, ...noteFields(pins), restSec: prefsRef.current.defaultRestSec, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
     })] })),
     removeEntry: (i) => setActive((a) => ({ ...a, entries: a.entries.filter((_, k) => k !== i) })),
+    routinePins: (routineId, exerciseId) => readPins('routine', exerciseId, routineId),
+    setRoutinePins: (routineId, exerciseId, texts) => writePins('routine', exerciseId, routineId, texts.filter((x) => x.trim())),
     pinnedNotes: (exerciseId) => readPins('exercise', exerciseId),
     setPinnedNotes: (exerciseId, texts) => writePins('exercise', exerciseId, null, texts.filter((x) => x.trim())),
     addNote: (i) => {

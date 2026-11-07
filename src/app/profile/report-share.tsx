@@ -13,6 +13,7 @@ import { fmtDuration, fmtVolume } from '../../lib/format';
 import { inMonth, metricValue, Metric, tally } from '../../lib/report';
 import { dayKey } from '../../lib/stats';
 import { useStore } from '../../lib/store';
+import { colors } from '../../lib/theme';
 
 const THEMES = [
   { bg: '#030A1E', fg: '#FFFFFF', sub: '#8A93A6', dim: '#0E1A33', accent: '#0A84FF', prev: '#9AA3B2' },
@@ -41,8 +42,8 @@ function Frame({ t, month, title, user, children }: { t: Theme; month: string; t
 function Btn2({ icon, label: l, onPress, children }: { icon?: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; children?: React.ReactNode }) {
   return (
     <Pressable onPress={onPress} style={{ alignItems: 'center', gap: 6, width: 82 }} testID={`rshare-${l}`}>
-      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#E8ECF2', alignItems: 'center', justifyContent: 'center' }}>{children ?? <Ionicons name={icon!} size={24} color="#0B1220" />}</View>
-      <Text style={{ color: '#6B7280', fontSize: 13 }}>{l}</Text>
+      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>{children ?? <Ionicons name={icon!} size={24} color={colors.text} />}</View>
+      <Text style={{ color: colors.muted, fontSize: 13 }}>{l}</Text>
     </Pressable>
   );
 }
@@ -174,10 +175,10 @@ export default function ReportShare() {
             </View>
           ))}
         </ScrollView>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8 }}>{cards.map((_, i) => <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: i === page ? '#0A84FF' : '#C9CFD8' }} />)}</View>
-        <Text style={{ textAlign: 'center', color: '#0B1220', fontSize: 17 }}>Share this image</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8 }}>{cards.map((_, i) => <View key={i} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: i === page ? colors.primary : colors.dot }} />)}</View>
+        <Text style={{ textAlign: 'center', color: colors.text, fontSize: 17 }}>Share this image</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8 }}>
-          <Btn2 label="Background" onPress={() => setBg((bg + 1) % THEMES.length)}><View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E8ECF2' }}><Ionicons name="color-palette-outline" size={24} color="#fff" /></View></Btn2>
+          <Btn2 label="Background" onPress={() => setBg((bg + 1) % THEMES.length)}><View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: t.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.border }}><Ionicons name="color-palette-outline" size={24} color="#fff" /></View></Btn2>
           <Btn2 icon="share-outline" label="More" onPress={doShare} />
           <Btn2 icon="download-outline" label="Download" onPress={doDownload} />
         </View>

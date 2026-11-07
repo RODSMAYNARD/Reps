@@ -19,7 +19,7 @@ export const MEASURE_FIELDS: { key: string; label: string; unit: 'weight' | 'pct
 ];
 export const SET_TYPES = [
   { type: 'warmup', label: 'Warm-up set', badge: 'W', color: '#F5A524', help: 'A light set to prepare your body. It does not count toward volume.' },
-  { type: 'normal', label: 'Normal set', badge: '', color: '#0B1220', help: 'A standard working set.' },
+  { type: 'normal', label: 'Normal set', badge: '', color: '', help: 'A standard working set.' },
   { type: 'failure', label: 'Failure set', badge: 'F', color: '#E5484D', help: 'A set taken to muscular failure.' },
   { type: 'drop', label: 'Drop set', badge: 'D', color: '#0A84FF', help: 'Reduce the weight and keep going without rest.' },
 ] as const;

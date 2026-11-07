@@ -99,7 +99,7 @@ export default function ActiveWorkoutScreen() {
     });
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   })();
-  const bodyColors = { body: '#B9C0CB', muscle: '#E3E7ED', on: colors.primary };
+  const bodyColors = { body: colors.bodyBase, muscle: colors.bodyMuscle, on: colors.primary };
   /** Atalho "Calculator" que SOBREPÕE a linha de baixo da série em foco (sem empurrar a lista), como no Hevy.
    * Fica dentro da área da linha seguinte (ou da do "Add Set"), senão o Android não entrega o toque. */
   const calcChip = (i: number, j: number) => {
@@ -421,7 +421,7 @@ export default function ActiveWorkoutScreen() {
       <Sheet visible={!!setSheet} onClose={() => setSetSheet(null)} title="Set Type">
         {SET_TYPES.map((t) => (
           <ListRow key={t.type} label={t.label} last={false}
-            right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ color: t.color, fontWeight: '700', width: 16 }}>{t.badge || '1'}</Text><Ionicons name="help-circle-outline" size={20} color={colors.faint} onPress={() => setHelpType(t.help)} /></View>}
+            right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ color: t.color || colors.text, fontWeight: '700', width: 16 }}>{t.badge || '1'}</Text><Ionicons name="help-circle-outline" size={20} color={colors.faint} onPress={() => setHelpType(t.help)} /></View>}
             onPress={() => { st.patchSet(setSheet!.i, setSheet!.j, { type: t.type }); setSetSheet(null); }} />
         ))}
         <ListRow icon="close" label="Remove Set" danger last onPress={() => { st.removeSet(setSheet!.i, setSheet!.j); setSetSheet(null); }} />
@@ -521,4 +521,4 @@ const NOTE_KINDS = [
   { kind: 'workout' as const, icon: 'document-outline' as const, label: 'Workout Note', text: 'Appears only in this workout. Visible to friends and followers.' },
 ];
 
-const h = { c: { color: colors.muted, fontSize: 12, textAlign: 'center' as const } };
+const h = { get c() { return { color: colors.muted, fontSize: 12, textAlign: 'center' as const }; } };

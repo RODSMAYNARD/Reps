@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reps · iPhone</title>
+<style>
+  :root { --w: 393px; --h: 852px; --bezel: 14px; --r: 62px; --sb: 54px; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, #2b3a33, #0d1210 70%); font-family: system-ui, sans-serif; overflow: auto; }
+  .scale { transform-origin: center; }
+  .phone { position: relative; width: calc(var(--w) + var(--bezel) * 2); height: calc(var(--h) + var(--bezel) * 2); border-radius: calc(var(--r) + var(--bezel)); background: linear-gradient(145deg, #3a3d3c, #151716 40%, #2c2f2e); padding: var(--bezel); box-sizing: border-box; box-shadow: 0 0 0 2px #5a5e5c inset, 0 0 0 1px #0a0c0b, 0 40px 90px rgba(0,0,0,.6); }
+  .btn { position: absolute; width: 4px; background: #2a2d2c; border-radius: 2px; }
+  .b1 { left: -4px; top: 150px; height: 34px; }
+  .b2 { left: -4px; top: 210px; height: 62px; }
+  .b3 { left: -4px; top: 285px; height: 62px; }
+  .b4 { right: -4px; top: 235px; height: 100px; }
+  .screen { position: relative; width: var(--w); height: var(--h); border-radius: var(--r); overflow: hidden; background: #000; }
+  iframe { position: absolute; left: 0; top: var(--sb); width: var(--w); height: calc(var(--h) - var(--sb)); border: 0; display: block; background: #fff; }
+  .status { position: absolute; left: 0; right: 0; top: 0; height: var(--sb); z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 30px 9px 38px; box-sizing: border-box; font-weight: 600; font-size: 16px; letter-spacing: -.2px; color: #000; transition: background .3s, color .3s; }
+  .status .r { display: flex; align-items: center; gap: 6px; }
+  .status svg { display: block; fill: currentColor; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 122px; height: 35px; border-radius: 20px; background: #000; z-index: 3; pointer-events: none; }
+  .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 140px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.85); z-index: 3; pointer-events: none; }
+  /* Simulated iOS keyboard: slides up when a text field in the app is focused, and the app shrinks above it like on a real phone. */
+  iframe { transition: height .25s ease; }
+  .kb { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; background: #d1d3d9; padding: 8px 4px 30px; box-sizing: border-box; transform: translateY(102%); transition: transform .25s ease; user-select: none; font-family: -apple-system, system-ui, sans-serif; }
+  .kb.on { transform: none; }
+  .kb.dark { background: #1c1c1e; }
+  .kb .row { display: flex; justify-content: center; gap: 6px; margin-bottom: 11px; }
+  .kb button { flex: 1; max-width: 36px; height: 42px; border: 0; border-radius: 5px; background: #fff; color: #000; font-size: 22px; box-shadow: 0 1px 0 rgba(0,0,0,.3); cursor: pointer; font-family: inherit; }
+  .kb.dark button { background: #6b6b6e; color: #fff; box-shadow: 0 1px 0 rgba(0,0,0,.6); }
+  .kb button.fn { background: #abb0ba; max-width: 46px; font-size: 16px; }
+  .kb.dark button.fn { background: #444446; }
+  .kb button.space { max-width: none; flex: 5; font-size: 16px; }
+  .kb button.ret { max-width: none; flex: 2; background: #abb0ba; font-size: 16px; }
+  .kb.dark button.ret { background: #444446; }
+  .kb.num { padding-top: 10px; }
+  .kb.num .row { gap: 8px; margin-bottom: 8px; }
+  .kb.num button { max-width: none; height: 46px; font-size: 26px; border-radius: 6px; }
+  .kb.num button small { display: block; font-size: 9px; letter-spacing: 2px; margin-top: -4px; opacity: .6; }
+  .kb.num button.blank { background: transparent; box-shadow: none; cursor: default; }
+  /* Device picker: iPhone (default), Android (punch-hole camera, gesture bar) or no frame. */
+  .picker { position: fixed; top: 10px; left: 10px; z-index: 20; display: flex; gap: 8px; align-items: center; color: #cfd8d3; font-size: 12px; }
+  .picker select { background: #1b211e; color: #fff; border: 1px solid #3a4540; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  body[data-device="android"] { --w: 412px; --h: 892px; --bezel: 9px; --r: 30px; --sb: 38px; }
+  body[data-device="android"] .island { top: 11px; width: 15px; height: 15px; border-radius: 50%; }
+  body[data-device="android"] .status { padding: 0 22px 9px 26px; }
+  body[data-device="android"] .home { width: 112px; height: 4px; bottom: 7px; }
+  body[data-device="android"] .b1, body[data-device="android"] .b2 { display: none; }
+  body[data-device="android"] .b3 { top: 150px; height: 70px; right: -4px; left: auto; }
+  body[data-device="android"] .b4 { top: 240px; height: 56px; }
+  body[data-device="android"] .phone { background: linear-gradient(145deg, #2e3330, #101312 45%, #232826); }
+  body[data-device="none"] { --w: min(100vw, 460px); --h: 100vh; --bezel: 0px; --r: 0px; --sb: 0px; }
+  body[data-device="full"] { --w: 100vw; --h: 100vh; --bezel: 0px; --r: 0px; --sb: 0px; }
+  body[data-device="none"] .btn, body[data-device="none"] .island, body[data-device="none"] .home, body[data-device="none"] .status,
+  body[data-device="full"] .btn, body[data-device="full"] .island, body[data-device="full"] .home, body[data-device="full"] .status { display: none; }
+  body[data-device="none"] .phone, body[data-device="full"] .phone { background: none; box-shadow: none; }
+  body[data-device="full"] { display: block; overflow: hidden; }
+  body[data-device="full"] .picker { top: auto; bottom: 8px; left: auto; right: 8px; opacity: .45; }
+</style>
+</head>
+<body data-device="iphone">
+  <div class="picker"><label for="device">Aparelho</label>
+    <select id="device"><option value="iphone">iPhone 15 Pro</option><option value="android">Android (Pixel)</option><option value="none">Sem moldura (largura de celular)</option><option value="full">Sem moldura 2 (tela inteira, como antes)</option></select>
+  </div>
+  <div class="scale" id="scale">
+    <div class="phone">
+      <i class="btn b1"></i><i class="btn b2"></i><i class="btn b3"></i><i class="btn b4"></i>
+      <div class="screen">
+        <div class="status" id="status">
+          <span id="clock">9:41</span>
+          <span class="r">
+            <svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+            <svg width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 2.3c2.3 0 4.4.9 6 2.4l1.1-1.2A10.6 10.6 0 0 0 8.5.6C5.7.6 3.2 1.6 1.4 3.5l1.1 1.2a8.9 8.9 0 0 1 6-2.4Zm0 3.7c1.3 0 2.5.5 3.4 1.3l1.1-1.2a7.2 7.2 0 0 0-9 0l1.1 1.2c.9-.8 2.1-1.3 3.4-1.3Zm0 3.6c.6 0 1.1.2 1.5.6L8.5 12 7 10.2c.4-.4.9-.6 1.5-.6Z"/></svg>
+            <svg width="27" height="13" viewBox="0 0 27 13"><rect x=".5" y=".5" width="22" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="19" height="9" rx="2.2"/><path d="M24 4.5v4c.8-.3 1.5-1.1 1.5-2s-.7-1.7-1.5-2Z" opacity=".5"/></svg>
+          </span>
+        </div>
+        <div class="island"></div>
+        <iframe id="app" src="/" title="Reps"></iframe>
+        <div class="kb" id="kb"></div>
+        <div class="home"></div>
+      </div>
+    </div>
+  </div>
+<script>
+  // Fit the phone to the window (sizes come from the device's own CSS variables).
+  const fit = () => {
+    const ph = document.querySelector('.phone'), bare = document.body.dataset.device === 'none' || document.body.dataset.device === 'full';
+    const k = bare ? 1 : Math.min(1, (innerHeight - 24) / (ph.offsetHeight + 4), (innerWidth - 24) / (ph.offsetWidth + 4));
+    document.getElementById('scale').style.transform = 'scale(' + k + ')';
+  };
+  addEventListener('resize', fit);
+  // Device picker: remembered between visits.
+  const pick = document.getElementById('device');
+  const useDevice = d => { document.body.dataset.device = d; pick.value = d; try { localStorage.setItem('p1-frame', d); } catch (e) { /* ignore */ } requestAnimationFrame(fit); };
+  pick.addEventListener('change', () => useDevice(pick.value));
+  let saved = 'iphone'; try { saved = localStorage.getItem('p1-frame') || 'iphone'; } catch (e) { /* ignore */ }
+  useDevice(['iphone', 'android', 'none', 'full'].includes(saved) ? saved : 'iphone'); fit();
+  // The status bar takes the app's own background (light or dark), and its text flips to stay readable.
+  const clock = () => { const d = new Date(); document.getElementById('clock').textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  const paint = () => {
+    try {
+      const doc = document.getElementById('app').contentDocument, el = doc.querySelector('[data-testid]') || doc.body;
+      let bg = 'rgba(0, 0, 0, 0)', n = doc.elementFromPoint(200, 4);
+      while (n && bg === 'rgba(0, 0, 0, 0)') { bg = getComputedStyle(n).backgroundColor; n = n.parentElement; }
+      const m = bg.match(/\d+/g) || [255, 255, 255], lum = (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]);
+      const st = document.getElementById('status'); st.style.background = bg === 'rgba(0, 0, 0, 0)' ? '#fff' : bg; st.style.color = lum < 140 ? '#fff' : '#000';
+      void el;
+    } catch (e) { /* not ready */ }
+  };
+  clock(); setInterval(clock, 20000); setInterval(paint, 800);
+
+  // ---- Simulated iOS keyboard ----
+  const kb = document.getElementById('kb'), frame = document.getElementById('app');
+  let shift = false, hideTimer = 0, target = null;
+  const doc = () => frame.contentDocument;
+  const isField = e => e && (e.tagName === 'INPUT' || e.tagName === 'TEXTAREA');
+  const kind = e => { const m = (e.getAttribute('inputmode') || '').toLowerCase(), t = (e.getAttribute('type') || '').toLowerCase(); return m === 'decimal' ? 'decimal' : (m === 'numeric' || m === 'tel' || t === 'number' || t === 'tel') ? 'numeric' : 'text'; };
+  const insert = ch => { const d = doc(); if (!d) return; d.execCommand('insertText', false, ch); };
+  const del = () => { const d = doc(); if (d) d.execCommand('delete'); };
+  const enter = () => { const e = target; if (!e) return; const o = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }; e.dispatchEvent(new KeyboardEvent('keydown', o)); e.dispatchEvent(new KeyboardEvent('keyup', o)); if (e.tagName === 'INPUT') e.blur(); };
+  const key = (label, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = label; if (cls) b.className = cls; b.addEventListener('click', fn); return b; };
+  const row = (...els) => { const r = document.createElement('div'); r.className = 'row'; els.forEach(x => r.appendChild(x)); return r; };
+  const build = k => {
+    kb.innerHTML = ''; kb.classList.toggle('num', k !== 'text');
+    if (k === 'text') {
+      ['qwertyuiop', 'asdfghjkl'].forEach(chars => kb.appendChild(row(...[...chars].map(c => key(shift ? c.toUpperCase() : c, '', () => { insert(shift ? c.toUpperCase() : c); if (shift) { shift = false; build('text'); } })))));
+      kb.appendChild(row(key('⇧', 'fn', () => { shift = !shift; build('text'); }), ...[...'zxcvbnm'].map(c => key(shift ? c.toUpperCase() : c, '', () => { insert(shift ? c.toUpperCase() : c); if (shift) { shift = false; build('text'); } })), key('⌫', 'fn', del)));
+      kb.appendChild(row(key('123', 'fn', () => {}), key('espaço', 'space', () => insert(' ')), key('ok', 'ret', enter)));
+    } else {
+      const sub = { 2: 'ABC', 3: 'DEF', 4: 'GHI', 5: 'JKL', 6: 'MNO', 7: 'PQRS', 8: 'TUV', 9: 'WXYZ' };
+      [[1, 2, 3], [4, 5, 6], [7, 8, 9]].forEach(r => kb.appendChild(row(...r.map(n => key(n + (sub[n] ? '<small>' + sub[n] + '</small>' : '<small>&nbsp;</small>'), '', () => insert(String(n)))))));
+      const dot = k === 'decimal' ? key('.', '', () => insert('.')) : key('', 'blank', () => {});
+      kb.appendChild(row(dot, key('0', '', () => insert('0')), key('⌫', 'fn', del)));
+    }
+  };
+  kb.addEventListener('mousedown', e => e.preventDefault()); // keep the focus in the app's field
+  const show = e => { clearTimeout(hideTimer); target = e; build(kind(e)); kb.classList.add('on'); frame.style.height = 'calc(var(--h) - var(--sb) - ' + kb.offsetHeight + 'px)'; };
+  const hide = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { const a = doc() && doc().activeElement; if (isField(a)) { show(a); return; } kb.classList.remove('on'); frame.style.height = ''; target = null; }, 150); };
+  const attach = () => { try { const d = doc(); if (!d || d.__kbAttached) return; d.__kbAttached = true; d.addEventListener('focusin', ev => { if (isField(ev.target)) show(ev.target); }); d.addEventListener('focusout', hide); } catch (e) { /* not ready */ } };
+  frame.addEventListener('load', attach); setInterval(attach, 1000);
+
+  // ---- Side swipe with a mouse ----
+  // On the phone a finger scrolls horizontal lists (date strip, carousels, containers). Here the wheel scrolls them sideways
+  // when the pointer is over one, and click-and-drag pulls them like a finger; a drag never counts as a tap.
+  const hScroller = (w, el) => { for (let e = el; e && e !== w.document.body; e = e.parentElement) { const o = w.getComputedStyle(e).overflowX; if ((o === 'auto' || o === 'scroll') && e.scrollWidth > e.clientWidth + 1) return e; } return null; };
+  const attachSwipe = () => {
+    try {
+      const w = frame.contentWindow, d = w && w.document; if (!d || d.__swipeAttached || !d.body) return; d.__swipeAttached = true;
+      d.addEventListener('wheel', ev => {
+        if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return; // trackpad already scrolls sideways
+        const s = hScroller(w, ev.target); if (!s) return;
+        const max = s.scrollWidth - s.clientWidth, next = s.scrollLeft + ev.deltaY;
+        if ((ev.deltaY < 0 && s.scrollLeft <= 0) || (ev.deltaY > 0 && s.scrollLeft >= max - 1)) return; // at the end: let the page scroll
+        s.scrollLeft = Math.max(0, Math.min(max, next)); ev.preventDefault();
+      }, { passive: false });
+      let drag = null;
+      d.addEventListener('mousedown', ev => { if (ev.button !== 0) return; const s = hScroller(w, ev.target); if (s) drag = { s, x: ev.clientX, left: s.scrollLeft, moved: false }; }, true);
+      d.addEventListener('mousemove', ev => { if (!drag) return; const dx = ev.clientX - drag.x; if (Math.abs(dx) > 5) drag.moved = true; if (drag.moved) { drag.s.scrollLeft = drag.left - dx; ev.preventDefault(); } }, true);
+      d.addEventListener('mouseup', () => { if (drag && drag.moved) { const stop = e => { e.stopPropagation(); e.preventDefault(); }; d.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => d.removeEventListener('click', stop, true), 50); } drag = null; }, true);
+    } catch (e) { /* not ready */ }
+  };
+  frame.addEventListener('load', attachSwipe); setInterval(attachSwipe, 1000);
+  // Same light/dark as the app.
+  setInterval(() => { try { const st = document.getElementById('status'); kb.classList.toggle('dark', st.style.color === 'rgb(255, 255, 255)' || st.style.color === '#fff'); } catch (e) { /* ignore */ } }, 800);
+</script>
+</body>
+</html>

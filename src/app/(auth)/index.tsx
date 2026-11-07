@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dialog } from '../../components/ui';
+import { colors } from '../../lib/theme';
 
-export function SocialButton({ icon, label, onPress, color = '#0B1220' }: { icon: any; label: string; onPress: () => void; color?: string }) {
+export function SocialButton({ icon, label, onPress, color }: { icon: any; label: string; onPress: () => void; color?: string }) {
   return (
-    <Pressable onPress={onPress} style={{ backgroundColor: '#F2F4F7', borderRadius: 12, height: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
-      <Ionicons name={icon} size={22} color={color} />
-      <Text style={{ flex: 1, textAlign: 'center', fontSize: 15, color: '#0B1220', marginRight: 22 }}>{label}</Text>
+    <Pressable onPress={onPress} style={{ backgroundColor: colors.surface, borderRadius: 12, height: 48, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 }}>
+      <Ionicons name={icon} size={22} color={color ?? colors.text} />
+      <Text style={{ flex: 1, textAlign: 'center', fontSize: 15, color: colors.text, marginRight: 22 }}>{label}</Text>
     </Pressable>
   );
 }

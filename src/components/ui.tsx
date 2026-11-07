@@ -359,7 +359,7 @@ export function LineChart({ data, height = 150, unit = '' }: { data: { label: st
   );
 }
 
-const s = StyleSheet.create({
+const build = () => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, minHeight: 52, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.bg },
   headerTitle: { fontSize: 16, fontWeight: '400', color: colors.text },
   headerPill: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.md },
@@ -376,3 +376,7 @@ const s = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warnSoft, paddingHorizontal: 16, paddingVertical: 12 },
   sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 16 },
 });
+
+let s = build();
+/** Recria os estilos com a paleta atual (chamado pela raiz ao trocar o tema). */
+export const refreshStyles = () => { s = build(); };

@@ -31,7 +31,7 @@ export function ActiveBar() {
           </View>
           {!!name && <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 16 }}>{name}</Text>}
         </View>
-        <Pressable onPress={() => setAsk(true)} hitSlop={6} style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#FDEDED', alignItems: 'center', justifyContent: 'center' }} testID="active-bar-discard">
+        <Pressable onPress={() => setAsk(true)} hitSlop={6} style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: colors.dangerSoft, alignItems: 'center', justifyContent: 'center' }} testID="active-bar-discard">
           <Ionicons name="trash-outline" size={24} color={colors.danger} />
         </Pressable>
       </Pressable>

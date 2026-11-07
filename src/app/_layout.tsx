@@ -1,15 +1,27 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, useColorScheme, View } from 'react-native';
+import { refreshStyles } from '../components/ui';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Telemetry } from '../components/Telemetry';
 import { WorkoutNotifier } from '../components/WorkoutNotifier';
 import { wrapRoot } from '../lib/monitoring';
 import { StoreProvider, useStore } from '../lib/store';
-import { colors } from '../lib/theme';
+import { applyScheme, colors, type Scheme } from '../lib/theme';
+
+/** Tema efetivo: a preferência (claro, escuro ou automático = o do aparelho). Aplica a paleta ANTES de desenhar as telas. */
+function useScheme(): Scheme {
+  const { profile } = useStore();
+  const system = useColorScheme();
+  const scheme: Scheme = profile.theme === 'dark' ? 'dark' : profile.theme === 'system' ? (system === 'dark' ? 'dark' : 'light') : 'light';
+  applyScheme(scheme);
+  refreshStyles();
+  return scheme;
+}
 
 function Routes() {
   const { ready, session, profile, toast } = useStore();
+  const scheme = useScheme();
   if (!ready)
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center' }}>
@@ -18,8 +30,9 @@ function Routes() {
     );
   const onboarded = !!session && profile.onboarded;
   return (
-    <View style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <Stack key={scheme} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
@@ -52,7 +65,6 @@ function RootLayout() {
   return (
     <SafeAreaProvider>
       <StoreProvider>
-        <StatusBar style="dark" />
         <Routes />
         <WorkoutNotifier />
         <Telemetry />

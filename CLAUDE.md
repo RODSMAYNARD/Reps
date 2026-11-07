@@ -63,7 +63,7 @@
 - Exercícios recolhíveis (um a um, `Collapse all/Expand all`), reordenáveis (botão Reorder ou segurar o cabeçalho) e ocultáveis só naquele treino (`hidden` na entrada; não conta no volume nem é salvo; some para a rotina original = nada é apagado)
 
 ## Só interface (sem backend real)
-Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, tema escuro (preferência salva, tema ainda não aplicado), importação de dados.
+Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, relógio, compra do Pro, seguir amigos e comentários, importação de dados.
 
 ## Workout Settings (`settings/workout*`, botão "Settings" no treino ativo)
 - Preferências em `store.wprefs` (AsyncStorage `reps:wprefs:<uid>`). Funcionam: descanso padrão (novos exercícios), valores anteriores (qualquer treino / mesma rotina; o treino guarda `routineId` em `meta`), calculadora de aquecimento (menu ⋮ do exercício; fórmula e arredondamentos), manter tela ligada (`expo-keep-awake`), calculadora de anilhas (ícone ao lado de KG em exercícios de barra), aviso de recorde pessoal ao marcar a série.
@@ -176,3 +176,9 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 
 ## Barra de números do treino ativo (como no Hevy, 2026-11-07)
 - Toque em Duration = folha Duration; em Volume e em Sets = pop-up central com a explicação (aquecimento incluído); no boneco = folha "Muscle Distribution" (boneco grande + séries feitas por músculo; principal e secundários contam).
+
+## Tema claro/escuro/automático (2026-11-07)
+- `lib/theme.ts`: duas paletas (`light`, `dark`) e `colors` = objeto ÚNICO e mutável; `applyScheme` troca os valores no lugar. `_layout.tsx` (`useScheme`) resolve a preferência `profile.theme` (light | dark | system = `useColorScheme()`), aplica a paleta, chama `refreshStyles()` (recria o `StyleSheet` de `ui.tsx`) e usa `key={scheme}` no `<Stack>` para remontar as telas com as cores novas (o estado do store e a navegação ficam). Tela `settings/theme`.
+- REGRA: nunca guardar `colors.x` em constante de módulo (fica na paleta antiga); ler dentro do componente/função. Constantes de módulo que precisam usar `get` (ver `h` em `active/index.tsx`). Cores novas de tema vão nas DUAS paletas. Cartões de compartilhamento (`done.tsx`, `report-share.tsx`) têm paleta própria de propósito.
+- Perfil novo começa em `system`. `app.json` `userInterfaceStyle: automatic` (antes `light`): sem isso o aparelho nunca avisa que está no escuro. É config nativa: muda o fingerprint, então builds antigos deixam de receber OTA e o Automático só vale em build novo (no app de desenvolvimento/web já funciona).
+- Miniaturas dos exercícios continuam com fundo branco (são JPG), também no escuro.

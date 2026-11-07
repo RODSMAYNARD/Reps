@@ -229,7 +229,7 @@ export default function WorkoutDone() {
             </View>
           ))}
         </ScrollView>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 14 }}>{cards.map((c, i) => <View key={c.key} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === page ? colors.primary : '#D5DAE1' }} />)}</View>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 14 }}>{cards.map((c, i) => <View key={c.key} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: i === page ? colors.primary : colors.dot }} />)}</View>
 
         <Text style={{ textAlign: 'center', color: colors.text, fontSize: 17, marginTop: 18 }}>Share workout</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginTop: 14 }} contentContainerStyle={{ paddingHorizontal: 8, alignItems: 'flex-start' }}>

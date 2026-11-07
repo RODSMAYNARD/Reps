@@ -95,5 +95,5 @@ export default function EditWorkout() {
     </Screen>
   );
 }
-const row = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.surface };
-const lbl = { flex: 1, fontSize: 18, color: colors.text };
+const row = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 14, borderBottomWidth: 1, get borderBottomColor() { return colors.surface; } };
+const lbl = { flex: 1, fontSize: 18, get color() { return colors.text; } };

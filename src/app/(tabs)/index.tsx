@@ -50,7 +50,7 @@ export default function Home() {
         </View>
       )}
       {streak > 0 && (
-        <View style={{ margin: 16, borderRadius: radius.lg, backgroundColor: '#FDEDED', padding: 20, gap: 4 }}>
+        <View style={{ margin: 16, borderRadius: radius.lg, backgroundColor: colors.dangerSoft, padding: 20, gap: 4 }}>
           <Ionicons name="flame" size={44} color={colors.danger} />
           <Text style={{ fontSize: 56, fontWeight: '800', color: colors.text }}>{streak}</Text>
           <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>{streak === 1 ? 'Week streak' : 'Week streak'}</Text>

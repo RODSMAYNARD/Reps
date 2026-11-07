@@ -16,11 +16,14 @@ import { RoutineExercise, SetRow } from '../../lib/types';
 
 export default function EditRoutine() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { routines, findExercise, profile, saveRoutine, showToast } = useStore();
+  const { routines, findExercise, profile, saveRoutine, showToast, routinePins, setRoutinePins } = useStore();
   const existing = routines.find((r) => r.id === id);
   const [title, setTitle] = useState(existing?.title ?? '');
   const [items, setItems] = useState<RoutineExercise[]>(existing?.exercises ?? []);
   const [hint, setHint] = useState(!existing);
+  /** Nota fixada da rotina por exercício (só aparece com a rotina já salva; fica no aparelho). */
+  const [pins, setPins] = useState<Record<string, string>>(() => Object.fromEntries((existing?.exercises ?? []).map((e) => [e.exerciseId, routinePins(existing!.id, e.exerciseId).join('
+')])));
   const [typeSheet, setTypeSheet] = useState<{ i: number; j: number } | null>(null);
   const [restSheet, setRestSheet] = useState<number | null>(null);
   const [cancelAsk, setCancelAsk] = useState(false);
@@ -29,7 +32,7 @@ export default function EditRoutine() {
   const patchSet = (i: number, j: number, p: Partial<SetRow>) => setItems((l) => l.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, ...p } : s)) } : e)));
   const valid = title.trim().length > 0 && items.length > 0;
   const add = () => { setPickHandler((ids) => setItems((l) => [...l, ...ids.map((eid): RoutineExercise => ({ exerciseId: eid, notes: '', restSec: 90, sets: [{ type: 'normal', kg: null, reps: null }] }))])); router.push('/exercises/pick'); };
-  const save = async () => { const r = await saveRoutine({ id: existing?.id, title, notes: existing?.notes ?? '', exercises: items }); if (r) { showToast('Routine saved'); router.back(); } };
+  const save = async () => { const r = await saveRoutine({ id: existing?.id, title, notes: existing?.notes ?? '', exercises: items }); if (r) { if (existing) items.forEach((e) => setRoutinePins(existing.id, e.exerciseId, [pins[e.exerciseId] ?? '']));  showToast('Routine saved'); router.back(); } };
   const dirty = !!title || items.length > 0;
 
   return (
@@ -50,6 +53,7 @@ export default function EditRoutine() {
               <View style={{ flex: 1 }}><ExerciseLabel exerciseId={e.exerciseId} nameStyle={{ color: colors.primary, fontSize: 17, fontWeight: '600' }} right={<IconButton name="trash-outline" color={colors.danger} onPress={() => setItems((l) => l.filter((_, k) => k !== i))} />} /></View>
             </View>
             <TextInput value={e.notes} onChangeText={(t) => setItems((l) => l.map((x, k) => (k === i ? { ...x, notes: t } : x)))} placeholder="Routine notes" placeholderTextColor={colors.faint} style={{ paddingHorizontal: 16, paddingVertical: 8, color: colors.text }} />
+            {!!existing && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 }}><Ionicons name="pin-outline" size={18} color={colors.muted} /><TextInput value={pins[e.exerciseId] ?? ''} onChangeText={(t) => setPins((p) => ({ ...p, [e.exerciseId]: t }))} placeholder="Pinned routine note" placeholderTextColor={colors.faint} style={{ flex: 1, paddingVertical: 8, color: colors.text }} testID="routine-pin" /></View>}
             <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 }}><Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Rest: {fmtRest(e.restSec)}</Text></Pressable>
             <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 4 }}>
               <Text style={[hd, { width: 44 }]}>SET</Text>
@@ -81,4 +85,4 @@ export default function EditRoutine() {
     </Screen>
   );
 }
-const hd = { color: colors.muted, fontSize: 12, textAlign: 'center' as const };
+const hd = { get color() { return colors.muted; }, fontSize: 12, textAlign: 'center' as const };
