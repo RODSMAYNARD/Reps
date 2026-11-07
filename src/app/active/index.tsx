@@ -13,6 +13,7 @@ import { BodyMap, regionsOf, type Region } from '../../components/BodyMap';
 import { RestSheet } from '../../components/pickers';
 import { NoteInput } from '../../components/NoteInput';
 import { PlateIcon } from '../../components/PlateIcon';
+import { SwipeRow } from '../../components/SwipeRow';
 import { notesOf } from '../../lib/notes';
 import { PlateSheet } from '../../components/PlateSheet';
 import { hasWeight, weightHeader } from '../../lib/exerciseOptions';
@@ -213,7 +214,7 @@ export default function ActiveWorkoutScreen() {
                 const lb = label(e, s, j);
                 const prev = prevSets[j] ?? null;
                 return (
-                  <View key={j} testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
+                  <SwipeRow key={j} onDelete={() => st.removeSet(i, j)}><View testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
                     <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 38, alignItems: 'center', paddingVertical: 6 }} testID="set-type">
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.bg : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
                         {prs[j] ? <Ionicons name="ribbon" size={20} color="#F5C400" /> : <Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text>}
@@ -236,7 +237,7 @@ export default function ActiveWorkoutScreen() {
                       </View>
                     </Pressable>
                     {calcChip(i, j - 1)}
-                  </View>
+                  </View></SwipeRow>
                 );
               })}
               <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>{calcChip(i, e.sets.length - 1)}<Btn title="Add Set" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
@@ -389,7 +390,10 @@ export default function ActiveWorkoutScreen() {
         }} />}
         {st.wprefs.warmupCalc && <ListRow icon="flame-outline" label="Add warm-up sets" testID="add-warmup" onPress={() => { const i = menu!; setMenu(null); addWarmups(i); }} />}
         <ListRow icon="information-circle-outline" label="View Exercise" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
-        <ListRow icon="eye-off-outline" label="Hide for this workout" testID="hide-exercise" onPress={() => { st.patchEntry(menu!, { hidden: true }); setMenu(null); st.showToast('Hidden for this workout. Nothing was deleted.'); }} />
+        <ListRow icon="eye-off-outline" label="Hide only for this workout" testID="hide-exercise"
+          right={<Ionicons name="help-circle-outline" size={22} color={colors.faint} onPress={() => setHelp(HELP.hide)} testID="hide-help" />}
+          onPress={() => { st.patchEntry(menu!, { hidden: true }); setMenu(null); st.showToast('Hidden only for this workout. Nothing was deleted.'); }} />
+        <ListRow icon="remove-circle-outline" label="Reduce sets" testID="reduce-sets" onPress={() => { const i = menu!; setMenu(null); const n = active.entries[i].sets.length; if (n > 1) st.removeSet(i, n - 1); else st.showToast('An exercise needs at least one set.'); }} />
         <ListRow icon="swap-vertical" label="Reorder exercises" onPress={() => { setMenu(null); setReordering(true); }} />
         <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { st.removeEntry(menu!); setMenu(null); }} />
       </Sheet>
@@ -429,6 +433,7 @@ const HELP = {
   previous: { title: 'Previous', text: 'In the "Previous" column, you will find your past performance of that exercise on that specific set.' },
   reps: { title: 'Repetitions', text: 'Repetitions indicate how many times you performed that exercise per set. You should only log completed reps.' },
   time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
+  hide: { title: 'Hide only for this workout', text: 'Hides this exercise only in the workout you are doing now. Nothing is deleted: it is not counted in the volume and is not saved with this workout. The next time you do this workout or routine, the exercise appears normally. To bring it back now, tap the hidden exercises row at the bottom of the list.' },
   complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
 };
 
