@@ -117,7 +117,7 @@ type Store = {
   deleteMeasurement: (id: string) => Promise<void>;
   // feedback
   sendFeedback: (kind: 'feature' | 'report' | 'contact', body: string, ref?: string) => Promise<void>;
-  showToast: (t: string) => void;
+  showToast: (t: string, ms?: number) => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -189,9 +189,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return [];
   }, []);
 
-  const showToast = useCallback((t: string) => {
+  const showToast = useCallback((t: string, ms = 2500) => {
     setToast(t);
-    setTimeout(() => setToast((c) => (c === t ? null : c)), 2500);
+    setTimeout(() => setToast((c) => (c === t ? null : c)), ms);
   }, []);
   const fail = useCallback((m: string) => { setError(m); showToast(m); }, [showToast]);
 
@@ -464,7 +464,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const p = last.length ? last[Math.min(j, last.length - 1)] : null;
         return p ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, typed: false } : { ...s, kg: null, typed: false };
       });
-      return { ...e, exerciseId: id, swappedFrom: id === original ? undefined : original, sets };
+      return { ...e, exerciseId: id, swappedFrom: id === original ? undefined : original, madeMain: undefined, sets };
     }) })),
     replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, exerciseId } : e)) })),
     patchEntry: (i, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...patch } : e)) })),

@@ -111,18 +111,29 @@ export default function ActiveWorkoutScreen() {
   };
   /** Ids de catálogo dos OUTROS exercícios do treino: não são oferecidos como troca. */
   const swapExclude = (i: number) => new Set(active.entries.flatMap((x, k) => (k === i ? [] : [exOf(x.exerciseId)?.catalogId ?? ''])).filter(Boolean) as string[]);
-  /** Deixa a variação como exercício principal da rotina (troca definitiva do original por ela). */
+  /** Deixa a variação como exercício principal da rotina (ou do programa do Trainer): troca definitiva do original por ela. */
   const makeMain = async (i: number) => {
     const e = active.entries[i];
     if (!e?.swappedFrom) return;
-    if (!active.fromRoutineId) return st.showToast('Start this workout from a routine to change its main exercise.');
-    const r = st.routines.find((x) => x.id === active.fromRoutineId);
-    if (!r) return st.showToast('Routine not found.');
     const from = st.realExerciseId(e.swappedFrom);
-    const idx = r.exercises.findIndex((x) => st.realExerciseId(x.exerciseId) === from);
-    if (idx < 0) return st.showToast('The original exercise is no longer in this routine.');
-    const saved = await st.saveRoutine({ id: r.id, title: r.title, notes: r.notes, exercises: r.exercises.map((x, k) => (k === idx ? { ...x, exerciseId: e.exerciseId } : x)) });
-    if (saved) { st.patchEntry(i, { swappedFrom: undefined }); st.showToast(`${exOf(e.exerciseId)?.name ?? 'Exercise'} is now the main exercise in ${r.title}.`); }
+    const name = exOf(e.exerciseId)?.name ?? 'Exercise';
+    let where = '';
+    if (active.fromRoutineId) {
+      const r = st.routines.find((x) => x.id === active.fromRoutineId);
+      const idx = r ? r.exercises.findIndex((x) => st.realExerciseId(x.exerciseId) === from) : -1;
+      if (!r || idx < 0) return st.showToast('The original exercise is no longer in this routine.', 5000);
+      const saved = await st.saveRoutine({ id: r.id, title: r.title, notes: r.notes, exercises: r.exercises.map((x, k) => (k === idx ? { ...x, exerciseId: e.exerciseId } : x)) });
+      if (!saved) return;
+      where = ` in ${r.title}`;
+    } else if (active.fromTrainer && st.trainer) {
+      const w = st.trainer.workouts.find((x) => x.uid === active.fromTrainer);
+      const idx = w ? w.exercises.findIndex((x) => st.realExerciseId(x.exerciseId) === from) : -1;
+      if (!w || idx < 0) return st.showToast('The original exercise is no longer in this program.', 5000);
+      st.saveTrainer({ ...st.trainer, workouts: st.trainer.workouts.map((x) => (x.uid === w.uid ? { ...x, exercises: x.exercises.map((y, k) => (k === idx ? { ...y, exerciseId: e.exerciseId } : y)) } : x)) });
+      where = ` in ${w.title}`;
+    } else return;
+    st.patchEntry(i, { swappedFrom: undefined, madeMain: true });
+    st.showToast(`${name} is now the main exercise${where}.`, 6000);
   };
   const goSave = () => router.push('/active/save');
   const hasTyped = shown.some((x) => x.e.sets.some((s) => !s.done && s.typed && ((s.kg ?? 0) > 0 || (s.reps ?? 0) > 0)));
@@ -200,6 +211,7 @@ export default function ActiveWorkoutScreen() {
                   <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: isCollapsed ? 16 : 17, fontWeight: '600' }}>{ex?.name ?? 'Removed exercise'}</Text>
                   {isCollapsed && <Text style={{ color: colors.muted, fontSize: 13 }}>{e.sets.filter((s) => s.done).length}/{e.sets.length} sets</Text>}
                   {!!e.swappedFrom && <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>Swapped today · was {exOf(e.swappedFrom)?.name ?? 'original'}</Text>}
+                  {!e.swappedFrom && !!e.madeMain && <Text style={{ color: '#E8890C', fontSize: 12, fontWeight: '700', marginTop: 1 }} numberOfLines={1} testID="main-tag">Now the main exercise</Text>}
                 </View>
                 <IconButton name={isCollapsed ? 'chevron-down' : 'chevron-up'} onPress={toggle} testID="entry-toggle" />
                 <IconButton name="ellipsis-vertical" onPress={() => setMenu(i)} testID="entry-menu" />
@@ -267,7 +279,7 @@ export default function ActiveWorkoutScreen() {
                   <Btn title="Add Set" icon="add" variant="secondary" style={{ flex: 1 }} onPress={() => st.addSet(i)} testID="add-set" />
                 </View>
               </View>
-              {swapOpen[uid] && <SwapPanel currentId={e.exerciseId} originalId={e.swappedFrom ?? e.exerciseId} exclude={swapExclude(i)} onPick={(id) => st.swapEntry(i, id)} onInfo={() => setHelp(HELP.swap)} />}
+              {swapOpen[uid] && <SwapPanel currentId={e.exerciseId} originalId={e.swappedFrom ?? e.exerciseId} exclude={swapExclude(i)} onPick={(id) => { st.swapEntry(i, id); setSwapOpen((o) => ({ ...o, [uid]: false })); }} onInfo={() => setHelp(HELP.swap)} />}
               </>}
             </View>
           );
@@ -407,7 +419,7 @@ export default function ActiveWorkoutScreen() {
       {/* menu do exercício */}
       <Sheet visible={menu !== null} onClose={() => setMenu(null)}>
         <ListRow icon="swap-horizontal-outline" label="Replace Exercise" onPress={() => { const i = menu!; setMenu(null); pickFor((ids) => ids[0] && st.replaceEntry(i, ids[0]), true); }} />
-        {menu !== null && !!active.entries[menu]?.swappedFrom && <ListRow icon="star-outline" label="Make main exercise" subtitle="Replaces the original in this routine for good" testID="make-main" onPress={() => { const i = menu; setMenu(null); makeMain(i); }} />}
+        {menu !== null && !!active.entries[menu]?.swappedFrom && (!!active.fromRoutineId || !!active.fromTrainer) && <ListRow icon="star-outline" label="Make main exercise" subtitle={active.fromTrainer ? 'Replaces the original in this program for good' : 'Replaces the original in this routine for good'} testID="make-main" onPress={() => { const i = menu; setMenu(null); makeMain(i); }} />}
         <ListRow icon="link-outline" label={menu !== null && active.entries[menu]?.superset != null ? 'Add to this superset' : 'Add to superset'} testID="superset-add" onPress={() => { setSsPick(menu); setMenu(null); }} />
         {menu !== null && active.entries[menu]?.superset != null && <ListRow icon="unlink-outline" label="Remove from superset" onPress={() => {
           const i = menu; setMenu(null);
