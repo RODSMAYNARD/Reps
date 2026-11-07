@@ -3,7 +3,7 @@ import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,6 +74,18 @@ export default function ActiveWorkoutScreen() {
   const litPrimary = [...new Set(worked.flatMap((x) => [...regionsOf(x?.muscle), ...regionsOf(x?.target)]))] as Region[];
   const litSecondary = [...new Set(worked.flatMap((x) => (x?.secondary ?? []).flatMap(regionsOf)))] as Region[];
   const bodyColors = { body: '#B9C0CB', muscle: '#E3E7ED', on: colors.primary };
+  /** Atalho "Calculator" que SOBREPÕE a linha de baixo da série em foco (sem empurrar a lista), como no Hevy.
+   * Fica dentro da área da linha seguinte (ou da do "Add Set"), senão o Android não entrega o toque. */
+  const calcChip = (i: number, j: number) => {
+    const entry = active?.entries[i];
+    if (!entry || kgFocus?.i !== i || kgFocus.j !== j || !st.wprefs.plateCalc || !/barbell/i.test(exOf(entry.exerciseId)?.equipment ?? '')) return null;
+    return (
+      <Pressable testID="kg-calculator" onPress={() => { setPlateJ(j); setPlate(i); }}
+        style={{ position: 'absolute', left: 8, top: 2, zIndex: 10, elevation: 6, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 }}>
+        <Ionicons name="calculator-outline" size={22} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Calculator</Text>
+      </Pressable>
+    );
+  };
 
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
   const addWarmups = (i: number) => {
@@ -152,7 +164,6 @@ export default function ActiveWorkoutScreen() {
           const isCollapsed = !!collapsed[uid];
           const prevSets = st.previousSets(e.exerciseId);
           const prs = prFlags(records(st.workouts, st.realExerciseId(e.exerciseId)), e.sets);
-          const isBarbell = /barbell/i.test(ex?.equipment ?? '');
           const eu: Units = e.unit ? { ...u, weight: e.unit } : u;
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
@@ -192,8 +203,7 @@ export default function ActiveWorkoutScreen() {
                 const lb = label(e, s, j);
                 const prev = prevSets[j] ?? null;
                 return (
-                  <Fragment key={j}>
-                  <View testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
+                  <View key={j} testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
                     <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 38, alignItems: 'center', paddingVertical: 6 }} testID="set-type">
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.bg : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
                         {prs[j] ? <Ionicons name="ribbon" size={20} color="#F5C400" /> : <Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text>}
@@ -215,19 +225,11 @@ export default function ActiveWorkoutScreen() {
                         <Ionicons name="checkmark" size={18} color={s.done ? '#fff' : colors.faint} />
                       </View>
                     </Pressable>
+                    {calcChip(i, j - 1)}
                   </View>
-                  {kgFocus?.i === i && kgFocus.j === j && isBarbell && st.wprefs.plateCalc && (
-                    <View style={{ paddingHorizontal: 16, paddingVertical: 6, alignItems: 'flex-start' }}>
-                      <Pressable testID="kg-calculator" onPress={() => { setPlateJ(j); setPlate(i); }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 }}>
-                        <Ionicons name="calculator-outline" size={22} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Calculator</Text>
-                      </Pressable>
-                    </View>
-                  )}
-                  </Fragment>
                 );
               })}
-              <View style={{ paddingHorizontal: 16, paddingTop: 10 }}><Btn title="Add Set" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
+              <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>{calcChip(i, e.sets.length - 1)}<Btn title="Add Set" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
               </>}
             </View>
           );
