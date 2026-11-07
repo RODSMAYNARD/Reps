@@ -49,6 +49,8 @@ export default function ActiveWorkoutScreen() {
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
   const [hidePop, setHidePop] = useState(false);
+  const [statHelp, setStatHelp] = useState<string | null>(null);
+  const [muscleSheet, setMuscleSheet] = useState(false);
   const [swapOpen, setSwapOpen] = useState<Record<string, boolean>>({});
   const [noteSheet, setNoteSheet] = useState<{ i: number; id: string } | null>(null);
   const [focusNote, setFocusNote] = useState<string | null>(null);
@@ -85,6 +87,18 @@ export default function ActiveWorkoutScreen() {
   const worked = active ? active.entries.filter((e) => !e.hidden && e.sets.some((s) => s.done)).map((e) => exOf(e.exerciseId)) : [];
   const litPrimary = [...new Set(worked.flatMap((x) => [...regionsOf(x?.muscle), ...regionsOf(x?.target)]))] as Region[];
   const litSecondary = [...new Set(worked.flatMap((x) => (x?.secondary ?? []).flatMap(regionsOf)))] as Region[];
+  /** Séries feitas por músculo (o principal e os secundários contam, como no Hevy), do mais trabalhado para o menos. */
+  const muscleCounts = (() => {
+    const m = new Map<string, number>();
+    active.entries.forEach((e) => {
+      if (e.hidden) return;
+      const n = e.sets.filter((s) => s.done).length;
+      const ex = exOf(e.exerciseId);
+      if (!n || !ex) return;
+      [...new Set([ex.muscle, ...(ex.secondary ?? [])].filter(Boolean))].forEach((k) => m.set(k, (m.get(k) ?? 0) + n));
+    });
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  })();
   const bodyColors = { body: '#B9C0CB', muscle: '#E3E7ED', on: colors.primary };
   /** Atalho "Calculator" que SOBREPÕE a linha de baixo da série em foco (sem empurrar a lista), como no Hevy.
    * Fica dentro da área da linha seguinte (ou da do "Add Set"), senão o Android não entrega o toque. */
@@ -171,12 +185,12 @@ export default function ActiveWorkoutScreen() {
       {!reordering && !statsOff && (
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bg }} testID="stats-bar">
           <Pressable onPress={() => setDurSheet(true)} testID="duration" style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.muted, fontSize: 11 }}>Duration</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDurationLive(elapsed)}</Text></Pressable>
-          <View style={{ flex: 1 }}><Stat label="Volume" value={fmtVolume(volume, u)} /></View>
-          <View style={{ flex: 0.7 }}><Stat label="Sets" value={String(doneSets.length)} /></View>
-          <View style={{ flexDirection: 'row', gap: 4, marginRight: scrolled ? 10 : 0 }}>
+          <Pressable style={{ flex: 1 }} onPress={() => setStatHelp(HELP.volume)} testID="stat-volume"><Stat label="Volume" value={fmtVolume(volume, u)} /></Pressable>
+          <Pressable style={{ flex: 0.7 }} onPress={() => setStatHelp(HELP.setsTotal)} testID="stat-sets"><Stat label="Sets" value={String(doneSets.length)} /></Pressable>
+          <Pressable onPress={() => setMuscleSheet(true)} testID="stat-body" style={{ flexDirection: 'row', gap: 4, marginRight: scrolled ? 10 : 0 }}>
             <BodyMap side="front" primary={litPrimary} secondary={litSecondary} width={30} colors={bodyColors} />
             <BodyMap side="back" primary={litPrimary} secondary={litSecondary} width={30} colors={bodyColors} />
-          </View>
+          </Pressable>
           {scrolled && <Pressable onPress={() => setStatsOff(true)} hitSlop={8} testID="stats-close" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={18} color={colors.text} /></Pressable>}
         </View>
       )}
@@ -413,6 +427,24 @@ export default function ActiveWorkoutScreen() {
         <ListRow icon="close" label="Remove Set" danger last onPress={() => { st.removeSet(setSheet!.i, setSheet!.j); setSetSheet(null); }} />
       </Sheet>
       {/* explicação do "Hide only for this workout": pop-over no centro (o menu fecha antes, para nada ficar empilhado) */}
+      <Dialog visible={!!statHelp} message={statHelp ?? ''} onClose={() => setStatHelp(null)} actions={[{ label: 'Ok', primary: true, onPress: () => setStatHelp(null) }]} />
+      <Sheet visible={muscleSheet} onClose={() => setMuscleSheet(false)} title="Muscle Distribution">
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 24, paddingVertical: 12 }}>
+          <BodyMap side="front" primary={litPrimary} secondary={litSecondary} width={130} colors={bodyColors} />
+          <BodyMap side="back" primary={litPrimary} secondary={litSecondary} width={130} colors={bodyColors} />
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 4, backgroundColor: colors.surface }}>
+          <Text style={{ color: colors.muted, fontSize: 14 }}>Muscle</Text><Text style={{ color: colors.muted, fontSize: 14 }}>Completed Sets</Text>
+        </View>
+        {muscleCounts.length === 0 && <Text style={{ color: colors.muted, textAlign: 'center', padding: 20 }}>Complete a set to see which muscles you are working.</Text>}
+        {muscleCounts.map(([name, n]) => (
+          <View key={name} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 4 }}>
+            <Text style={{ width: 90, color: colors.text, fontSize: 15 }} numberOfLines={1}>{name}</Text>
+            <View style={{ flex: 1, height: 14, justifyContent: 'center' }}><View style={{ width: `${Math.max(8, (n / muscleCounts[0][1]) * 100)}%`, height: 14, backgroundColor: colors.primary }} /></View>
+            <Text style={{ width: 36, textAlign: 'right', color: colors.text, fontSize: 15 }}>{n}</Text>
+          </View>
+        ))}
+      </Sheet>
       <Dialog visible={hidePop} title={HELP.hide.title} message={HELP.hide.text} onClose={() => setHidePop(false)} actions={[{ label: 'Got it!', primary: true, onPress: () => setHidePop(false) }]} />
       <Dialog visible={!!helpType} message={helpType ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setHelpType(null) }]} />
 
@@ -478,6 +510,8 @@ const HELP = {
   time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
   hide: { title: 'Hide only for this workout', text: 'Hides this exercise only in the workout you are doing now. Nothing is deleted: it is not counted in the volume and is not saved with this workout. The next time you do this workout or routine, the exercise appears normally. To bring it back now, tap the hidden exercises row at the bottom of the list.' },
   swap: { title: 'Swap', text: 'Is the gym packed, or do you just want to change the stimulus a little? Pick another exercise that trains the same muscle and use it instead, only in this workout. Your routine does not change, and next time the original comes back. To keep the new exercise for good, open the ⋮ menu of the exercise and choose "Make main exercise".' },
+  volume: 'Volume is the aggregate of all the weight lifted in your current workout. Warm-up sets are included.',
+  setsTotal: 'Sets are the total number of completed sets in your current workout. Warm-up sets are included.',
   complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
 };
 
