@@ -41,6 +41,7 @@ export default function ActiveWorkoutScreen() {
   const [sw, setSw] = useState<Stopwatch>({ acc: 0, startedAt: null });
   const swNow = useNow(100, !!sw.startedAt);
   const [cancelAsk, setCancelAsk] = useState(false);
+  const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [helpType, setHelpType] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [reordering, setReordering] = useState(false);
@@ -470,7 +471,7 @@ export default function ActiveWorkoutScreen() {
           onPress={() => { const i = menu; setMenu(null); if (i !== null) { st.patchEntry(i, { hidden: true }); st.showToast('Hidden only for this workout. Nothing was deleted.'); } }} />
         <ListRow icon="remove-circle-outline" label="Reduce sets" testID="reduce-sets" onPress={() => { const i = menu!; setMenu(null); const n = active.entries[i].sets.length; if (n > 1) st.removeSet(i, n - 1); else st.showToast('An exercise needs at least one set.'); }} />
         <ListRow icon="swap-vertical" label="Reorder exercises" onPress={() => { setMenu(null); setReordering(true); }} />
-        <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { st.removeEntry(menu!); setMenu(null); }} />
+        <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { const i = menu!; setMenu(null); setConfirm({ title: 'Remove exercise?', message: 'Its sets in this workout will be lost.', label: 'Remove', run: () => st.removeEntry(i) }); }} />
       </Sheet>
 
       {/* duração: roda de horas/minutos, dia e hora de início, pausar cronômetro */}
@@ -494,6 +495,7 @@ export default function ActiveWorkoutScreen() {
           <View key={uidOf(e, i)} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.exerciseId} right={<Text style={{ color: colors.primary, fontSize: 16 }} onPress={() => { st.patchEntry(i, { hidden: false }); if (hiddenList.length <= 1) setHiddenSheet(false); }}>Show</Text>} /></View>
         ))}
       </Sheet>
+      <Dialog visible={!!confirm} title={confirm?.title} message={confirm?.message} onClose={() => setConfirm(null)} actions={[{ label: 'Cancel' }, { label: confirm?.label ?? 'OK', danger: true, onPress: () => { const c = confirm; setConfirm(null); c?.run(); } }]} />
       <Dialog visible={cancelAsk} title="Cancel workout?" message="All progress in this workout will be lost." onClose={() => setCancelAsk(false)}
         actions={[{ label: 'Keep going' }, { label: 'Discard', danger: true, onPress: () => { setCancelAsk(false); st.discardActive(); router.back(); } }]} />
     </Screen>

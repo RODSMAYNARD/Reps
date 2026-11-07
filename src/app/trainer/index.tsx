@@ -12,6 +12,7 @@ export default function TrainerHome() {
   const st = useStore();
   const { trainer, workouts, active } = st;
   const [menu, setMenu] = useState(false);
+  const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [replace, setReplace] = useState(false);
   if (!trainer)
     return (
@@ -85,10 +86,11 @@ export default function TrainerHome() {
 
       <Sheet visible={menu} onClose={() => setMenu(false)} title={next?.title}>
         <ListRow icon="swap-vertical" label="Reorder Workouts" onPress={() => { setMenu(false); router.push('/trainer/reorder'); }} />
-        <ListRow icon="close" label="Skip Workout" danger last onPress={() => { setMenu(false); st.skipTrainerWorkout(next.uid); }} testID="trainer-skip" />
+        <ListRow icon="close" label="Skip Workout" danger last onPress={() => { setMenu(false); setConfirm({ title: 'Skip this workout?', message: 'The program moves on to the next workout.', label: 'Skip', run: () => st.skipTrainerWorkout(next.uid) }); }} testID="trainer-skip" />
       </Sheet>
       <Dialog visible={replace} title="Replace current workout?" message="You already have a workout in progress. Starting this one discards it." onClose={() => setReplace(false)}
         actions={[{ label: 'Cancel' }, { label: 'Replace', danger: true, onPress: () => { setReplace(false); st.discardActive(); go(); } }]} />
+      <Dialog visible={!!confirm} title={confirm?.title} message={confirm?.message} onClose={() => setConfirm(null)} actions={[{ label: 'Cancel' }, { label: confirm?.label ?? 'OK', danger: true, onPress: () => { const c = confirm; setConfirm(null); c?.run(); } }]} />
     </Screen>
   );
 }

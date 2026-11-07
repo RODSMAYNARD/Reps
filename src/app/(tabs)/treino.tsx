@@ -11,6 +11,7 @@ import { Routine } from '../../lib/types';
 export default function Treino() {
   const { trainer, routines, exercises, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast } = useStore();
   const [menu, setMenu] = useState<Routine | null>(null);
+  const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [ask, setAsk] = useState<'replace' | null>(null);
   const [pending, setPending] = useState<Routine | null | undefined>(undefined);
   const nameOf = (id: string) => exercises.find((e) => e.id === id)?.name ?? '—';
@@ -65,10 +66,11 @@ export default function Treino() {
         <ListRow icon="play-outline" label="Start Routine" onPress={() => { const r = menu!; setMenu(null); start(r); }} />
         <ListRow icon="create-outline" label="Edit Routine" onPress={() => { const r = menu!; setMenu(null); router.push({ pathname: '/routines/edit', params: { id: r.id } }); }} />
         <ListRow icon="copy-outline" label="Duplicate Routine" onPress={async () => { const r = menu!; setMenu(null); await saveRoutine({ title: `${r.title} (copy)`, notes: r.notes, exercises: r.exercises }); showToast('Routine duplicated'); }} />
-        <ListRow icon="trash-outline" label="Delete Routine" danger last onPress={() => { const r = menu!; setMenu(null); deleteRoutine(r.id); showToast('Routine deleted'); }} />
+        <ListRow icon="trash-outline" label="Delete Routine" danger last onPress={() => { const r = menu!; setMenu(null); setConfirm({ title: 'Delete routine?', message: `"${r.title}" will be deleted. This can't be undone.`, label: 'Delete', run: () => { deleteRoutine(r.id); showToast('Routine deleted'); } }); }} />
       </Sheet>
       <Dialog visible={ask === 'replace'} title="A workout is already in progress" message="Discard the current workout and start a new one?" onClose={() => setAsk(null)}
         actions={[{ label: 'Back to workout', onPress: () => { setAsk(null); router.push('/active'); } }, { label: 'Discard and start', danger: true, onPress: () => { discardActive(); startWorkout({ routine: pending ?? null }); setAsk(null); router.push('/active'); } }]} />
+      <Dialog visible={!!confirm} title={confirm?.title} message={confirm?.message} onClose={() => setConfirm(null)} actions={[{ label: 'Cancel' }, { label: confirm?.label ?? 'OK', danger: true, onPress: () => { const c = confirm; setConfirm(null); c?.run(); } }]} />
     </Screen>
   );
 }
