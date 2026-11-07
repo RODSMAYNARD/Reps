@@ -67,11 +67,11 @@ export function IconButton({ name, onPress, color = colors.text, size = 24, test
   );
 }
 
-export function Btn({ title, onPress, variant = 'primary', disabled, loading, icon, style, testID, textStyle }: {
-  textStyle?: StyleProp<TextStyle>; title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline'; disabled?: boolean; loading?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>; testID?: string;
+export function Btn({ title, onPress, variant = 'primary', disabled, loading, icon, style, testID, textStyle, selected }: {
+  selected?: boolean; textStyle?: StyleProp<TextStyle>; title: string; onPress: () => void; variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline'; disabled?: boolean; loading?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>; testID?: string;
 }) {
-  const bg = variant === 'primary' ? colors.primary : variant === 'secondary' ? colors.surface : variant === 'danger' ? colors.danger : 'transparent';
-  const fg = variant === 'primary' || variant === 'danger' ? colors.onPrimary : variant === 'ghost' ? colors.primary : colors.text;
+  const bg = selected ? colors.primarySoft : variant === 'primary' ? colors.primary : variant === 'secondary' ? colors.surface : variant === 'danger' ? colors.danger : 'transparent';
+  const fg = selected ? colors.primary : variant === 'primary' || variant === 'danger' ? colors.onPrimary : variant === 'ghost' ? colors.primary : colors.text;
   return (
     <Pressable
       testID={testID}
@@ -132,14 +132,18 @@ export function Section({ title, right, children }: { title?: string; right?: Re
   );
 }
 
-export function ListRow({ icon, label, detail, onPress, danger, last, right, subtitle, testID }: {
-  icon?: IconName; label: string; detail?: string; onPress?: () => void; danger?: boolean; last?: boolean; right?: React.ReactNode; subtitle?: string; testID?: string;
+export function ListRow({ icon, label, detail, onPress, danger, last, right, subtitle, testID, after }: {
+  after?: React.ReactNode; icon?: IconName; label: string; detail?: string; onPress?: () => void; danger?: boolean; last?: boolean; right?: React.ReactNode; subtitle?: string; testID?: string;
 }) {
   return (
     <Pressable onPress={onPress} testID={testID} style={[s.row, !last && s.rowBorder]}>
       {icon && <Ionicons name={icon} size={22} color={danger ? colors.danger : colors.text} />}
       <View style={{ flex: 1 }}>
-        <Text style={{ color: danger ? colors.danger : colors.text, fontSize: 16 }}>{label}</Text>
+        {after ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ color: danger ? colors.danger : colors.text, fontSize: 16 }}>{label}</Text>{after}
+          </View>
+        ) : <Text style={{ color: danger ? colors.danger : colors.text, fontSize: 16 }}>{label}</Text>}
         {!!subtitle && <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{subtitle}</Text>}
       </View>
       {!!detail && <Text style={{ color: colors.muted, fontSize: 15 }}>{detail}</Text>}

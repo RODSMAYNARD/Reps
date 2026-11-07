@@ -80,6 +80,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 ## Swap (troca de exercício no treino, 2026-11-07)
 - Botão **Swap** (esquerda) ao lado de **Add Set** (direita) em cada exercício do treino ativo. Abre `components/SwapPanel.tsx`: cartões com foto (alinhados pelo topo): o original (com ✓ quando é o atual) e 3-4 opções do MESMO alvo muscular (`lib/substitutes.ts`: alvo do catálogo, parecença do nome sem palavras de equipamento, preferência leve por equipamento de academia, no máximo 2 do mesmo equipamento; a primeira é "Closest match"). ⓘ explica (folha "Got it!").
 - Tocar numa opção chama `store.swapEntry` (troca só neste treino, guarda `ActiveEntry.swappedFrom`, séries não feitas usam o histórico do novo exercício; tocar no original desfaz). O exercício mostra "Swapped today · was X".
+- O botão Swap fica azul claro (`Btn selected`) enquanto o painel está aberto; tocar de novo fecha, e marcar uma série (✓) também fecha.
 - ⋮ > **Make main exercise** (só aparece se houve troca): troca o original pelo novo na ROTINA de origem (`saveRoutine`), definitivamente. Só funciona em treino iniciado de rotina (Trainer não, por enquanto). Texto das justificativas é genérico por equipamento (sem citar estudos).
 
 ## Menu do exercício e séries (treino ativo)

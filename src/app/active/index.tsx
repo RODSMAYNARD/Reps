@@ -252,7 +252,7 @@ export default function ActiveWorkoutScreen() {
                       </View>
                     )}
                     <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v, typed: true })} /></View>
-                    <Pressable onPress={() => st.toggleSet(i, j)} testID="check" style={{ width: 38, alignItems: 'center' }}>
+                    <Pressable onPress={() => { st.toggleSet(i, j); if (!s.done) setSwapOpen((o) => (o[uid] ? { ...o, [uid]: false } : o)); }} testID="check" style={{ width: 38, alignItems: 'center' }}>
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.success : colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="checkmark" size={18} color={s.done ? '#fff' : colors.faint} />
                       </View>
@@ -263,7 +263,7 @@ export default function ActiveWorkoutScreen() {
               })}
               <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>{calcChip(i, e.sets.length - 1)}
                 <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <Btn title="Swap" icon="swap-horizontal" variant="secondary" style={{ flex: 1 }} onPress={() => setSwapOpen((o) => ({ ...o, [uid]: !o[uid] }))} testID="swap-btn" />
+                  <Btn title="Swap" icon="swap-horizontal" variant="secondary" selected={!!swapOpen[uid]} style={{ flex: 1 }} onPress={() => setSwapOpen((o) => ({ ...o, [uid]: !o[uid] }))} testID="swap-btn" />
                   <Btn title="Add Set" icon="add" variant="secondary" style={{ flex: 1 }} onPress={() => st.addSet(i)} testID="add-set" />
                 </View>
               </View>
@@ -419,8 +419,8 @@ export default function ActiveWorkoutScreen() {
         {st.wprefs.warmupCalc && <ListRow icon="flame-outline" label="Add warm-up sets" testID="add-warmup" onPress={() => { const i = menu!; setMenu(null); addWarmups(i); }} />}
         <ListRow icon="information-circle-outline" label="View Exercise" onPress={() => { const i = menu!; setMenu(null); router.push({ pathname: '/exercises/[id]', params: { id: active.entries[i].exerciseId } }); }} />
         <ListRow icon="eye-off-outline" label="Hide only for this workout" testID="hide-exercise"
-          right={<Ionicons name="help-circle-outline" size={22} color={colors.faint} onPress={() => setHelp(HELP.hide)} testID="hide-help" />}
-          onPress={() => { st.patchEntry(menu!, { hidden: true }); setMenu(null); st.showToast('Hidden only for this workout. Nothing was deleted.'); }} />
+          after={<Pressable onPress={() => setHelp(HELP.hide)} hitSlop={12} testID="hide-help"><Ionicons name="help-circle-outline" size={20} color={colors.faint} /></Pressable>}
+          onPress={() => { const i = menu; setMenu(null); if (i !== null) { st.patchEntry(i, { hidden: true }); st.showToast('Hidden only for this workout. Nothing was deleted.'); } }} />
         <ListRow icon="remove-circle-outline" label="Reduce sets" testID="reduce-sets" onPress={() => { const i = menu!; setMenu(null); const n = active.entries[i].sets.length; if (n > 1) st.removeSet(i, n - 1); else st.showToast('An exercise needs at least one set.'); }} />
         <ListRow icon="swap-vertical" label="Reorder exercises" onPress={() => { setMenu(null); setReordering(true); }} />
         <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { st.removeEntry(menu!); setMenu(null); }} />
