@@ -39,6 +39,8 @@ export default function ActiveWorkoutScreen() {
   const [plate, setPlate] = useState<number | null>(null);
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
+  const [kgFocus, setKgFocus] = useState<{ i: number; j: number } | null>(null);
+  const [plateJ, setPlateJ] = useState<number | null>(null);
   const [ssPick, setSsPick] = useState<number | null>(null);
   const [help, setHelp] = useState<{ title: string; text: string } | null>(null);
   const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
@@ -187,7 +189,7 @@ export default function ActiveWorkoutScreen() {
                     </Pressable>
                     {hasWeight(kind) && (
                       <View style={{ flex: 1, paddingHorizontal: 6 }}>
-                        <NumInput decimal style={inputStyle(s.done)} testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, eu), typed: true })} />
+                        <NumInput decimal style={inputStyle(s.done)} testID="kg" onFocus={() => setKgFocus({ i, j })} onBlur={() => setKgFocus((f) => (f && f.i === i && f.j === j ? null : f))} value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, eu), typed: true })} />
                       </View>
                     )}
                     <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v, typed: true })} /></View>
@@ -231,12 +233,20 @@ export default function ActiveWorkoutScreen() {
         </View>
       )}
 
+      {/* atalho acima do teclado: com o campo KG de uma barra em foco, abre a calculadora de anilhas para aquela série */}
+      {!reordering && kgFocus && active.entries[kgFocus.i] && st.wprefs.plateCalc && /barbell/i.test(exOf(active.entries[kgFocus.i].exerciseId)?.equipment ?? '') && (
+        <Pressable testID="kg-calculator" onPress={() => { setPlateJ(kgFocus.j); setPlate(kgFocus.i); }}
+          style={{ position: 'absolute', left: 16, bottom: (rest ? 66 + insets.bottom : 0) + 10, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 }}>
+          <Ionicons name="calculator-outline" size={22} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Calculator</Text>
+        </Pressable>
+      )}
+
       {plate !== null && active.entries[plate] && (() => {
         const pe = active.entries[plate];
         const pu = pe.unit ?? u.weight;
-        const next = pe.sets.find((s) => !s.done && s.type !== 'warmup') ?? pe.sets.at(-1);
+        const next = (plateJ != null ? pe.sets[plateJ] : undefined) ?? pe.sets.find((s) => !s.done && s.type !== 'warmup') ?? pe.sets.at(-1);
         const target = Math.round(toDisplayWeight(next?.kg ?? 0, { ...u, weight: pu }) * 100) / 100;
-        return <PlateSheet visible onClose={() => setPlate(null)} target={target} unit={pu} sets={st.wprefs.plateSets[pu]} onChange={(s) => st.setWprefs({ plateSets: { ...st.wprefs.plateSets, [pu]: s } })} />;
+        return <PlateSheet visible onClose={() => { setPlate(null); setPlateJ(null); }} target={target} unit={pu} sets={st.wprefs.plateSets[pu]} onChange={(s) => st.setWprefs({ plateSets: { ...st.wprefs.plateSets, [pu]: s } })} />;
       })()}
 
       <Sheet visible={!!help} onClose={() => setHelp(null)} title={help?.title}>
@@ -280,7 +290,7 @@ export default function ActiveWorkoutScreen() {
             <Sheet visible={!unitSheet} onClose={() => setWsheet(null)} title="Weight Input">
               <Text style={{ color: colors.text, fontSize: 17, paddingHorizontal: 16, paddingBottom: 12 }}>{hint}</Text>
               <ListRow label="Weight Unit" detail={we.unit ? (we.unit === 'kg' ? 'kg' : 'lbs') : `Default (${u.weight})`} onPress={() => setUnitSheet(true)} testID="weight-unit-row" last={!(/barbell/i.test(eq) && st.wprefs.plateCalc)} />
-              {/barbell/i.test(eq) && st.wprefs.plateCalc && <ListRow icon="calculator-outline" label="Plate Calculator" last onPress={() => { const i = wsheet; setWsheet(null); setPlate(i); }} />}
+              {/barbell/i.test(eq) && st.wprefs.plateCalc && <ListRow icon="calculator-outline" label="Plate Calculator" last onPress={() => { const i = wsheet; setWsheet(null); setPlateJ(null); setPlate(i); }} />}
             </Sheet>
             <Sheet visible={unitSheet} onClose={() => setUnitSheet(false)} title="Weight Units" left={<Ionicons name="arrow-back" size={24} color={colors.text} onPress={() => setUnitSheet(false)} />}>
               <Text style={{ color: colors.muted, fontSize: 16, textAlign: 'center', paddingBottom: 10 }}>{wex?.name}</Text>
