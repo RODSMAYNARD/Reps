@@ -64,7 +64,10 @@ type Store = {
   resetPassword: (e: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   // perfil
-  saveProfile: (patch: Partial<Profile>) => Promise<void>;
+  saveProfile: (patch: Partial<Profile>) => Promise<boolean>;
+  /** true quando a carga inicial dos dados falhou (rede/servidor): a raiz mostra "tentar de novo" em vez de cair no onboarding. */
+  loadFailed: boolean;
+  reload: () => void;
   // exercícios
   addExercise: (x: Omit<Exercise, 'id'>) => Promise<Exercise | null>;
   removeExercise: (id: string) => Promise<void>;
@@ -116,10 +119,10 @@ type Store = {
   saveRoutine: (r: Omit<Routine, 'id'> & { id?: string }) => Promise<Routine | null>;
   deleteRoutine: (id: string) => Promise<void>;
   // medidas
-  saveMeasurement: (m: Omit<Measurement, 'id'> & { id?: string }) => Promise<void>;
-  deleteMeasurement: (id: string) => Promise<void>;
+  saveMeasurement: (m: Omit<Measurement, 'id'> & { id?: string }) => Promise<boolean>;
+  deleteMeasurement: (id: string) => Promise<boolean>;
   // feedback
-  sendFeedback: (kind: 'feature' | 'report' | 'contact', body: string, ref?: string) => Promise<void>;
+  sendFeedback: (kind: 'feature' | 'report' | 'contact', body: string, ref?: string) => Promise<boolean>;
   showToast: (t: string, ms?: number) => void;
 };
 
@@ -129,6 +132,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -213,12 +218,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const load = useCallback(async (uid: string, email: string) => {
     const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id,target,secondary_muscles').order('created_at');
-    if (ex.error) return setError(ex.error.message);
+    if (ex.error) { setError(ex.error.message); setLoadFailed(true); return; }
     const assets = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}') as Record<string, string>;
     setExercises(ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id, target: r.target ?? null, secondary: r.secondary_muscles ?? [], assetUri: assets[r.id] ?? null }; }));
 
     const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'athlete';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
+    if (pr.error) { setError(pr.error.message); setLoadFailed(true); return; }
     if (pr.data) {
       const p = pr.data;
       setProfile({ username: p.username || fallbackName, displayName: p.display_name, bio: p.bio, link: p.link, sex: p.sex, birthYear: p.birth_year, weightKg: p.weight_kg ? Number(p.weight_kg) : null, units: { ...DEFAULT_UNITS, ...p.units }, theme: p.theme, isPrivate: p.is_private, onboarded: p.onboarded });
@@ -230,7 +236,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const wk = await supabase.from('workouts')
       .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type))')
       .order('performed_at', { ascending: false });
-    if (wk.error) return setError(wk.error.message);
+    if (wk.error) { setError(wk.error.message); setLoadFailed(true); return; }
     setWorkouts(wk.data.map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
@@ -274,6 +280,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     activeRef.current = raw ? JSON.parse(raw) : null;
     setActiveState(activeRef.current);
     setError(null);
+    setLoadFailed(false);
   }, []);
 
   useEffect(() => {
@@ -288,8 +295,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Carrega os dados do servidor quando o usuário entra (busca assíncrona).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (userId) load(userId, session?.user.email ?? 'user').finally(() => setReady(true));
-  }, [userId, session?.user.email, load]);
+    if (userId) load(userId, session?.user.email ?? 'user').catch((e) => { setError(String(e?.message ?? e)); setLoadFailed(true); }).finally(() => setReady(true));
+  }, [userId, session?.user.email, load, reloadTick]);
 
   const ensure = useCallback(async (ids: string[]): Promise<string[]> => {
       const have = new Map(exRef.current.filter((e) => e.catalogId).map((e) => [e.catalogId!, e.id]));
@@ -347,7 +354,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value_startWorkout = (opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string; trainerUid?: string }) => startRef.current(opts);
 
   const value = useMemo<Store>(() => ({
-    ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
+    loadFailed, reload: () => setReloadTick((n) => n + 1), ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
     ensureExercises: ensure,
     findExercise: (id) => lookup.get(id),
     wprefs,
@@ -375,7 +382,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         user_id: userId!, username: next.username, display_name: next.displayName, bio: next.bio, link: next.link, sex: next.sex, birth_year: next.birthYear,
         weight_kg: next.weightKg, units: next.units, theme: next.theme, is_private: next.isPrivate, onboarded: next.onboarded,
       });
-      if (e) fail(e.message);
+      if (e) { fail(e.message); return false; }
+      return true;
     },
 
     addExercise: async (x) => {
@@ -582,21 +590,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const row = { measured_on: m.date, values: m.values, photo_uri: m.photoUri };
       const q = m.id ? supabase.from('measurements').update(row).eq('id', m.id) : supabase.from('measurements').insert(row);
       const { data, error: e } = await q.select('id,measured_on,values,photo_uri').single();
-      if (e) return fail(e.message);
+      if (e) { fail(e.message); return false; }
       const mm: Measurement = { id: data.id, date: data.measured_on, values: data.values, photoUri: data.photo_uri };
       setMeasurements((l) => [mm, ...l.filter((x) => x.id !== mm.id)].sort((a, b) => b.date.localeCompare(a.date)));
+      return true;
     },
     deleteMeasurement: async (id) => {
       const { error: e } = await supabase.from('measurements').delete().eq('id', id);
-      if (e) return fail(e.message);
+      if (e) { fail(e.message); return false; }
       setMeasurements((l) => l.filter((x) => x.id !== id));
+      return true;
     },
 
     sendFeedback: async (kind, body, ref) => {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
-      if (e) fail(e.message);
+      if (e) { fail(e.message); return false; }
+      return true;
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes]);
+  }), [loadFailed, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes]);
 
   useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

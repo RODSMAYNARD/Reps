@@ -11,7 +11,7 @@ export default function Contact() {
   const [thanks, setThanks] = useState(false);
   return (
     <Screen>
-      <Header title="Contact Us" right={<HeaderAction label="Send" disabled={!body.trim()} onPress={async () => { await sendFeedback('contact', `${subject}\n${body}`); setThanks(true); }} />} />
+      <Header title="Contact Us" right={<HeaderAction label="Send" disabled={!body.trim()} onPress={async () => { if (await sendFeedback('contact', `${subject}\n${body}`)) setThanks(true); }} />} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
         <Field label="Subject" value={subject} onChangeText={setSubject} />
         <Field label="Message" multiline value={body} onChangeText={setBody} />

@@ -11,7 +11,7 @@ export default function FeatureRequest() {
   const [thanks, setThanks] = useState(false);
   return (
     <Screen>
-      <Header title="Feature Request" right={<HeaderAction label="Send" disabled={!text.trim()} onPress={async () => { await sendFeedback('feature', text); setThanks(true); }} />} />
+      <Header title="Feature Request" right={<HeaderAction label="Send" disabled={!text.trim()} onPress={async () => { if (await sendFeedback('feature', text)) setThanks(true); }} />} />
       <TextInput value={text} onChangeText={setText} multiline autoFocus placeholder="Send us your ideas or feature requests..." placeholderTextColor={colors.faint} style={{ flex: 1, padding: 16, fontSize: 16, color: colors.text, textAlignVertical: 'top' }} testID="feature-text" />
       <Pressable onPress={() => router.push('/settings/faq')} style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flex: 1 }}><Text style={{ color: colors.primary, fontSize: 16 }}>FAQ</Text><Text style={{ color: colors.muted }}>Get answers right away.</Text></View><Text style={{ color: colors.primary, fontSize: 18 }}>›</Text>

@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, useColorScheme, View } from 'react-native';
 import { refreshStyles } from '../components/ui';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Telemetry } from '../components/Telemetry';
@@ -20,12 +20,21 @@ function useScheme(): Scheme {
 }
 
 function Routes() {
-  const { ready, session, profile, toast } = useStore();
+  const { ready, session, profile, toast, loadFailed, reload, error } = useStore();
   const scheme = useScheme();
   if (!ready)
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center' }}>
         <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  if (session && loadFailed)
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 }} testID="load-failed">
+        <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>Can't load your data</Text>
+        <Text style={{ color: colors.muted, textAlign: 'center' }}>Check your connection and try again. Your workouts are safe.</Text>
+        {!!error && <Text style={{ color: colors.faint, fontSize: 12, textAlign: 'center' }}>{error}</Text>}
+        <Pressable onPress={reload} testID="load-retry" style={{ backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12, marginTop: 8 }}><Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Try again</Text></Pressable>
       </View>
     );
   const onboarded = !!session && profile.onboarded;

@@ -29,7 +29,7 @@ export default function LogMeasures() {
   const save = async () => {
     const values: Record<string, number> = {};
     MEASURE_FIELDS.forEach((f) => { const v = vals[f.key]; if (v != null) values[f.key] = f.unit === 'weight' ? fromDisplayWeight(v, u) : f.unit === 'body' ? fromDisplayBody(v, u) : v; });
-    await saveMeasurement({ id: existing?.id, date: iso, values, photoUri: photo });
+    if (!(await saveMeasurement({ id: existing?.id, date: iso, values, photoUri: photo }))) return;
     if (values.weight) await syncWeight(values.weight);
     showToast('Measurements saved'); router.back();
   };
@@ -68,7 +68,7 @@ export default function LogMeasures() {
       <Sheet visible={sheet} onClose={() => setSheet(false)} title="Entry date">
         {[0, 1, 2, 3, 7, 14, 30].map((d) => <ListRow key={d} label={d === 0 ? 'Today' : d === 1 ? 'Yesterday' : `${d} days ago`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setSheet(false); }} />)}
       </Sheet>
-      <Dialog visible={del} title="Delete entry?" message="This can't be undone." onClose={() => setDel(false)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); await deleteMeasurement(existing!.id); router.back(); } }]} />
+      <Dialog visible={del} title="Delete entry?" message="This can't be undone." onClose={() => setDel(false)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); if (await deleteMeasurement(existing!.id)) router.back(); } }]} />
     </Screen>
   );
 }

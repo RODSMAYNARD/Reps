@@ -21,7 +21,7 @@ export default function EditProfile() {
   const [photo, setPhoto] = useState(false);
   const u = profile.units;
   const thisYear = new Date().getFullYear();
-  const save = async () => { await saveProfile({ displayName: name.trim(), username: username.trim(), bio, link, sex, birthYear: year, weightKg: kg, isPrivate: priv }); showToast('Profile updated'); router.back(); };
+  const save = async () => { if (!(await saveProfile({ displayName: name.trim(), username: username.trim(), bio, link, sex, birthYear: year, weightKg: kg, isPrivate: priv }))) return; showToast('Profile updated'); router.back(); };
   return (
     <Screen>
       <Header left="cancel" title="Edit profile" right={<HeaderAction label="Save" primary disabled={!username.trim()} onPress={save} />} />
