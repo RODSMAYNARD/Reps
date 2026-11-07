@@ -195,9 +195,9 @@ export default function ActiveWorkoutScreen() {
                 </Pressable>
               </View>
               {(noteOpen[uid] || !!e.notes) && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 6, minHeight: 36 }}>
                   <Pressable onPress={() => setNoteSheet(i)} hitSlop={10} testID="note-type"><Ionicons name={NOTE_KINDS.find((n) => n.kind === (e.noteKind ?? 'workout'))!.icon} size={22} color={colors.text} /></Pressable>
-                  <TextInput value={e.notes} autoFocus={!e.notes} onChangeText={(t) => st.setNote(i, t)} placeholder="Add a session note" placeholderTextColor={colors.faint} multiline style={{ flex: 1, color: colors.text, fontSize: 16, paddingVertical: 8 }} testID="note-input" />
+                  <TextInput value={e.notes} autoFocus={!e.notes} onChangeText={(t) => st.setNote(i, t)} placeholder="Add a session note" placeholderTextColor={colors.faint} multiline numberOfLines={1} textAlignVertical="center" style={{ flex: 1, color: colors.text, fontSize: 16, lineHeight: 22, paddingVertical: 0, paddingTop: 0, minHeight: 28, includeFontPadding: false }} testID="note-input" />
                 </View>
               )}
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>

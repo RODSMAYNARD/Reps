@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import { fmtClock, toDisplayWeight } from '../lib/format';
+import { TIMER_SOUNDS, notificationSoundFile, playTimerSound } from '../lib/sounds';
 import { useStore } from '../lib/store';
 import { ActiveWorkout, Units } from '../lib/types';
 
@@ -19,6 +20,8 @@ async function setup() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('workout', { name: 'Workout in progress', importance: 2 as Notifications.AndroidImportance, vibrationPattern: [0], showBadge: false });
     await Notifications.setNotificationChannelAsync('rest', { name: 'Rest timer', importance: 4 as Notifications.AndroidImportance, sound: 'default', vibrationPattern: [0, 250, 150, 250] });
+    // um canal por som: no Android o som é do canal e não muda depois de criado
+    for (const s of TIMER_SOUNDS) await Notifications.setNotificationChannelAsync(`rest-${s.id}`, { name: `Rest timer: ${s.label}`, importance: 4 as Notifications.AndroidImportance, sound: notificationSoundFile(s.id), vibrationPattern: [0, 250, 150, 250] });
     await Notifications.setNotificationChannelAsync('rest-silent', { name: 'Rest timer (silent)', importance: 3 as Notifications.AndroidImportance, sound: null, vibrationPattern: [0] });
   }
   await Notifications.setNotificationCategoryAsync('workout', [{ identifier: 'complete', buttonTitle: 'Complete Set', options: { opensAppToForeground: false } }]);
@@ -125,11 +128,14 @@ export function WorkoutNotifier() {
     const n = active ? nextSet(active, profile.units, (x) => st.findExercise(x)?.name) : null;
     Notifications.scheduleNotificationAsync({
       identifier: REST_END,
-      content: { title: 'Rest is over', body: n ? `${n.title} — ${n.text}` : 'Time for your next set.', sound: audible ? 'default' : undefined, data: { restEnd: true } },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(rest.endsAt), channelId: audible ? 'rest' : 'rest-silent' },
+      content: { title: 'Rest is over', body: n ? `${n.title} — ${n.text}` : 'Time for your next set.', sound: audible ? notificationSoundFile(wprefs.timerSound) : undefined, data: { restEnd: true } },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(rest.endsAt), channelId: audible ? `rest-${wprefs.timerSound}` : 'rest-silent' },
     }).catch(() => {});
+    // com o app aberto a notificação não toca: o som sai daqui
+    const timer = setTimeout(() => { if (AppState.currentState === 'active') playTimerSound(wprefs.timerSound, wprefs.timerVolume); }, rest.endsAt - Date.now());
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rest?.endsAt, audible]);
+  }, [rest?.endsAt, audible, wprefs.timerSound, wprefs.timerVolume]);
 
   // ao terminar/descartar o treino, limpa tudo
   useEffect(() => {

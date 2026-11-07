@@ -58,11 +58,22 @@
         "expo-notifications",
         {
           "icon": "./assets/android-icon-monochrome.png",
-          "color": "#0A84FF"
+          "color": "#0A84FF",
+          "sounds": [
+            "./assets/sounds/rest_default.wav",
+            "./assets/sounds/rest_alarm.wav",
+            "./assets/sounds/rest_futuristic.wav",
+            "./assets/sounds/rest_ting.wav",
+            "./assets/sounds/rest_boxing.wav",
+            "./assets/sounds/rest_iron.wav",
+            "./assets/sounds/rest_marimba.wav",
+            "./assets/sounds/rest_liftoff.wav"
+          ]
         }
       ],
       "expo-localization",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-audio"
     ],
     "scheme": "reps",
     "owner": "rodsappz4u",

@@ -5,6 +5,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { track } from './analytics';
 import { reportError } from './monitoring';
+import { playSound } from './sounds';
 import { prFlags, records } from './stats';
 import { CYCLE_WEEKS, generateProgram, suggestSets } from './trainer';
 import { supabase } from './supabase';
@@ -438,8 +439,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, done: willBeDone } : s)) } : e)) }));
       if (willBeDone && prefsRef.current.livePR) {
         const rec = records(wkRef.current, (cur.exerciseId.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === cur.exerciseId.slice(4))?.id ?? cur.exerciseId : cur.exerciseId));
-        if (prFlags(rec, cur.sets.map((s, n) => (n === j ? { ...s, done: true } : s)))[j]) showToast('New personal record!');
+        if (prFlags(rec, cur.sets.map((s, n) => (n === j ? { ...s, done: true } : s)))[j]) { showToast('New personal record!'); playSound('sfx_record', prefsRef.current.prVolume); }
       }
+      if (willBeDone) playSound('sfx_check', prefsRef.current.checkVolume);
       if (willBeDone) track('set_completed', { type: cur.sets[j].type, has_weight: (cur.sets[j].kg ?? 0) > 0 });
       if (willBeDone && cur.restSec > 0) setRest({ endsAt: Date.now() + cur.restSec * 1000, total: cur.restSec });
     },

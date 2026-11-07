@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { View } from 'react-native';
 import { Header, ListRow, Screen } from '../../components/ui';
+import { playSound, playTimerSound, TIMER_SOUNDS } from '../../lib/sounds';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 import { SoundVolume, TimerSound, WorkoutPrefs } from '../../lib/types';
 
-export const SOUND_LABEL: Record<TimerSound, string> = { default: 'Default', alarm: 'Alarm', futuristic: 'Futuristic', ting: 'Ting Ting', boxing: 'Boxing Bell' };
+export const SOUND_LABEL = Object.fromEntries(TIMER_SOUNDS.map((s) => [s.id, s.label])) as Record<TimerSound, string>;
 export const VOLUME_LABEL: Record<SoundVolume, string> = { high: 'High', normal: 'Normal', low: 'Low', off: 'Off' };
 
 type Key = 'timerSound' | 'timerVolume' | 'checkVolume' | 'prVolume';
@@ -26,7 +27,13 @@ export default function TimerPick() {
       <Header title={TITLES[k]} />
       <View>
         {opts.map((o) => (
-          <ListRow key={o.id} label={o.label} testID={`pick-${o.id}`} onPress={() => setWprefs({ [k]: o.id } as Partial<WorkoutPrefs>)}
+          <ListRow key={o.id} label={o.label} testID={`pick-${o.id}`} onPress={() => {
+            setWprefs({ [k]: o.id } as Partial<WorkoutPrefs>);
+            // ouvir ao escolher: o som novo, ou o som que o volume controla, já no volume novo
+            if (k === 'timerSound') playTimerSound(o.id as TimerSound, wprefs.timerVolume === 'off' ? 'normal' : wprefs.timerVolume);
+            else if (k === 'timerVolume') playTimerSound(wprefs.timerSound, o.id as SoundVolume);
+            else playSound(k === 'checkVolume' ? 'sfx_check' : 'sfx_record', o.id as SoundVolume);
+          }}
             right={current === o.id ? <Ionicons name="checkmark" size={22} color={colors.primary} /> : <View style={{ width: 22 }} />} />
         ))}
       </View>

@@ -49,7 +49,7 @@ export type Measurement = { id: string; date: string; values: Record<string, num
 
 export type WarmupRow = { pct: number; reps: number };
 export type SoundVolume = 'high' | 'normal' | 'low' | 'off';
-export type TimerSound = 'default' | 'alarm' | 'futuristic' | 'ting' | 'boxing';
+export type TimerSound = 'default' | 'alarm' | 'futuristic' | 'ting' | 'boxing' | 'iron' | 'marimba' | 'liftoff';
 export type WorkoutPrefs = {
   timerSound: TimerSound; timerVolume: SoundVolume; checkVolume: SoundVolume; prVolume: SoundVolume;
   sounds: boolean; defaultRestSec: number; prevMode: 'any' | 'routine';
