@@ -36,6 +36,8 @@ export default function ActiveWorkoutScreen() {
   const [reordering, setReordering] = useState(false);
   const [hiddenSheet, setHiddenSheet] = useState(false);
   const [plate, setPlate] = useState<number | null>(null);
+  const [wsheet, setWsheet] = useState<number | null>(null);
+  const [unitSheet, setUnitSheet] = useState(false);
   const [noteOpen, setNoteOpen] = useState<Record<string, boolean>>({});
   const keepAwake = st.wprefs.keepAwake && !!active;
   useEffect(() => {
@@ -130,7 +132,7 @@ export default function ActiveWorkoutScreen() {
           const isCollapsed = !!collapsed[uid];
           const prevSets = st.previousSets(e.exerciseId);
           const prs = prFlags(records(st.workouts, st.realExerciseId(e.exerciseId)), e.sets);
-          const isBarbell = /barbell/i.test(ex?.equipment ?? '');
+          const eu: Units = e.unit ? { ...u, weight: e.unit } : u;
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
             <View key={uid} style={{ paddingTop: 16 }} testID="entry">
@@ -161,9 +163,7 @@ export default function ActiveWorkoutScreen() {
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
                 <Text style={[h.c, { width: 38 }]}>SET</Text>
                 <Text style={[h.c, { flex: 1.3 }]}>PREVIOUS</Text>
-                {hasWeight(kind) && (isBarbell && st.wprefs.plateCalc
-                  ? <Pressable onPress={() => setPlate(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="plate-calc" hitSlop={8}><Ionicons name="calculator-outline" size={14} color={colors.primary} /><Text style={h.c}>{weightHeader(kind, u.weight)}</Text></Pressable>
-                  : <Text style={[h.c, { flex: 1 }]}>{weightHeader(kind, u.weight)}</Text>)}
+                {hasWeight(kind) && <Pressable onPress={() => setWsheet(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="weight-header" hitSlop={8}><Ionicons name="barbell-outline" size={14} color={colors.muted} /><Text style={h.c}>{weightHeader(kind, eu.weight)}</Text></Pressable>}
                 <Text style={[h.c, { flex: 1 }]}>{kind === 'duration' ? 'SEC' : 'REPS'}</Text>
                 <Text style={[h.c, { width: 38 }]}>✓</Text>
               </View>
@@ -180,11 +180,11 @@ export default function ActiveWorkoutScreen() {
                     <Pressable
                       style={{ flex: 1.3, alignItems: 'center' }}
                       onPress={() => prev && st.patchSet(i, j, { kg: prev.kg, reps: prev.reps, typed: true })}>
-                      <Text style={{ color: colors.faint, fontSize: 14 }}>{prev ? (hasWeight(kind) ? `${Math.round(toDisplayWeight(prev.kg ?? 0, u) * 10) / 10}${u.weight} × ${prev.reps}` : String(prev.reps)) : '-'}</Text>
+                      <Text style={{ color: colors.faint, fontSize: 14 }}>{prev ? (hasWeight(kind) ? `${Math.round(toDisplayWeight(prev.kg ?? 0, eu) * 10) / 10}${eu.weight} × ${prev.reps}` : String(prev.reps)) : '-'}</Text>
                     </Pressable>
                     {hasWeight(kind) && (
                       <View style={{ flex: 1, paddingHorizontal: 6 }}>
-                        <NumInput decimal style={inputStyle(s.done)} testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u), typed: true })} />
+                        <NumInput decimal style={inputStyle(s.done)} testID="kg" value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, eu), typed: true })} />
                       </View>
                     )}
                     <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v, typed: true })} /></View>
@@ -228,7 +228,31 @@ export default function ActiveWorkoutScreen() {
         </View>
       )}
 
-      <PlateSheet key={plate ?? 'x'} visible={plate !== null} onClose={() => setPlate(null)} kg={plate !== null ? active.entries[plate]?.sets.at(-1)?.kg ?? 0 : 0} u={u} />
+      <PlateSheet key={plate ?? 'x'} visible={plate !== null} onClose={() => setPlate(null)} kg={plate !== null ? active.entries[plate]?.sets.at(-1)?.kg ?? 0 : 0} u={plate !== null && active.entries[plate]?.unit ? { ...u, weight: active.entries[plate].unit! } : u} />
+
+      {/* Weight Input: unidade só deste exercício neste treino */}
+      {wsheet !== null && active.entries[wsheet] && (() => {
+        const we = active.entries[wsheet];
+        const wex = exOf(we.exerciseId);
+        const eq = wex?.equipment ?? '';
+        const hint = /barbell/i.test(eq) ? 'Input the total weight on the bar, including the bar itself.' : /dumbbell/i.test(eq) ? 'Input the weight of one dumbbell.' : 'Input the total weight lifted in one rep of the exercise as indicated by the machine setting.';
+        return (
+          <>
+            <Sheet visible={!unitSheet} onClose={() => setWsheet(null)} title="Weight Input">
+              <Text style={{ color: colors.text, fontSize: 17, paddingHorizontal: 16, paddingBottom: 12 }}>{hint}</Text>
+              <ListRow label="Weight Unit" detail={we.unit ? (we.unit === 'kg' ? 'kg' : 'lbs') : `Default (${u.weight})`} onPress={() => setUnitSheet(true)} testID="weight-unit-row" last={!(/barbell/i.test(eq) && st.wprefs.plateCalc)} />
+              {/barbell/i.test(eq) && st.wprefs.plateCalc && <ListRow icon="calculator-outline" label="Plate Calculator" last onPress={() => { const i = wsheet; setWsheet(null); setPlate(i); }} />}
+            </Sheet>
+            <Sheet visible={unitSheet} onClose={() => setUnitSheet(false)} title="Weight Units" left={<Ionicons name="arrow-back" size={24} color={colors.text} onPress={() => setUnitSheet(false)} />}>
+              <Text style={{ color: colors.muted, fontSize: 16, textAlign: 'center', paddingBottom: 10 }}>{wex?.name}</Text>
+              {([[undefined, `Default (${u.weight})`], ['kg', 'kg'], ['lbs', 'lbs']] as const).map(([val, label]) => (
+                <ListRow key={label} label={label} last right={we.unit === val ? <Ionicons name="checkmark" size={22} color={colors.primary} /> : undefined}
+                  onPress={() => { st.patchEntry(wsheet, { unit: val }); setUnitSheet(false); setWsheet(null); }} />
+              ))}
+            </Sheet>
+          </>
+        );
+      })()}
 
       {/* set type */}
       <Sheet visible={!!setSheet} onClose={() => setSetSheet(null)} title="Set Type">
