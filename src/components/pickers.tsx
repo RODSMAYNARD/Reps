@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
+import { colors } from '../lib/theme';
 import { fmtRest } from '../lib/format';
 import { Btn, Sheet, WheelPicker } from './ui';
 import { WheelPicker as Wheel } from './WheelPicker';
@@ -34,12 +36,13 @@ const REST_LABELS = REST_VALUES.map((v) => (v ? fmtRest(v) : 'Off'));
 const nearestRest = (sec: number) => REST_VALUES.reduce((b, v, i) => (Math.abs(v - sec) < Math.abs(REST_VALUES[b] - sec) ? i : b), 0);
 
 /** Descanso livre numa roda só (0 = desligado). Montar só quando aberto (estado parte do valor atual). */
-export function RestSheet({ title = 'Rest Timer', value, confirm = 'Done', onDone, onClose }: {
-  title?: string; value: number; confirm?: string; onDone: (sec: number) => void; onClose: () => void;
+export function RestSheet({ title = 'Rest Timer', subtitle, value, confirm = 'Done', onDone, onClose, onSettings }: {
+  title?: string; subtitle?: string; value: number; confirm?: string; onDone: (sec: number) => void; onClose: () => void; onSettings?: () => void;
 }) {
   const [i, setI] = useState(() => nearestRest(value));
   return (
-    <Sheet visible onClose={onClose} title={title}>
+    <Sheet visible onClose={onClose} title={title} subtitle={subtitle}
+      right={onSettings ? <Ionicons name="options-outline" size={22} color={colors.text} onPress={() => { onDone(REST_VALUES[i]); onClose(); onSettings(); }} testID="rest-settings" /> : undefined}>
       <View style={{ paddingHorizontal: 24 }} testID="rest-wheel">
         <Wheel items={REST_LABELS} index={i} onChange={setI} />
       </View>

@@ -23,7 +23,9 @@ export type Exercise = { id: string; name: string; muscle: string; equipment: st
 export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null };
 /** `typed`: o usuário digitou kg/reps (ou tocou em PREVIOUS); ao finalizar, séries digitadas e sem ✓ passam a valer, como no Hevy. */
 export type ActiveSet = SetRow & { done: boolean; typed?: boolean };
-export type ActiveEntry = { uid?: string; hidden?: boolean; unit?: Units['weight']; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
+/** Tipo da nota do exercício: do treino (vai no post), fixada no exercício ou fixada na rotina (as fixadas não vão no post). */
+export type NoteKind = 'workout' | 'exercise' | 'routine';
+export type ActiveEntry = { uid?: string; hidden?: boolean; unit?: Units['weight']; noteKind?: NoteKind; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
 export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null; fromTrainer?: string | null; dateAt?: string | null };
 
 export type SavedEntry = { exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
@@ -46,13 +48,17 @@ export type Routine = { id: string; title: string; notes: string; exercises: Rou
 export type Measurement = { id: string; date: string; values: Record<string, number>; photoUri: string | null };
 
 export type WarmupRow = { pct: number; reps: number };
+export type SoundVolume = 'high' | 'normal' | 'low' | 'off';
+export type TimerSound = 'default' | 'alarm' | 'futuristic' | 'ting' | 'boxing';
 export type WorkoutPrefs = {
+  timerSound: TimerSound; timerVolume: SoundVolume; checkVolume: SoundVolume; prVolume: SoundVolume;
   sounds: boolean; defaultRestSec: number; prevMode: 'any' | 'routine';
   warmupCalc: boolean; warmupFormula: WarmupRow[]; plateRounding: number; dumbbellRounding: number;
   keepAwake: boolean; plateCalc: boolean; plateSets: Record<Units['weight'], PlateSet>; rpe: boolean; smartSuperset: boolean; inlineTimer: boolean; livePR: boolean;
 };
 export const DEFAULT_WARMUP: WarmupRow[] = [{ pct: 40, reps: 5 }, { pct: 60, reps: 5 }, { pct: 80, reps: 3 }];
 export const DEFAULT_WPREFS: WorkoutPrefs = {
+  timerSound: 'default', timerVolume: 'high', checkVolume: 'off', prVolume: 'high',
   sounds: true, defaultRestSec: 90, prevMode: 'any', warmupCalc: false, warmupFormula: DEFAULT_WARMUP, plateRounding: 5, dumbbellRounding: 1,
   keepAwake: false, plateCalc: true, plateSets: DEFAULT_PLATE_SETS, rpe: false, smartSuperset: false, inlineTimer: true, livePR: true,
 };

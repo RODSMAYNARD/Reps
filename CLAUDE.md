@@ -74,6 +74,13 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Cálculo (`solvePlates`): anilhas ilimitadas de cada tipo, peso montável mais próximo do alvo (empate: o mais leve), com menos anilhas; troco mínimo por programação dinâmica em centésimos (o método guloso erra com anilhas personalizadas). Pesquisado: sem pacote TS/RN padrão; `plate-calculator` (npm) também devolve o peso mais próximo.
 - Preferências por unidade em `wprefs.plateSets` (kg e lbs separados); barras EZ: 7,5 kg / 15 lbs (valor nosso, confirmar com o Hevy).
 
+## Notas do exercício e Timer Settings (copiados do Hevy, 2026-11-06)
+- **Nota**: toque em "Note" abre uma linha com o ícone do tipo + campo "Add a session note". Tocar no ícone abre "Notes type": Pinned Exercise Note (fica sempre que fizer o exercício), Pinned Routine Note (sempre que fizer a rotina; exige treino iniciado de rotina) e Workout Note (só neste treino, vai no post), mais Delete Note. Só UMA nota por exercício por enquanto.
+- As fixadas ficam SÓ NO APARELHO (AsyncStorage `reps:pinned:<uid>`, `pinnedRef` no store; chave canônica `cat:<id>` para exercícios do catálogo) e NÃO vão no post (`finishActive` grava notes vazio para elas). Ao iniciar: nota fixada da rotina > nota fixada do exercício > nota do treino copiado. `ActiveEntry.noteKind`; ações `setNote`, `setNoteKind`, `deleteNote`.
+- **Rest Timer** do exercício: folha com o nome do exercício e ícone de sliders (aplica o valor e abre `settings/timer`). **Timer Settings** (`settings/timer`): Sounds (`timer-sounds`: Timer Sound, Timer Volume, Check Set, Live Personal Record Volume; opções em `timer-pick`) e Default Rest Timer. Prefs em `wprefs` (`timerSound`, `timerVolume`, `checkVolume`, `prVolume`).
+- Efeito real hoje: só Timer Volume = Off silencia o alarme. Tipo de som, volumes e som do check/recorde são interface (faltam arquivos de som e build novo).
+- Pendente: nota fixada na rotina ainda não aparece/edita na tela da rotina; gravar as fixadas no Supabase (hoje só no aparelho).
+
 ## Atualizações pelo ar (OTA)
 - `expo-updates` + `runtimeVersion: fingerprint`; canais: development/preview/production (eas.json). Android de teste = canal `preview`; iOS TestFlight = `production`.
 - Publicar: `workflow_run` com fileName `update.yml` (gitRef `main`) — NÃO precisa de build. Só JS/telas/textos chegam; pacote nativo novo muda o fingerprint e exige build novo (com autorização do Rodrigo).

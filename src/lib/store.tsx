@@ -9,7 +9,7 @@ import { prFlags, records } from './stats';
 import { CYCLE_WEEKS, generateProgram, suggestSets } from './trainer';
 import { supabase } from './supabase';
 import {
-  ActiveEntry, ActiveSet, ActiveWorkout, DEFAULT_WPREFS, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, TrainerProgram, Units, Workout, WorkoutPrefs,
+  ActiveEntry, ActiveSet, ActiveWorkout, DEFAULT_WPREFS, NoteKind, Exercise, Measurement, Profile, Routine, RoutineExercise, SavedEntry, SetRow, TrainerProgram, Units, Workout, WorkoutPrefs,
 } from './types';
 
 export const DEFAULT_UNITS: Units = { weight: 'kg', distance: 'km', body: 'cm' };
@@ -76,6 +76,10 @@ type Store = {
   addEntries: (ids: string[]) => void;
   removeEntry: (i: number) => void;
   moveEntry: (from: number, to: number) => void;
+  /** Notas do exercício no treino ativo: texto, tipo (treino / fixada no exercício / fixada na rotina) e apagar. */
+  setNote: (i: number, text: string) => void;
+  setNoteKind: (i: number, kind: NoteKind) => void;
+  deleteNote: (i: number) => void;
   replaceEntry: (i: number, exerciseId: string) => void;
   patchEntry: (i: number, patch: Partial<ActiveEntry>) => void;
   addSet: (i: number) => void;
@@ -126,6 +130,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const activeRef = useRef<ActiveWorkout | null>(null);
   const exRef = useRef<Exercise[]>([]);
   useEffect(() => { exRef.current = exercises; }, [exercises]);
+  /** Notas fixadas (só no aparelho): por exercício e por rotina+exercício. Chave = id canônico (catálogo = cat:<id>). */
+  const pinnedRef = useRef<{ exercise: Record<string, string>; routine: Record<string, string> }>({ exercise: {}, routine: {} });
+  const pinKey = useCallback((exerciseId: string) => {
+    const ex = exRef.current.find((e) => e.id === exerciseId);
+    return ex?.catalogId ? `cat:${ex.catalogId}` : exerciseId;
+  }, []);
+  const readPin = useCallback((kind: 'exercise' | 'routine', exerciseId: string, routineId?: string | null) =>
+    kind === 'exercise' ? pinnedRef.current.exercise[pinKey(exerciseId)] ?? '' : routineId ? pinnedRef.current.routine[`${routineId}:${pinKey(exerciseId)}`] ?? '' : '', [pinKey]);
+  const writePin = useCallback((kind: 'exercise' | 'routine', exerciseId: string, routineId: string | null | undefined, text: string) => {
+    const map = kind === 'exercise' ? pinnedRef.current.exercise : pinnedRef.current.routine;
+    const key = kind === 'exercise' ? pinKey(exerciseId) : routineId ? `${routineId}:${pinKey(exerciseId)}` : null;
+    if (!key) return;
+    if (text) map[key] = text; else delete map[key];
+    if (userId) AsyncStorage.setItem(`reps:pinned:${userId}`, JSON.stringify(pinnedRef.current)).catch(() => {});
+  }, [userId, pinKey]);
+  /** Nota inicial de um exercício ao começar o treino: nota da rotina (fixada) > nota fixada do exercício > nota do treino copiado. */
+  const startNote = useCallback((exerciseId: string, saved: string, opts?: { routine?: Routine | null; entries?: SavedEntry[] }): { notes: string; noteKind: NoteKind } => {
+    const rid = opts?.routine?.id;
+    const routineNote = rid ? readPin('routine', exerciseId, rid) || (opts?.entries ? '' : saved) : '';
+    if (routineNote) return { notes: routineNote, noteKind: 'routine' };
+    const pinned = readPin('exercise', exerciseId);
+    if (pinned) return { notes: pinned, noteKind: 'exercise' };
+    return { notes: opts?.routine && !opts.entries ? '' : saved, noteKind: 'workout' };
+  }, [readPin]);
   const [trainer, setTrainerState] = useState<TrainerProgram | null>(null);
   const trainerRef = useRef<TrainerProgram | null>(null);
   const [wprefs, setWprefsState] = useState<WorkoutPrefs>(DEFAULT_WPREFS);
@@ -205,6 +233,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const wp = await AsyncStorage.getItem(`reps:wprefs:${uid}`);
     prefsRef.current = { ...DEFAULT_WPREFS, ...(wp ? JSON.parse(wp) : {}) };
     setWprefsState(prefsRef.current);
+    const pn = await AsyncStorage.getItem(`reps:pinned:${uid}`);
+    pinnedRef.current = pn ? { exercise: {}, routine: {}, ...JSON.parse(pn) } : { exercise: {}, routine: {} };
     const raw = await AsyncStorage.getItem(`reps:active:${uid}`);
     activeRef.current = raw ? JSON.parse(raw) : null;
     setActiveState(activeRef.current);
@@ -334,7 +364,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     startWorkout: (opts) => {
       const src = opts?.entries ?? opts?.routine?.exercises ?? [];
       const entries: ActiveEntry[] = src.map((e) => ({
-        uid: randomUUID(), exerciseId: e.exerciseId, notes: e.notes ?? '', restSec: e.restSec ?? 0, superset: e.superset ?? null,
+        uid: randomUUID(), exerciseId: e.exerciseId, ...startNote(e.exerciseId, e.notes ?? '', opts), restSec: e.restSec ?? 0, superset: e.superset ?? null,
         sets: (e.sets.length ? e.sets : ([{ type: 'normal', kg: null, reps: null }] as SetRow[])).map((s, j): ActiveSet => {
           // campos vazios/zerados vêm preenchidos com o que foi feito da última vez
           const last = lastSetsOf(e.exerciseId, opts?.routine?.id);
@@ -369,9 +399,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setActiveTitle: (t) => setActive((a) => ({ ...a, title: t })),
     addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => {
       const last = lastSetsOf(id, activeRef.current?.fromRoutineId);
-      return { uid: randomUUID(), exerciseId: id, notes: '', restSec: prefsRef.current.defaultRestSec, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
+      const pin = readPin('exercise', id);
+      return { uid: randomUUID(), exerciseId: id, notes: pin, noteKind: pin ? 'exercise' : 'workout', restSec: prefsRef.current.defaultRestSec, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
     })] })),
     removeEntry: (i) => setActive((a) => ({ ...a, entries: a.entries.filter((_, k) => k !== i) })),
+    setNote: (i, text) => {
+      const a = activeRef.current, e = a?.entries[i];
+      if (!a || !e) return;
+      setActive((cur) => ({ ...cur, entries: cur.entries.map((x, k) => (k === i ? { ...x, notes: text } : x)) }));
+      if (e.noteKind === 'exercise' || e.noteKind === 'routine') writePin(e.noteKind, e.exerciseId, a.fromRoutineId, text);
+    },
+    setNoteKind: (i, kind) => {
+      const a = activeRef.current, e = a?.entries[i];
+      if (!a || !e) return;
+      const old = e.noteKind ?? 'workout';
+      if (old === kind) return;
+      if (kind === 'routine' && !a.fromRoutineId) return showToast('Start this workout from a routine to pin a routine note.');
+      if (old !== 'workout') writePin(old, e.exerciseId, a.fromRoutineId, '');
+      if (kind !== 'workout') writePin(kind, e.exerciseId, a.fromRoutineId, e.notes);
+      setActive((cur) => ({ ...cur, entries: cur.entries.map((x, k) => (k === i ? { ...x, noteKind: kind } : x)) }));
+    },
+    deleteNote: (i) => {
+      const a = activeRef.current, e = a?.entries[i];
+      if (!a || !e) return;
+      if (e.noteKind === 'exercise' || e.noteKind === 'routine') writePin(e.noteKind, e.exerciseId, a.fromRoutineId, '');
+      setActive((cur) => ({ ...cur, entries: cur.entries.map((x, k) => (k === i ? { ...x, notes: '', noteKind: 'workout' } : x)) }));
+    },
     moveEntry: (from, to) => setActive((a) => { const list = [...a.entries]; const [it] = list.splice(from, 1); list.splice(to, 0, it); return { ...a, entries: list }; }),
     replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, exerciseId } : e)) })),
     patchEntry: (i, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...patch } : e)) })),
@@ -402,7 +455,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!a) return null;
       const entries: SavedEntry[] = a.entries
         .filter((e) => !e.hidden)
-        .map((e) => ({ exerciseId: e.exerciseId, notes: e.notes, restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, typed: _t, ...s }) => s) }))
+        .map((e) => ({ exerciseId: e.exerciseId, notes: e.noteKind === 'exercise' || e.noteKind === 'routine' ? '' : e.notes, restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, typed: _t, ...s }) => s) }))
         .filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
@@ -482,7 +535,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('feedback').insert({ kind, body, ref });
       if (e) fail(e.message);
     },
-  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer]);
+  }), [ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPin, writePin, startNote]);
 
   useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

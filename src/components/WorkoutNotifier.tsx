@@ -47,6 +47,8 @@ function nextSet(a: ActiveWorkout, u: Units, name: (id: string) => string | unde
 export function WorkoutNotifier() {
   const st = useStore();
   const { active, rest, profile, wprefs } = st;
+  /** O alarme só toca com Sounds ligado e o volume do timer diferente de Off (volume e tipo do som exigem sons próprios: build novo). */
+  const audible = wprefs.sounds && wprefs.timerVolume !== 'off';
   const ref = useRef(st);
   useEffect(() => { ref.current = st; });
   const ready = useRef(false);
@@ -123,11 +125,11 @@ export function WorkoutNotifier() {
     const n = active ? nextSet(active, profile.units, (x) => st.findExercise(x)?.name) : null;
     Notifications.scheduleNotificationAsync({
       identifier: REST_END,
-      content: { title: 'Rest is over', body: n ? `${n.title} — ${n.text}` : 'Time for your next set.', sound: wprefs.sounds ? 'default' : undefined, data: { restEnd: true } },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(rest.endsAt), channelId: wprefs.sounds ? 'rest' : 'rest-silent' },
+      content: { title: 'Rest is over', body: n ? `${n.title} — ${n.text}` : 'Time for your next set.', sound: audible ? 'default' : undefined, data: { restEnd: true } },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(rest.endsAt), channelId: audible ? 'rest' : 'rest-silent' },
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rest?.endsAt, wprefs.sounds]);
+  }, [rest?.endsAt, audible]);
 
   // ao terminar/descartar o treino, limpa tudo
   useEffect(() => {

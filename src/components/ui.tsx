@@ -244,7 +244,7 @@ export function Stat({ label, value, color }: { label: string; value: string; co
   );
 }
 
-export function Sheet({ visible, onClose, title, children, left }: { visible: boolean; onClose: () => void; title?: string; children: React.ReactNode; left?: React.ReactNode }) {
+export function Sheet({ visible, onClose, title, subtitle, children, left, right }: { visible: boolean; onClose: () => void; title?: string; subtitle?: string; children: React.ReactNode; left?: React.ReactNode; right?: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -255,8 +255,11 @@ export function Sheet({ visible, onClose, title, children, left }: { visible: bo
           {!!title && (
             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
               <View style={{ width: 40 }}>{left}</View>
-              <Text style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '500', color: colors.text }}>{title}</Text>
-              <View style={{ width: 40 }} />
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '500', color: colors.text }}>{title}</Text>
+                {!!subtitle && <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 14, color: colors.muted, marginTop: 2 }}>{subtitle}</Text>}
+              </View>
+              <View style={{ width: 40, alignItems: 'flex-end' }}>{right}</View>
             </View>
           )}
           {children}

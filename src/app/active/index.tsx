@@ -40,6 +40,7 @@ export default function ActiveWorkoutScreen() {
   const [plate, setPlate] = useState<number | null>(null);
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
+  const [noteSheet, setNoteSheet] = useState<number | null>(null);
   const [statsOff, setStatsOff] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [kgFocus, setKgFocus] = useState<{ i: number; j: number } | null>(null);
@@ -187,11 +188,16 @@ export default function ActiveWorkoutScreen() {
                 <Pressable onPress={() => setRestSheet(i)} testID="rest-chip" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 9 }}>
                   <Ionicons name="timer-outline" size={18} color={colors.text} /><Text style={{ color: colors.text, fontSize: 15 }}>Rest: {e.restSec ? fmtRest(e.restSec) : 'Off'}</Text>
                 </Pressable>
-                <Pressable onPress={() => setNoteOpen((n) => ({ ...n, [uid]: !n[uid] }))} testID="note-chip" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: e.notes ? colors.primarySoft : colors.surface, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 9 }}>
-                  <Ionicons name="document-text-outline" size={18} color={e.notes ? colors.primary : colors.text} /><Text style={{ color: e.notes ? colors.primary : colors.text, fontSize: 15 }}>Note</Text>
+                <Pressable onPress={() => setNoteOpen((n) => ({ ...n, [uid]: !n[uid] }))} testID="note-chip" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 9 }}>
+                  <Ionicons name="document-text-outline" size={18} color={colors.text} /><Text style={{ color: colors.text, fontSize: 15 }}>Note</Text>
                 </Pressable>
               </View>
-              {(noteOpen[uid] || !!e.notes) && <TextInput value={e.notes} onChangeText={(t) => st.patchEntry(i, { notes: t })} placeholder="Add notes here..." placeholderTextColor={colors.faint} multiline style={{ marginHorizontal: 16, marginBottom: 6, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10, color: colors.text, fontSize: 16 }} testID="note-input" />}
+              {(noteOpen[uid] || !!e.notes) && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingBottom: 4 }}>
+                  <Pressable onPress={() => setNoteSheet(i)} hitSlop={10} testID="note-type"><Ionicons name={NOTE_KINDS.find((n) => n.kind === (e.noteKind ?? 'workout'))!.icon} size={22} color={colors.text} /></Pressable>
+                  <TextInput value={e.notes} autoFocus={!e.notes} onChangeText={(t) => st.setNote(i, t)} placeholder="Add a session note" placeholderTextColor={colors.faint} multiline style={{ flex: 1, color: colors.text, fontSize: 16, paddingVertical: 8 }} testID="note-input" />
+                </View>
+              )}
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
                 <Pressable onPress={() => setHelp(HELP.sets)} hitSlop={6} style={{ width: 38 }} testID="help-set"><Text style={h.c}>SET</Text></Pressable>
                 <Pressable onPress={() => setHelp(HELP.previous)} hitSlop={6} style={{ flex: 1.3 }} testID="help-previous"><Text style={h.c}>PREVIOUS</Text></Pressable>
@@ -280,6 +286,29 @@ export default function ActiveWorkoutScreen() {
         <View style={{ paddingHorizontal: 16 }}><Btn title="Got it!" onPress={() => setHelp(null)} testID="help-ok" /></View>
       </Sheet>
 
+      {/* tipo da nota: fixada no exercício, fixada na rotina ou só deste treino; apagar */}
+      <Sheet visible={noteSheet !== null} onClose={() => setNoteSheet(null)} title="Notes type">
+        {noteSheet !== null && active.entries[noteSheet] && (
+          <View style={{ paddingHorizontal: 16, gap: 12 }}>
+            <View style={{ backgroundColor: colors.bg, borderRadius: radius.md }}>
+              {NOTE_KINDS.map((n) => (
+                <Pressable key={n.kind} testID={`note-kind-${n.kind}`} onPress={() => { st.setNoteKind(noteSheet, n.kind); setNoteSheet(null); }} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 14 }}>
+                  <Ionicons name={n.icon} size={22} color={colors.text} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 16 }}>{n.label}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{n.text}</Text>
+                  </View>
+                  {(active.entries[noteSheet].noteKind ?? 'workout') === n.kind && <Ionicons name="checkmark" size={22} color={colors.primary} />}
+                </Pressable>
+              ))}
+            </View>
+            <Pressable testID="note-delete" onPress={() => { const i = noteSheet; const uid = uidOf(active.entries[i], i); st.deleteNote(i); setNoteOpen((o) => ({ ...o, [uid]: false })); setNoteSheet(null); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: colors.bg, borderRadius: radius.md }}>
+              <Ionicons name="trash-outline" size={22} color={colors.danger} /><Text style={{ color: colors.danger, fontSize: 16 }}>Delete Note</Text>
+            </Pressable>
+          </View>
+        )}
+      </Sheet>
+
       {/* superset: o usuário escolhe com qual exercício juntar */}
       <Sheet visible={ssPick !== null} onClose={() => setSsPick(null)} title="Superset with...">
         <ScrollView style={{ maxHeight: 360 }}>
@@ -341,7 +370,7 @@ export default function ActiveWorkoutScreen() {
       <Dialog visible={!!helpType} message={helpType ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setHelpType(null) }]} />
 
       {/* descanso do exercício */}
-      {restSheet !== null && <RestSheet value={active.entries[restSheet]?.restSec ?? 0} onDone={(sec) => st.patchEntry(restSheet, { restSec: sec })} onClose={() => setRestSheet(null)} />}
+      {restSheet !== null && <RestSheet subtitle={exOf(active.entries[restSheet]?.exerciseId ?? '')?.name} value={active.entries[restSheet]?.restSec ?? 0} onDone={(sec) => st.patchEntry(restSheet, { restSec: sec })} onClose={() => setRestSheet(null)} onSettings={() => router.push('/settings/timer')} />}
 
       {/* menu do exercício */}
       <Sheet visible={menu !== null} onClose={() => setMenu(null)}>
@@ -398,5 +427,11 @@ const HELP = {
   time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
   complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
 };
+
+const NOTE_KINDS = [
+  { kind: 'exercise' as const, icon: 'pin-outline' as const, label: 'Pinned Exercise Note', text: 'Appears every time you log this exercise. Hidden from workout posts.' },
+  { kind: 'routine' as const, icon: 'reader-outline' as const, label: 'Pinned Routine Note', text: 'Appears every time you log this routine. Hidden from workout posts.' },
+  { kind: 'workout' as const, icon: 'document-text-outline' as const, label: 'Workout Note', text: 'Appears only in this workout. Visible to friends and followers.' },
+];
 
 const h = { c: { color: colors.muted, fontSize: 12, textAlign: 'center' as const } };
