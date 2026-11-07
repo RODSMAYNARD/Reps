@@ -220,7 +220,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (userId) (next ? AsyncStorage.setItem(`reps:active:${userId}`, JSON.stringify(next)) : AsyncStorage.removeItem(`reps:active:${userId}`)).catch(() => {});
   }, [userId]);
 
+  /** Linha do banco → medida da tela. Foto no Storage (`storage:<caminho>`) vira URL assinada; valores antigos (caminho local) seguem como estavam. */
+  const toMeasurement = async (m: any): Promise<Measurement> => {
+    const raw: string | null = m.photo_uri;
+    if (raw?.startsWith('storage:')) {
+      const path = raw.slice(8);
+      const s = await supabase.storage.from('progress-photos').createSignedUrl(path, 60 * 60 * 24 * 7).catch(() => null);
+      return { id: m.id, date: m.measured_on, values: m.values, photoUri: s?.data?.signedUrl ?? null, photoPath: path };
+    }
+    return { id: m.id, date: m.measured_on, values: m.values, photoUri: raw, photoPath: null };
+  };
   const load = useCallback(async (uid: string, email: string) => {
+    // o treino em andamento vive no aparelho: restaura ANTES de falar com o servidor, para não se perder offline
+    try { const raw = await AsyncStorage.getItem(`reps:active:${uid}`); activeRef.current = raw ? JSON.parse(raw) : null; } catch { activeRef.current = null; }
+    setActiveState(activeRef.current);
     const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id,target,secondary_muscles').order('created_at');
     if (ex.error) { setError(ex.error.message); setLoadFailed(true); return; }
     const assets = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}') as Record<string, string>;
@@ -237,11 +250,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setProfile({ ...EMPTY_PROFILE, username: fallbackName });
     }
 
-    const wk = await supabase.from('workouts')
+    // o servidor devolve no máximo ~1000 linhas por pedido: busca por páginas até acabar
+    const rowsAll: any[] = [];
+    let wk: { data: any[] | null; error: { message: string } | null } = { data: [], error: null };
+    for (let from = 0; ; from += 1000) {
+      const page = await supabase.from('workouts')
       .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type))')
-      .order('performed_at', { ascending: false });
+      .order('performed_at', { ascending: false }).range(from, from + 999);
+      if (page.error) { wk = { data: null, error: page.error }; break; }
+      rowsAll.push(...page.data);
+      if (page.data.length < 1000) break;
+    }
+    if (!wk.error) wk = { data: rowsAll, error: null };
     if (wk.error) { setError(wk.error.message); setLoadFailed(true); return; }
-    setWorkouts(wk.data.map((w: any) => ({
+    setWorkouts(wk.data!.map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
@@ -261,13 +283,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       })),
     })));
     const ms = await supabase.from('measurements').select('id,measured_on,values,photo_uri').order('measured_on', { ascending: false });
-    if (!ms.error) setMeasurements(ms.data.map((m: any) => ({ id: m.id, date: m.measured_on, values: m.values, photoUri: m.photo_uri })));
+    if (!ms.error) setMeasurements(await Promise.all(ms.data.map((m: any) => toMeasurement(m))));
 
-    const tr = await AsyncStorage.getItem(`reps:trainer:${uid}`);
-    trainerRef.current = tr ? JSON.parse(tr) : null;
+    // Trainer e preferências: o servidor (`user_state`) é a fonte; o AsyncStorage é cache/offline. O que só existe no aparelho sobe.
+    const safe = (s: string | null) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
+    const localTrainer = safe(await AsyncStorage.getItem(`reps:trainer:${uid}`)) as TrainerProgram | null;
+    const localPrefs = safe(await AsyncStorage.getItem(`reps:wprefs:${uid}`)) as Partial<WorkoutPrefs> | null;
+    const us = await supabase.from('user_state').select('trainer,wprefs').maybeSingle();
+    const up: { user_id: string; trainer?: TrainerProgram; wprefs?: Partial<WorkoutPrefs> } = { user_id: uid };
+    if (!us.error) {
+      trainerRef.current = us.data?.trainer ?? localTrainer;
+      if (!us.data?.trainer && localTrainer) up.trainer = localTrainer;
+      const prefs = us.data?.wprefs ?? localPrefs;
+      if (!us.data?.wprefs && localPrefs) up.wprefs = localPrefs;
+      prefsRef.current = { ...DEFAULT_WPREFS, ...(prefs ?? {}) };
+      if (up.trainer || up.wprefs) supabase.from('user_state').upsert(up, { onConflict: 'user_id' }).then(() => {}, () => {});
+      if (us.data?.trainer) AsyncStorage.setItem(`reps:trainer:${uid}`, JSON.stringify(us.data.trainer)).catch(() => {});
+      if (us.data?.wprefs) AsyncStorage.setItem(`reps:wprefs:${uid}`, JSON.stringify(us.data.wprefs)).catch(() => {});
+    } else {
+      trainerRef.current = localTrainer;
+      prefsRef.current = { ...DEFAULT_WPREFS, ...(localPrefs ?? {}) };
+    }
     setTrainerState(trainerRef.current);
-    const wp = await AsyncStorage.getItem(`reps:wprefs:${uid}`);
-    prefsRef.current = { ...DEFAULT_WPREFS, ...(wp ? JSON.parse(wp) : {}) };
     setWprefsState(prefsRef.current);
     const pn = await AsyncStorage.getItem(`reps:pinned:${uid}`);
     pinnedRef.current = pn ? { exercise: {}, routine: {}, ...JSON.parse(pn) } : { exercise: {}, routine: {} };
@@ -280,9 +317,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (rows.length) supabase.from('pinned_notes').upsert(rows, { onConflict: 'user_id,scope,key' }).then(() => {}, () => {});
       pinnedRef.current = { exercise: { ...pinnedRef.current.exercise, ...remote.exercise }, routine: { ...pinnedRef.current.routine, ...remote.routine } };
     }
-    const raw = await AsyncStorage.getItem(`reps:active:${uid}`);
-    activeRef.current = raw ? JSON.parse(raw) : null;
-    setActiveState(activeRef.current);
     setError(null);
     setLoadFailed(false);
   }, []);
@@ -298,7 +332,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Carrega os dados do servidor quando o usuário entra (busca assíncrona).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (userId) load(userId, session?.user.email ?? 'user').catch((e) => { setError(String(e?.message ?? e)); setLoadFailed(true); }).finally(() => setReady(true));
   }, [userId, session?.user.email, load, reloadTick]);
 
@@ -334,7 +367,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const persistTrainer = useCallback((p: TrainerProgram | null) => {
     trainerRef.current = p;
     setTrainerState(p);
-    if (userId) (p ? AsyncStorage.setItem(`reps:trainer:${userId}`, JSON.stringify(p)) : AsyncStorage.removeItem(`reps:trainer:${userId}`)).catch(() => {});
+    if (userId) {
+      (p ? AsyncStorage.setItem(`reps:trainer:${userId}`, JSON.stringify(p)) : AsyncStorage.removeItem(`reps:trainer:${userId}`)).catch(() => {});
+      supabase.from('user_state').upsert({ user_id: userId, trainer: p }, { onConflict: 'user_id' }).then(() => {}, () => {});
+    }
   }, [userId]);
 
   /** Ao terminar um treino do Trainer: avança para o próximo; fecha a semana/ciclo e renova os exercícios conforme a variedade. */
@@ -362,7 +398,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ensureExercises: ensure,
     findExercise: (id) => lookup.get(id),
     wprefs,
-    setWprefs: (patch) => { prefsRef.current = { ...prefsRef.current, ...patch }; setWprefsState(prefsRef.current); if (userId) AsyncStorage.setItem(`reps:wprefs:${userId}`, JSON.stringify(prefsRef.current)).catch(() => {}); },
+    setWprefs: (patch) => { prefsRef.current = { ...prefsRef.current, ...patch }; setWprefsState(prefsRef.current); if (userId) { AsyncStorage.setItem(`reps:wprefs:${userId}`, JSON.stringify(prefsRef.current)).catch(() => {}); supabase.from('user_state').upsert({ user_id: userId, wprefs: prefsRef.current }, { onConflict: 'user_id' }).then(() => {}, () => {}); } },
     previousSets: (id) => lastSetsOf(id, activeRef.current?.fromRoutineId),
     realExerciseId: (id) => (id.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === id.slice(4))?.id ?? id : id),
     signIn: async (email, password) => {
@@ -607,17 +643,34 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setRoutines((l) => l.filter((x) => x.id !== id));
     },
     saveMeasurement: async (m) => {
-      const row = { measured_on: m.date, values: m.values, photo_uri: m.photoUri };
+      const prev = m.id ? measurements.find((x) => x.id === m.id) : undefined;
+      let path: string | null = null;
+      if (m.photoUri && prev?.photoUri === m.photoUri) path = prev.photoPath ?? null;
+      const keepLocal = m.photoUri && !path && /^https?:/.test(m.photoUri) ? m.photoUri : null;
+      if (m.photoUri && !path && !keepLocal) {
+        // foto nova: sobe para o bucket privado do próprio usuário
+        try {
+          const bytes = await (await fetch(m.photoUri)).arrayBuffer();
+          const p = `${userId}/${randomUUID()}.jpg`;
+          const up = await supabase.storage.from('progress-photos').upload(p, bytes, { contentType: 'image/jpeg' });
+          if (up.error) { fail(up.error.message); return false; }
+          path = p;
+        } catch { fail('Could not upload the photo. Check your connection.'); return false; }
+      }
+      if (prev?.photoPath && prev.photoPath !== path) supabase.storage.from('progress-photos').remove([prev.photoPath]).then(() => {}, () => {});
+      const row = { measured_on: m.date, values: m.values, photo_uri: path ? `storage:${path}` : keepLocal };
       const q = m.id ? supabase.from('measurements').update(row).eq('id', m.id) : supabase.from('measurements').insert(row);
       const { data, error: e } = await q.select('id,measured_on,values,photo_uri').single();
       if (e) { fail(e.message); return false; }
-      const mm: Measurement = { id: data.id, date: data.measured_on, values: data.values, photoUri: data.photo_uri };
+      const mm = await toMeasurement(data);
       setMeasurements((l) => [mm, ...l.filter((x) => x.id !== mm.id)].sort((a, b) => b.date.localeCompare(a.date)));
       return true;
     },
     deleteMeasurement: async (id) => {
+      const gone = measurements.find((x) => x.id === id);
       const { error: e } = await supabase.from('measurements').delete().eq('id', id);
       if (e) { fail(e.message); return false; }
+      if (gone?.photoPath) supabase.storage.from('progress-photos').remove([gone.photoPath]).then(() => {}, () => {});
       setMeasurements((l) => l.filter((x) => x.id !== id));
       return true;
     },

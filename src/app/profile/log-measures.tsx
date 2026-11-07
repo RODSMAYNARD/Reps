@@ -50,7 +50,7 @@ export default function LogMeasures() {
           ) : (
             <Pressable onPress={pick} style={{ width: 120, height: 160, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, alignItems: 'center', justifyContent: 'center', gap: 6 }}><Ionicons name="camera-outline" size={28} color={colors.primary} /><Text style={{ color: colors.primary }}>Add</Text></Pressable>
           )}
-          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>The photo is saved on this device only.</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Your photo is stored privately in your account.</Text>
         </View>
         <Section title="Measurements" />
         {MEASURE_FIELDS.map((f) => {

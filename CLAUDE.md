@@ -46,7 +46,7 @@
 - Layout e fluxos inspirados no Hevy (via Mobbin), com identidade própria: nome Reps, sem logo, ícones nem ilustrações do Hevy
 - Textos em português do Brasil; pesos guardados em kg e convertidos na tela
 - Reps em exercícios de duração = segundos
-- Fotos (progresso/treino) ficam só no aparelho (sem Storage ainda)
+- Fotos de PROGRESSO ficam no bucket privado `progress-photos` (`<uid>/<uuid>.jpg`, `measurements.photo_uri = storage:<caminho>`, URL assinada de 7 dias ao carregar); a foto do TREINO (active/save) ainda é só da sessão
 
 ## Desempenho dos exercícios (arquitetura)
 - Catálogo (texto) e miniaturas 96x96 ficam DENTRO do app como recurso nativo de verdade: `src/data/thumbs.ts` tem um `require('../../assets/thumbs/<id>.jpg')` por exercício (gerado por `scripts/build-thumbs.py`), decisão do Rodrigo (2026-11-05) — "deixar o máximo dentro do app". Listas e seletor não fazem rede, sem custo de decodificação (resource id pré-compilado no build).
@@ -113,7 +113,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 ## Trainer (programa personalizado) — `src/app/trainer/`, `src/lib/trainer.ts`
 - Entrada: cartão "Trainer" no topo da aba Workout. Telas: início (meta semanal, próximo treino, programa/semana), `workouts` (treinos do programa, ⋯ Reorder/Skip/Program Settings), `reorder`, `settings` (Modify My Program + Start New Program + Restart/Delete + Science/Feedback), `option/[key]` (level, equipment, focus, duration, rest, variety, cardio, excluded, injuries, split, goal, frequency), `setup`, `science`.
 - Gera treinos a partir do catálogo (equipamento, lesões, exercícios excluídos, foco, duração, descanso, meta). Ciclo de 6 semanas (+1 com deload); variedade: balanced renova no fim do ciclo, varied toda semana, consistent não renova.
-- O programa fica SÓ NO APARELHO (AsyncStorage `reps:trainer:<uid>`; não sincroniza com o Supabase ainda). Treino iniciado pelo Trainer leva `fromTrainer` e, ao salvar, avança o próximo treino.
+- O programa fica no Supabase (`user_state.trainer`, jsonb) com cache no AsyncStorage `reps:trainer:<uid>`; o servidor vence ao entrar e o que só existia no aparelho sobe. Treino iniciado pelo Trainer leva `fromTrainer` e, ao salvar, avança o próximo treino.
 - Só interface: os ícones de equipamento são genéricos (sem as imagens do Hevy); "Edit" dos pesos dos equipamentos não existe.
 
 ## Menu ⋯ do treino salvo (`src/components/WorkoutMenu.tsx`)
@@ -185,3 +185,12 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 
 ## Unidade por exercício (2026-11-07, migração `unidade_por_exercicio_e_notas_fixadas`)
 - `workout_exercises.weight_unit` e `routine_exercises.weight_unit` ('kg' | 'lbs', nulo = padrão do perfil). O app guarda em `ActiveEntry/SavedEntry/RoutineExercise.unit`; `save_workout` e `sync_routine_children` gravam; iniciar treino de rotina/cópia herda a unidade.
+
+## Auditoria e lotes (2026-11-07) — ver `docs/AUDITORIA.md`
+- `FEATURES` em `lib/constants.ts`: social, watch, integrations, coach, dataImport, workoutLink = `false` → tudo isso fica ESCONDIDO (nada de "Coming soon"). Só ligar quando existir backend. `SUPPORT_EMAIL` também em constants.
+- Falha de carga → tela "Can't load your data / Try again" (`loadFailed`/`reload` no store). Treino ativo é lido do aparelho ANTES do servidor. `workouts` carrega por páginas de 1000.
+- `saveProfile/saveMeasurement/deleteMeasurement/sendFeedback` devolvem boolean; telas só confirmam quando true.
+- Recuperar senha = código de 6 dígitos (`forgot.tsx`, `verifyOtp` + `updateUser`). **Precisa do template de e-mail "Reset Password" do Supabase (Authentication > Emails) conter `{{ .Token }}`**.
+- Apagar conta: Settings > Delete Account → Edge Function `delete-account` (service role no servidor; tabelas apagam em cascata; limpa `progress-photos/<uid>`). Também limpa AsyncStorage do usuário.
+- Migrações: `unidade_por_exercicio_e_notas_fixadas`, `user_state_e_fotos_de_progresso` (tabela `user_state` trainer+wprefs com RLS; bucket `progress-photos` com policies por pasta do usuário).
+- Confirmações: remover exercício (treino e rotina), apagar rotina, pular treino do Trainer, sair do editor de rotina com mudanças. Exportar = arquivo CSV/JSON real (`settings/export`).

@@ -47,7 +47,8 @@ export type Workout = {
 export type RoutineExercise = { unit?: Units['weight']; exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };
 export type Routine = { id: string; title: string; notes: string; exercises: RoutineExercise[] };
 
-export type Measurement = { id: string; date: string; values: Record<string, number>; photoUri: string | null };
+/** `photoUri` = o que a tela mostra (URL assinada do Storage ou arquivo local recém-escolhido); `photoPath` = caminho no bucket privado `progress-photos`. */
+export type Measurement = { id: string; date: string; values: Record<string, number>; photoUri: string | null; photoPath?: string | null };
 
 export type WarmupRow = { pct: number; reps: number };
 export type SoundVolume = 'high' | 'normal' | 'low' | 'off';
