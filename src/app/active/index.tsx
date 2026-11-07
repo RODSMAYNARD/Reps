@@ -9,6 +9,7 @@ import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
 import { DurationSheet } from '../../components/DurationSheet';
+import { BodyMap, regionsOf, type Region } from '../../components/BodyMap';
 import { RestSheet } from '../../components/pickers';
 import { PlateSheet } from '../../components/PlateSheet';
 import { hasWeight, weightHeader } from '../../lib/exerciseOptions';
@@ -39,6 +40,8 @@ export default function ActiveWorkoutScreen() {
   const [plate, setPlate] = useState<number | null>(null);
   const [wsheet, setWsheet] = useState<number | null>(null);
   const [unitSheet, setUnitSheet] = useState(false);
+  const [statsOff, setStatsOff] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [kgFocus, setKgFocus] = useState<{ i: number; j: number } | null>(null);
   const [plateJ, setPlateJ] = useState<number | null>(null);
   const [ssPick, setSsPick] = useState<number | null>(null);
@@ -67,6 +70,10 @@ export default function ActiveWorkoutScreen() {
   const setAll = (v: boolean) => setCollapsed(Object.fromEntries(shown.map((x) => [uidOf(x.e, x.i), v])));
   const doneSets = shown.flatMap((x) => x.e.sets.filter((s) => s.done));
   const volume = doneSets.reduce((t, s) => t + setVolume(s), 0);
+  const worked = active ? active.entries.filter((e) => !e.hidden && e.sets.some((s) => s.done)).map((e) => exOf(e.exerciseId)) : [];
+  const litPrimary = [...new Set(worked.flatMap((x) => [...regionsOf(x?.muscle), ...regionsOf(x?.target)]))] as Region[];
+  const litSecondary = [...new Set(worked.flatMap((x) => (x?.secondary ?? []).flatMap(regionsOf)))] as Region[];
+  const bodyColors = { body: '#B9C0CB', muscle: '#E3E7ED', on: colors.primary };
 
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
   const addWarmups = (i: number) => {
@@ -97,7 +104,7 @@ export default function ActiveWorkoutScreen() {
 
   return (
     <Screen>
-      <Header left="down" titleAlign="left" title="Log Workout" right={<>
+      <Header left="down" titleAlign="left" title={statsOff ? <Text style={{ color: colors.primary, fontSize: 16 }} testID="header-duration">{fmtDurationLive(elapsed)}</Text> : 'Log Workout'} right={<>
         <IconButton name="timer-outline" onPress={() => setTimerSheet(true)} testID="open-timer" />
         <HeaderAction label="Finish" primary onPress={finish} />
       </>} />
@@ -110,13 +117,21 @@ export default function ActiveWorkoutScreen() {
           <View style={{ padding: 16 }}><Btn title="Done" onPress={() => setReordering(false)} testID="reorder-done" /></View>
         </View>
       )}
-      {!reordering && <ScrollView contentContainerStyle={{ paddingBottom: rest ? 100 : 40 }} keyboardShouldPersistTaps="handled">
-        <View style={{ flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      {/* barra de números fixa (sticky) abaixo do cabeçalho; o ✕ recolhe e o "+" no topo traz de volta, como no Hevy */}
+      {!reordering && !statsOff && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bg }} testID="stats-bar">
           <Pressable onPress={() => setDurSheet(true)} testID="duration" style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.muted, fontSize: 11 }}>Duration</Text><Text style={{ color: colors.primary, fontSize: 16 }}>{fmtDurationLive(elapsed)}</Text></Pressable>
           <View style={{ flex: 1 }}><Stat label="Volume" value={fmtVolume(volume, u)} /></View>
-          <View style={{ flex: 1 }}><Stat label="Sets" value={String(doneSets.length)} /></View>
+          <View style={{ flex: 0.7 }}><Stat label="Sets" value={String(doneSets.length)} /></View>
+          <View style={{ flexDirection: 'row', gap: 4, marginRight: scrolled ? 10 : 0 }}>
+            <BodyMap side="front" primary={litPrimary} secondary={litSecondary} width={30} colors={bodyColors} />
+            <BodyMap side="back" primary={litPrimary} secondary={litSecondary} width={30} colors={bodyColors} />
+          </View>
+          {scrolled && <Pressable onPress={() => setStatsOff(true)} hitSlop={8} testID="stats-close" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={18} color={colors.text} /></Pressable>}
         </View>
-
+      )}
+      {!reordering && <View style={{ flex: 1 }}><ScrollView contentContainerStyle={{ paddingBottom: rest ? 100 : 40 }} keyboardShouldPersistTaps="handled" scrollEventThrottle={16}
+        onScroll={(ev) => { const y = ev.nativeEvent.contentOffset.y; setScrolled(y > 6); if (y <= 2) setStatsOff(false); }}>
         {shown.length > 1 && (
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 18, paddingHorizontal: 16, paddingTop: 12 }}>
             <Pressable onPress={() => setReordering(true)} testID="reorder-btn" hitSlop={8} style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
@@ -230,7 +245,13 @@ export default function ActiveWorkoutScreen() {
             <Btn title="Discard Workout" variant="secondary" style={{ flex: 1 }} textStyle={{ color: colors.danger }} onPress={() => setCancelAsk(true)} testID="discard-btn" />
           </View>
         </View>
-      </ScrollView>}
+      </ScrollView>
+      {statsOff && (
+        <Pressable onPress={() => setStatsOff(false)} testID="stats-open" hitSlop={8} style={{ position: 'absolute', top: 0, alignSelf: 'center', width: 46, height: 22, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="add" size={18} color={colors.text} />
+        </Pressable>
+      )}
+      </View>}
 
       {rest && !reordering && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: insets.bottom }}>
