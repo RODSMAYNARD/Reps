@@ -74,6 +74,9 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Cálculo (`solvePlates`): anilhas ilimitadas de cada tipo, peso montável mais próximo do alvo (empate: o mais leve), com menos anilhas; troco mínimo por programação dinâmica em centésimos (o método guloso erra com anilhas personalizadas). Pesquisado: sem pacote TS/RN padrão; `plate-calculator` (npm) também devolve o peso mais próximo.
 - Preferências por unidade em `wprefs.plateSets` (kg e lbs separados); barras EZ: 7,5 kg / 15 lbs (valor nosso, confirmar com o Hevy).
 
+## Relógio do treino (botão do alarme no cabeçalho, `components/ClockSheet.tsx`)
+- Folha "Clock" (ícone de sliders abre Timer Settings): aba **Timer** (anel com a contagem, -15s/+15s, Start/Cancel; usa o mesmo temporizador de descanso do store, então a barra de descanso embaixo também aparece) e aba **Stopwatch** (MM:SS:CC, Start/Stop/Resume/Reset). Com o cronômetro andando/pausado com valor, o título do cabeçalho mostra o tempo em azul.
+
 ## Menu do exercício e séries (treino ativo)
 - ⋮ do exercício: Replace, Add to superset, View Exercise, **Hide only for this workout** (com ícone "?" que explica: some só neste treino, nada é apagado, na próxima vez aparece normal), **Reduce sets** (tira a última série; interpretação nossa do pedido, confirmar com o Rodrigo), Reorder, Remove.
 - Séries: deslizar a linha para a esquerda mostra "Delete" vermelho (`components/SwipeRow.tsx`, PanResponder puro).

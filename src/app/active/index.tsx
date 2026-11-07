@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ReorderList } from '../../components/ReorderList';
 import { DurationSheet } from '../../components/DurationSheet';
 import { BodyMap, regionsOf, type Region } from '../../components/BodyMap';
+import { ClockSheet, fmtStopwatch, swMs, type Stopwatch } from '../../components/ClockSheet';
 import { RestSheet } from '../../components/pickers';
 import { NoteInput } from '../../components/NoteInput';
 import { PlateIcon } from '../../components/PlateIcon';
@@ -36,6 +37,8 @@ export default function ActiveWorkoutScreen() {
   const [menu, setMenu] = useState<number | null>(null);
   const [durSheet, setDurSheet] = useState(false);
   const [timerSheet, setTimerSheet] = useState(false);
+  const [sw, setSw] = useState<Stopwatch>({ acc: 0, startedAt: null });
+  const swNow = useNow(100, !!sw.startedAt);
   const [cancelAsk, setCancelAsk] = useState(false);
   const [helpType, setHelpType] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -122,8 +125,8 @@ export default function ActiveWorkoutScreen() {
 
   return (
     <Screen>
-      <Header left="down" titleAlign="left" title={statsOff ? <Text style={{ color: colors.primary, fontSize: 16 }} testID="header-duration">{fmtDurationLive(elapsed)}</Text> : 'Log Workout'} right={<>
-        <IconButton name="timer-outline" onPress={() => setTimerSheet(true)} testID="open-timer" />
+      <Header left="down" titleAlign="left" title={sw.startedAt || sw.acc > 0 ? <Text style={{ color: colors.primary, fontSize: 16, fontVariant: ['tabular-nums'] }} testID="header-stopwatch">{fmtStopwatch(swMs(sw, swNow))}</Text> : statsOff ? <Text style={{ color: colors.primary, fontSize: 16 }} testID="header-duration">{fmtDurationLive(elapsed)}</Text> : 'Log Workout'} right={<>
+        <IconButton name="alarm-outline" onPress={() => setTimerSheet(true)} testID="open-timer" />
         <HeaderAction label="Finish" primary onPress={finish} />
       </>} />
       {reordering && (
@@ -412,7 +415,7 @@ export default function ActiveWorkoutScreen() {
       )}
 
       {/* timer manual */}
-      {timerSheet && <RestSheet value={st.wprefs.defaultRestSec || 90} confirm="Start" onDone={(sec) => sec && st.startRest(sec)} onClose={() => setTimerSheet(false)} />}
+      <ClockSheet visible={timerSheet} onClose={() => setTimerSheet(false)} onSettings={() => router.push('/settings/timer')} rest={rest ? { left: restLeft, total: rest.total } : null} onStart={(sec) => st.startRest(sec)} onAdjust={st.adjustRest} onCancel={st.skipRest} sw={sw} setSw={setSw} defaultSec={st.wprefs.defaultRestSec} />
 
       <Sheet visible={hiddenSheet} onClose={() => setHiddenSheet(false)} title="Hidden exercises">
         {hiddenList.map(({ e, i }) => (
