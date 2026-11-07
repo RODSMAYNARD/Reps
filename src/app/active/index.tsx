@@ -3,7 +3,7 @@ import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -137,6 +137,7 @@ export default function ActiveWorkoutScreen() {
           const isCollapsed = !!collapsed[uid];
           const prevSets = st.previousSets(e.exerciseId);
           const prs = prFlags(records(st.workouts, st.realExerciseId(e.exerciseId)), e.sets);
+          const isBarbell = /barbell/i.test(ex?.equipment ?? '');
           const eu: Units = e.unit ? { ...u, weight: e.unit } : u;
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
@@ -176,7 +177,8 @@ export default function ActiveWorkoutScreen() {
                 const lb = label(e, s, j);
                 const prev = prevSets[j] ?? null;
                 return (
-                  <View key={j} testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
+                  <Fragment key={j}>
+                  <View testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
                     <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 38, alignItems: 'center', paddingVertical: 6 }} testID="set-type">
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.bg : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
                         {prs[j] ? <Ionicons name="ribbon" size={20} color="#F5C400" /> : <Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text>}
@@ -199,6 +201,15 @@ export default function ActiveWorkoutScreen() {
                       </View>
                     </Pressable>
                   </View>
+                  {kgFocus?.i === i && kgFocus.j === j && isBarbell && st.wprefs.plateCalc && (
+                    <View style={{ paddingHorizontal: 16, paddingVertical: 6, alignItems: 'flex-start' }}>
+                      <Pressable testID="kg-calculator" onPress={() => { setPlateJ(j); setPlate(i); }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 }}>
+                        <Ionicons name="calculator-outline" size={22} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Calculator</Text>
+                      </Pressable>
+                    </View>
+                  )}
+                  </Fragment>
                 );
               })}
               <View style={{ paddingHorizontal: 16, paddingTop: 10 }}><Btn title="Add Set" icon="add" variant="secondary" onPress={() => st.addSet(i)} testID="add-set" /></View>
@@ -231,14 +242,6 @@ export default function ActiveWorkoutScreen() {
             <Btn title="Skip" style={{ minWidth: 64, minHeight: 38, paddingHorizontal: 12 }} onPress={st.skipRest} testID="rest-skip" />
           </View>
         </View>
-      )}
-
-      {/* atalho acima do teclado: com o campo KG de uma barra em foco, abre a calculadora de anilhas para aquela série */}
-      {!reordering && kgFocus && active.entries[kgFocus.i] && st.wprefs.plateCalc && /barbell/i.test(exOf(active.entries[kgFocus.i].exerciseId)?.equipment ?? '') && (
-        <Pressable testID="kg-calculator" onPress={() => { setPlateJ(kgFocus.j); setPlate(kgFocus.i); }}
-          style={{ position: 'absolute', left: 16, bottom: (rest ? 66 + insets.bottom : 0) + 10, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 10 }}>
-          <Ionicons name="calculator-outline" size={22} color={colors.text} /><Text style={{ color: colors.text, fontSize: 17 }}>Calculator</Text>
-        </Pressable>
       )}
 
       {plate !== null && active.entries[plate] && (() => {
