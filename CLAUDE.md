@@ -196,3 +196,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Confirmações: remover exercício (treino e rotina), apagar rotina, pular treino do Trainer, sair do editor de rotina com mudanças. Exportar = arquivo CSV/JSON real (`settings/export`).
 - Editar exercício criado: ⋮ do detalhe > Edit exercise (reusa `exercises/create?id=`, `store.updateExercise`); salvar tem trava de duplo toque.
 - Pro: `lib/gate.ts` (`useGate`, `FREE_LIMITS`: 4 rotinas no grátis; Trainer e Gerar plano exigem Pro) protegido por `FEATURES.proGating` (DESLIGADO: ligar só quando os produtos existirem nas lojas e no RevenueCat). Textos "Preview mode" do paywall só aparecem em `__DEV__`.
+
+## Ícones de equipamento e músculo (2026-11-07)
+- Equipamento (`exercises/equipment`) e categorias usam **Hugeicons (MIT)**, embutidos como SVG em `src/lib/gymIcons.ts` (gerado a partir do Iconify; sem rede) e desenhados por `components/GymIcon.tsx` (`react-native-svg` `SvgXml`, cor via `color`). Para trocar/adicionar: regenerar o arquivo com outro nome de ícone do conjunto `hugeicons`.
+- Músculos (`exercises/muscle`) mostram o boneco do `react-native-body-highlighter` (`BodyMap`) com o músculo pintado (frente ou costas); Cardio, Full Body e Other usam ícone. Nenhuma biblioteca aberta tem as ilustrações realistas de máquinas do Hevy: só ícones de traço.
