@@ -1,5 +1,5 @@
 -- Libera os tipos de exercício com tempo/distância e faz a rotina guardar tempo e distância das séries.
--- PENDENTE: aplicar no projeto `reps` (o modo automático bloqueou a aplicação; precisa da aprovação do Rodrigo).
+-- Aplicada no projeto `reps` em 2026-11-09 (aprovada pelo Rodrigo).
 -- Aditiva: só amplia o CHECK e acrescenta duas colunas no insert do gatilho da rotina.
 
 alter table public.exercises drop constraint exercises_kind_check;

@@ -207,7 +207,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 
 ## Tempo e distância (2026-11-09)
 - Tipos `duration_weight` (kg + segundos), `distance_duration` (distância + minutos) e `weight_distance` (kg + distância). Série: `seconds` → `duration_sec`, `distM` (metros) → `distance_m`. O `duration` antigo continua com os segundos em `reps`. Helpers em `lib/exerciseOptions.ts` (`setCols`, `colValue`, `colPatch`, `fmtSet`, `setHasValue`).
-- **Migração PENDENTE** `supabase/migrations/tipos_com_distancia.sql` (CHECK de `exercises.kind` + tempo/distância nas séries da rotina): o modo automático bloqueou; aplicar com aprovação do Rodrigo. Sem ela, criar exercício desses tipos falha no banco e a rotina perde tempo/distância (o treino já grava).
+- Migração `tipos_com_distancia` (aplicada em 2026-11-09, cópia em `supabase/migrations/`): CHECK de `exercises.kind` com os 8 tipos e `sync_routine_children` gravando `duration_sec`/`distance_m` (vindos de `seconds`/`distM` do JSON da rotina).
 
 ## Idiomas (2026-11-09, `lib/i18n.ts`)
 - O código fica em inglês; `components/Text.tsx` (`Text`/`TextInput`) traduz na hora de desenhar pelo dicionário `src/i18n/pt.ts` (chave = texto em inglês exato). Todas as telas importam `Text` de `components/Text`, nunca do `react-native`. Texto montado com variáveis só traduz os pedaços literais; para frases dinâmicas usar `tr()`. Títulos das abas usam `tr()`.
