@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { tr } from '../../lib/i18n';
 import { colors } from '../../lib/theme';
 
 const tab = (title: string, on: any, off: any) => ({
-  title,
+  title: tr(title),
   tabBarIcon: ({ focused, color }: { focused: boolean; color: any }) => <Ionicons name={focused ? on : off} size={26} color={color} />,
 });
 

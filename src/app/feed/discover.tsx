@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Avatar, Btn, Header, Screen, SearchBar } from '../../components/ui';
 import { DEMO_ATHLETES } from '../../lib/constants';
 import { colors } from '../../lib/theme';

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Animated, PanResponder, Pressable, Text, View } from 'react-native';
+import { Animated, PanResponder, Pressable, View } from 'react-native';
+import { Text } from './Text';
 import { colors } from '../lib/theme';
 
 const W = 96;

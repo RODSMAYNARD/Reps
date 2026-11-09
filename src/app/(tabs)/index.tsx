@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { ActiveBar } from '../../components/ActiveBar';
 import { WorkoutCard } from '../../components/WorkoutCard';
 import { WorkoutMenu } from '../../components/WorkoutMenu';
@@ -11,6 +12,7 @@ import { FEATURES } from '../../lib/constants';
 import { weekStreak } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
+import { locale } from '../../lib/i18n';
 
 export default function Home() {
   const { workouts, startWorkout, session, offline, pendingCount } = useStore();
@@ -47,7 +49,7 @@ export default function Home() {
       )}
       {pmCount > 0 && !reportGone && (
         <View style={{ padding: 16, gap: 8, borderBottomWidth: 8, borderBottomColor: colors.surface }} testID="report-card">
-          <Text style={{ fontWeight: '800', fontSize: 20, color: colors.text }}>Your {pm.toLocaleDateString('en-US', { month: 'long' })} Monthly Report is ready!</Text>
+          <Text style={{ fontWeight: '800', fontSize: 20, color: colors.text }}>Your {pm.toLocaleDateString(locale(), { month: 'long' })} Monthly Report is ready!</Text>
           <Text style={{ color: colors.muted, fontSize: 16 }}>Get an overview of your workout data, milestones, and improvements from last month.</Text>
           <Btn title="View Report" onPress={() => router.push({ pathname: '/profile/report', params: { month: pmKey } })} />
           <Btn title="Dismiss" variant="secondary" onPress={dismissReport} />

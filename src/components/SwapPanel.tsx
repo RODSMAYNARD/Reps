@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Text } from './Text';
 import { THUMBS } from '../data/thumbs';
 import { catKey } from '../lib/catalog';
 import { useStore } from '../lib/store';

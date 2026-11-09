@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Share, Text, View } from 'react-native';
+import { Share, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Avatar, Btn, Card, Screen, SearchBar, Section } from '../../components/ui';
 import { colors } from '../../lib/theme';
 

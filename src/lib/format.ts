@@ -1,4 +1,5 @@
 import { Units } from './types';
+import { locale } from './i18n';
 
 export const LB = 2.2046226;
 export const IN = 0.3937008;
@@ -9,7 +10,7 @@ const r1 = (n: number) => Math.round(n * 10) / 10;
 export const fmtWeight = (kg: number, u: Units) => `${r1(toDisplayWeight(kg, u))} ${u.weight}`;
 export const fmtVolume = (kg: number, u: Units) => {
   const v = toDisplayWeight(kg, u);
-  return `${Math.round(v).toLocaleString('en-US')} ${u.weight}`;
+  return `${Math.round(v).toLocaleString(locale())} ${u.weight}`;
 };
 export const MI = 1609.344;
 export const toDisplayDist = (m: number, u: Units) => (u.distance === 'mi' ? m / MI : m / 1000);
@@ -55,13 +56,14 @@ export const fmtRest = (sec: number) => {
   return `${m ? `${m}min ` : ''}${s ? `${s}s` : ''}`.trim();
 };
 export const fmtDate = (iso: string, opts?: Intl.DateTimeFormatOptions) =>
-  new Date(iso).toLocaleDateString('en-US', opts ?? { day: '2-digit', month: 'short', year: 'numeric' });
+  new Date(iso).toLocaleDateString(locale(), opts ?? { day: '2-digit', month: 'short', year: 'numeric' });
 export const fmtDateTime = (iso: string) =>
-  new Date(iso).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  new Date(iso).toLocaleString(locale(), { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 export const timeAgo = (iso: string) => {
   const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return 'now';
-  if (m < 60) return `${m} min ago`;
-  if (m < 1440) return `${Math.floor(m / 60)} h ago`;
-  return `${Math.floor(m / 1440)} d ago`;
+  const pt = locale() === 'pt-BR';
+  if (m < 1) return pt ? 'agora' : 'now';
+  if (m < 60) return pt ? `há ${m} min` : `${m} min ago`;
+  if (m < 1440) return pt ? `há ${Math.floor(m / 60)} h` : `${Math.floor(m / 60)} h ago`;
+  return pt ? `há ${Math.floor(m / 1440)} d` : `${Math.floor(m / 1440)} d ago`;
 };

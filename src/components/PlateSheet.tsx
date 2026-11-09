@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from './Text';
 import { BARS, DEFAULT_PLATES, PlateSet, WUnit, barOf, fmtPlate, solvePlates, unitLabel } from '../lib/plates';
 import { colors } from '../lib/theme';
 import { NumInput } from './NumInput';

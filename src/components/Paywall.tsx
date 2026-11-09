@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
+import { Text } from './Text';
 import { track } from '../lib/analytics';
 import { Offers, Plan, buy, loadOffers, mockPrices, money, rcEnabled, restore, usePro } from '../lib/purchases';
 import { colors, radius } from '../lib/theme';

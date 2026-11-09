@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, useWindowDimensions, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Btn, Screen, TextLink } from '../../components/ui';
 import { colors, radius } from '../../lib/theme';
 

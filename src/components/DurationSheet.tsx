@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from './Text';
 import { fmtStartTime, fmtDurationLive } from '../lib/format';
 import { colors } from '../lib/theme';
 import { StartTimeWheels, WheelPicker } from './WheelPicker';

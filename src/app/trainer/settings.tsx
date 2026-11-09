@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { track } from '../../lib/analytics';
 import { useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView } from 'react-native';
+import { Text } from '../../components/Text';
 import { Dialog, Header, ListRow, Screen, Section } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';

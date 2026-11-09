@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { NumInput } from '../../components/NumInput';
 import { Btn, Header, ListRow, Screen, Sheet, Toggle } from '../../components/ui';
 import { useStore } from '../../lib/store';

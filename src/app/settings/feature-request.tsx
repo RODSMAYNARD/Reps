@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text, TextInput } from '../../components/Text';
 import { Dialog, Header, HeaderAction, Screen } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';

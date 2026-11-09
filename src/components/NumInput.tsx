@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { TextInput, TextStyle } from 'react-native';
+import { TextStyle } from 'react-native';
+import { TextInput } from './Text';
 import { colors } from '../lib/theme';
 
 /** Campo numérico: enquanto está focado mostra o texto digitado (permite "7."), fora disso mostra o valor do store. */

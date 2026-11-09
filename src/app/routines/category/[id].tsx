@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView } from 'react-native';
+import { Text } from '../../../components/Text';
 import { Card, Empty, Header, Screen } from '../../../components/ui';
 import { CATEGORIES, CATEGORY_ROUTINES } from '../../../lib/constants';
 import { colors } from '../../../lib/theme';

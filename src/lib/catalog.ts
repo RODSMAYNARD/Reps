@@ -1,4 +1,5 @@
 import raw from '../data/catalog.json';
+import { getLang } from './i18n';
 import { Exercise, ExerciseKind } from './types';
 
 /** Catálogo de exercícios embutido no app (texto do dataset MIT hasaneyldrm/exercises-dataset, traduzido). */
@@ -10,7 +11,11 @@ export const catKey = (c: CatItem) => `cat:${c.id}`;
 
 export const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-export const catToExercise = (c: CatItem): Exercise => ({ id: catKey(c), name: c.n, muscle: c.m, equipment: c.e, kind: c.k, catalogId: c.id });
+/** Nome e passo a passo no idioma da interface (o catálogo traz inglês e pt-BR). */
+export const catName = (c: CatItem) => (getLang() === 'pt' && c.pt?.n ? c.pt.n : c.n);
+export const catSteps = (c: CatItem) => (getLang() === 'pt' && c.pt?.i?.length ? c.pt.i : c.i);
+
+export const catToExercise = (c: CatItem): Exercise => ({ id: catKey(c), name: catName(c), muscle: c.m, equipment: c.e, kind: c.k, catalogId: c.id });
 
 // Chave de ordenação e texto de busca calculados uma vez por exercício. No Android (Hermes),
 // `localeCompare(x, 'en')` passa pelo Intl a cada comparação e ordenar 1.324 nomes levava segundos.
@@ -19,7 +24,7 @@ const keyOf = (e: Exercise) => {
   let k = keys.get(e);
   if (!k) {
     const c = e.catalogId ? CAT_BY_ID.get(e.catalogId) : undefined;
-    k = { sort: e.name.toLowerCase(), hay: norm(e.name + ' ' + (c?.pt?.n ?? '')) };
+    k = { sort: e.name.toLowerCase(), hay: norm(e.name + ' ' + (c ? `${c.n} ${c.pt?.n ?? ''}` : '')) };
     keys.set(e, k);
   }
   return k;

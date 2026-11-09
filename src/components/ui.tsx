@@ -1,10 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useSegments } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleProp, StyleSheet, Switch, Text,
-  TextInput, TextInputProps, TextStyle, View, ViewStyle,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleProp, StyleSheet, Switch, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
+import { Text, TextInput } from './Text';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius } from '../lib/theme';
 

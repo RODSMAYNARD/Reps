@@ -42,13 +42,13 @@ export const PROGRAMS: Program[] = [
   ] },
 ];
 export const CATEGORIES = [
-  { id: 'home', label: 'At home', icon: 'home-outline' },
-  { id: 'travel', label: 'Travel', icon: 'briefcase-outline' },
-  { id: 'dumbbell', label: 'Dumbbells only', icon: 'barbell-outline' },
-  { id: 'band', label: 'Band', icon: 'pulse-outline' },
-  { id: 'cardio', label: 'Cardio & HIIT', icon: 'flame-outline' },
-  { id: 'gym', label: 'Gym', icon: 'fitness-outline' },
-  { id: 'body', label: 'Bodyweight', icon: 'body-outline' },
+  { id: 'home', label: 'At home', icon: 'home' },
+  { id: 'travel', label: 'Travel', icon: 'travel' },
+  { id: 'dumbbell', label: 'Dumbbells only', icon: 'dumbbell' },
+  { id: 'band', label: 'Band', icon: 'band' },
+  { id: 'cardio', label: 'Cardio & HIIT', icon: 'hiit' },
+  { id: 'gym', label: 'Gym', icon: 'machine' },
+  { id: 'body', label: 'Bodyweight', icon: 'bodyweight' },
 ] as const;
 
 export type Template = { title: string; notes: string; exercises: string[] };

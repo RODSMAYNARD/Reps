@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, Share, Text, View } from 'react-native';
+import { Pressable, Share, View } from 'react-native';
+import { Text } from './Text';
 import { fmtDuration, fmtVolume, timeAgo } from '../lib/format';
 import { workoutVolume } from '../lib/stats';
 import { useStore } from '../lib/store';

@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/refs -- the PanResponder must survive re-renders (the workout timer ticks every second), so it reads latest props through refs */
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
-import { PanResponder, ScrollView, Text, View } from 'react-native';
+import { PanResponder, ScrollView, View } from 'react-native';
+import { Text } from './Text';
 import { colors, radius } from '../lib/theme';
 import { ExerciseThumb } from './ExerciseThumb';
 

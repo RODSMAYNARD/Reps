@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Header, Screen } from '../../components/ui';
 import { EXERCISE_TYPES } from '../../lib/exerciseOptions';
 import { patchDraft, useDraft } from '../../lib/exerciseDraft';

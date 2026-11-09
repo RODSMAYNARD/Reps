@@ -3,7 +3,8 @@ import type { Session } from '@supabase/supabase-js';
 import { randomUUID } from './uuid';
 import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
+import { CAT_BY_ID, CATALOG, catName, catToExercise } from './catalog';
+import { useLang } from './i18n';
 import { track } from './analytics';
 import { reportError } from './monitoring';
 import { setHasValue } from './exerciseOptions';
@@ -167,6 +168,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [active, setActiveState] = useState<ActiveWorkout | null>(null);
   const [rest, setRest] = useState<RestTimer>(null);
+  const lang = useLang();
   const userId = session?.user.id ?? null;
   const activeRef = useRef<ActiveWorkout | null>(null);
   const exRef = useRef<Exercise[]>([]);
@@ -457,9 +459,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const allExercises = useMemo<Exercise[]>(() => {
     const byCat = new Map(exercises.filter((e) => e.catalogId).map((e) => [e.catalogId!, e]));
-    const fromCatalog = CATALOG.map((c) => byCat.get(c.id) ?? catToExercise(c));
+    // nome do catálogo no idioma da interface
+    const fromCatalog = CATALOG.map((c) => { const e = byCat.get(c.id); if (!e) return catToExercise(c); const n = catName(c); return e.name === n ? e : { ...e, name: n }; });
     return [...fromCatalog, ...exercises.filter((e) => !e.catalogId)];
-  }, [exercises]);
+    // `lang` não aparece no corpo: `catName` lê o idioma atual, e o memo precisa refazer quando ele muda
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercises, lang]);
 
   const lookup = useMemo(() => {
     const m = new Map<string, Exercise>();

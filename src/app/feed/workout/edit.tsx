@@ -3,7 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text, TextInput } from '../../../components/Text';
 import { NumInput } from '../../../components/NumInput';
 import { Btn, Dialog, Header, HeaderAction, Screen, Sheet, ListRow } from '../../../components/ui';
 import { colDecimal, colHeader, colPatch, colValue, hasWeight, setCols } from '../../../lib/exerciseOptions';
@@ -11,6 +12,7 @@ import { fmtDuration, fromDisplayWeight, toDisplayWeight } from '../../../lib/fo
 import { useStore } from '../../../lib/store';
 import { colors, radius } from '../../../lib/theme';
 import { SavedEntry, Workout } from '../../../lib/types';
+import { locale } from '../../../lib/i18n';
 
 const VIS: { id: Workout['visibility']; label: string }[] = [{ id: 'everyone', label: 'Everyone' }, { id: 'followers', label: 'Followers' }, { id: 'private', label: 'Only me' }];
 
@@ -47,7 +49,7 @@ export default function EditWorkout() {
   const t0 = new Date(w.date);
   const withDay = (d: Date) => { const x = new Date(d); x.setHours(t0.getHours(), t0.getMinutes(), 0, 0); return x.toISOString(); };
   const sameDay = (a: string, b: Date) => new Date(a).toDateString() === b.toDateString();
-  const label = new Date(date).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const label = new Date(date).toLocaleString(locale(), { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
   return (
     <Screen>
@@ -88,7 +90,7 @@ export default function EditWorkout() {
       </Sheet>
       <Sheet visible={dateSheet} onClose={() => setDateSheet(false)} title="Date">
         <ScrollView style={{ maxHeight: 360 }}>
-          {days.map((d, i) => <ListRow key={i} label={i === 0 ? 'Today' : i === 1 ? 'Yesterday' : d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })} last right={sameDay(date, d) ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDirty(true); setDate(withDay(d)); setDateSheet(false); }} />)}
+          {days.map((d, i) => <ListRow key={i} label={i === 0 ? 'Today' : i === 1 ? 'Yesterday' : d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' })} last right={sameDay(date, d) ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDirty(true); setDate(withDay(d)); setDateSheet(false); }} />)}
         </ScrollView>
       </Sheet>
       <Dialog visible={ask} title="Discard changes?" message="Your edits to this workout won't be saved." onClose={() => setAsk(false)}

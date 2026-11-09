@@ -1,6 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { BarChart, Card, Empty, Header, PillRow, Screen, Stat } from '../../components/ui';
 import { MUSCLES } from '../../lib/constants';
@@ -9,6 +10,7 @@ import { muscleDistribution, records, workoutSets, workoutVolume } from '../../l
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { ADVANCED } from './stats';
+import { locale } from '../../lib/i18n';
 
 export default function StatsDetail() {
   const { type } = useLocalSearchParams<{ type: string }>();
@@ -52,7 +54,7 @@ export default function StatsDetail() {
         {type === 'leaderboard' && (<View>{exercises.filter((e) => e.kind === 'weight_reps').map((e) => { const r = records(workouts, e.id); return <View key={e.id} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.id} right={<Text style={{ color: colors.muted }}>{r.best1rm ? fmtWeight(r.best1rm, u) : '—'}</Text>} /></View>; })}</View>)}
         {type === 'monthly' && (
           <View style={{ padding: 16, gap: 14 }}>
-            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</Text>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{new Date().toLocaleDateString(locale(), { month: 'long', year: 'numeric' })}</Text>
             <Card style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Stat label="Workouts" value={String(month.length)} /><Stat label="Duration" value={fmtDuration(month.reduce((t, w) => t + w.durationSec, 0))} /><Stat label="Volume" value={fmtVolume(month.reduce((t, w) => t + workoutVolume(w), 0), u)} /><Stat label="Sets" value={String(month.reduce((t, w) => t + workoutSets(w), 0))} /></Card>
             <BarChart data={Array.from({ length: 4 }, (_, i) => ({ label: `W${i + 1}`, value: month.filter((w) => Math.floor((new Date(w.date).getDate() - 1) / 7) === i).length }))} />
             {month.length === 0 && <Empty text="No workouts this month yet." />}

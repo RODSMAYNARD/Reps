@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from './Text';
 import { fmtDuration } from '../lib/format';
 import { elapsedSec, useNow, useStore } from '../lib/store';
 import { colors, radius } from '../lib/theme';

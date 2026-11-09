@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Badge, ExerciseLines } from '../../components/TrainerParts';
 import { Dialog, Header, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { useStore } from '../../lib/store';

@@ -1,4 +1,5 @@
-import { ScrollView, Text } from 'react-native';
+import { ScrollView } from 'react-native';
+import { Text } from '../../components/Text';
 import { Header, Screen } from '../../components/ui';
 import { colors } from '../../lib/theme';
 

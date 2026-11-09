@@ -2,13 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Text, TextInput } from '../../components/Text';
 import { NumInput } from '../../components/NumInput';
 import { Dialog, Header, HeaderAction, ListRow, Screen, Section, Sheet } from '../../components/ui';
 import { MEASURE_FIELDS } from '../../lib/constants';
 import { fromDisplayBody, fromDisplayWeight, toDisplayBody, toDisplayWeight } from '../../lib/format';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
+import { locale } from '../../lib/i18n';
 
 export default function LogMeasures() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -42,7 +44,7 @@ export default function LogMeasures() {
     <Screen>
       <Header left="cancel" title="Log Measurements" right={<HeaderAction label="Save" disabled={!any} onPress={save} />} />
       <ScrollView keyboardShouldPersistTaps="handled">
-        <ListRow label="Date" detail={date.toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })} onPress={existing ? undefined : () => setSheet(true)} last />
+        <ListRow label="Date" detail={date.toLocaleDateString(locale(), { day: '2-digit', month: 'long', year: 'numeric' })} onPress={existing ? undefined : () => setSheet(true)} last />
         <Section title="Progress photo" />
         <View style={{ paddingHorizontal: 16 }}>
           {photo ? (

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { TextInput } from 'react-native';
+import { TextInput } from '../../components/Text';
 import { Dialog, Header, HeaderAction, Screen } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';

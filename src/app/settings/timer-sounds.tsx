@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Header, ListRow, Screen } from '../../components/ui';
 import { router } from 'expo-router';
 import { useStore } from '../../lib/store';

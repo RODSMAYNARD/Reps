@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { GymIcon } from '../../components/GymIcon';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Btn, Card, Header, Screen } from '../../components/ui';
 import { CATEGORIES, PROGRAMS } from '../../lib/constants';
 import { colors, radius } from '../../lib/theme';
@@ -27,7 +29,7 @@ export default function Explore() {
           {CATEGORIES.map((c) => (
             <Pressable key={c.id} onPress={() => router.push({ pathname: '/routines/category/[id]', params: { id: c.id } })} style={{ width: '47.5%', backgroundColor: colors.surface, borderRadius: radius.md, padding: 14, minHeight: 84, justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 16, color: colors.text }}>{c.label}</Text>
-              <Ionicons name={c.icon as any} size={30} color={colors.primary} style={{ alignSelf: 'flex-end' }} />
+              <View style={{ alignSelf: 'flex-end' }}><GymIcon name={c.icon} size={32} color={colors.primary} /></View>
             </Pressable>
           ))}
         </View>

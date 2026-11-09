@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, ScrollView, Text } from 'react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
+import { Text } from '../../components/Text';
 import { Btn, Field, Header, Screen } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';

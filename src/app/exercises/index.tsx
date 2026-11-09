@@ -1,7 +1,8 @@
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { router } from 'expo-router';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { ExerciseFilterBar } from '../../components/ExerciseFilterBar';
 import { Empty, Header, HeaderAction, Screen, SearchBar } from '../../components/ui';
 import { filterExercises } from '../../lib/catalog';

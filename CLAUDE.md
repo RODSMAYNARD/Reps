@@ -200,3 +200,22 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 ## Ícones de equipamento e músculo (2026-11-07)
 - Equipamento (`exercises/equipment`) e categorias usam **Hugeicons (MIT)**, embutidos como SVG em `src/lib/gymIcons.ts` (gerado a partir do Iconify; sem rede) e desenhados por `components/GymIcon.tsx` (`react-native-svg` `SvgXml`, cor via `color`). Para trocar/adicionar: regenerar o arquivo com outro nome de ícone do conjunto `hugeicons`.
 - Músculos (`exercises/muscle`) mostram o boneco do `react-native-body-highlighter` (`BodyMap`) com o músculo pintado (frente ou costas); Cardio, Full Body e Other usam ícone. Nenhuma biblioteca aberta tem as ilustrações realistas de máquinas do Hevy: só ícones de traço.
+
+## Modo offline (2026-11-09, `lib/offline.ts`)
+- Cópia dos dados da última carga em `reps:cache:<uid>` (perfil, exercícios, até 300 treinos, rotinas, medidas). Sem internet ao abrir, o app usa a cópia (`store.offline = true`, aviso no Início); sem cópia, mostra "Can't load your data".
+- Treino salvo sem rede vai para a fila `reps:outbox:<uid>` (`Workout.pending`, "Waiting to upload" no cartão). A fila sobe sozinha (a cada 30 s, ao voltar ao app e após a carga); exercícios `cat:` são criados no banco nessa hora. Editar/apagar treino pendente mexe só na fila. Rotinas, medidas e perfil offline: mensagem "You're offline" (sem fila).
+
+## Tempo e distância (2026-11-09)
+- Tipos `duration_weight` (kg + segundos), `distance_duration` (distância + minutos) e `weight_distance` (kg + distância). Série: `seconds` → `duration_sec`, `distM` (metros) → `distance_m`. O `duration` antigo continua com os segundos em `reps`. Helpers em `lib/exerciseOptions.ts` (`setCols`, `colValue`, `colPatch`, `fmtSet`, `setHasValue`).
+- **Migração PENDENTE** `supabase/migrations/tipos_com_distancia.sql` (CHECK de `exercises.kind` + tempo/distância nas séries da rotina): o modo automático bloqueou; aplicar com aprovação do Rodrigo. Sem ela, criar exercício desses tipos falha no banco e a rotina perde tempo/distância (o treino já grava).
+
+## Idiomas (2026-11-09, `lib/i18n.ts`)
+- O código fica em inglês; `components/Text.tsx` (`Text`/`TextInput`) traduz na hora de desenhar pelo dicionário `src/i18n/pt.ts` (chave = texto em inglês exato). Todas as telas importam `Text` de `components/Text`, nunca do `react-native`. Texto montado com variáveis só traduz os pedaços literais; para frases dinâmicas usar `tr()`. Títulos das abas usam `tr()`.
+- Preferência no aparelho (`reps:lang`): Automático/English/Português (Settings > Language). A raiz remonta as telas ao trocar (`key` do Stack). Datas usam `locale()`. Nomes e passo a passo do catálogo: `catName`/`catSteps` (pt quando o idioma é pt); a busca acha pelos dois idiomas.
+- Termos do catálogo em pt padronizados por `scripts/fix-catalog-pt.py` ("na polia", "bola suíça", "leg press 45°"...). Rodar de novo depois de `build-catalog.py`.
+
+## Lembretes (2026-11-09, `lib/reminders.ts`, Settings > Reminders)
+- Locais (expo-notifications, sem servidor), reagendados por `components/ReminderSync.tsx`: dias/horário de treino (pula o dia já treinado), aviso após 3 dias sem treinar e meta semanal (aviso na sexta). Prefs em `wprefs` (`remind`, `remindDays`, `remindHour`, `remindMin`, `nudge`, `weeklyGoal`). Só no aparelho (web não agenda).
+
+## Textos legais
+- Rascunhos em `docs/legal/privacy-policy.md` e `docs/legal/terms-of-use.md` (com `[TODO]` para o Rodrigo decidir). Publicar numa URL pública antes de enviar às lojas.

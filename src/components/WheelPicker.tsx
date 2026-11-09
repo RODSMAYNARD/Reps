@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, type ScrollViewInstance, Text, View } from 'react-native';
+import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, type ScrollViewInstance, View } from 'react-native';
+import { Text } from './Text';
 import { fmtDayWheel } from '../lib/format';
 import { colors } from '../lib/theme';
 

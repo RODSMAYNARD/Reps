@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text, TextInput } from '../../components/Text';
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { NumInput } from '../../components/NumInput';
 import { RestSheet } from '../../components/pickers';

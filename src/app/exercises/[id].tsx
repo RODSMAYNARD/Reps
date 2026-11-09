@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { ScrollView, Share, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { NoteInput } from '../../components/NoteInput';
 import { ExerciseGif } from '../../components/ExerciseThumb';
-import { CAT_BY_ID } from '../../lib/catalog';
+import { CAT_BY_ID, catSteps } from '../../lib/catalog';
 import { Btn, Card, Dialog, Header, IconButton, LineChart, ListRow, PillRow, Screen, Section, Sheet, TopTabs } from '../../components/ui';
 import { fmtSet } from '../../lib/exerciseOptions';
 import { fmtDate, fmtWeight, toDisplayWeight } from '../../lib/format';
@@ -51,7 +52,7 @@ export default function ExerciseDetail() {
             <Section title="Personal records" />
             <ListRow label="Heaviest weight" detail={rec.heaviest ? fmtWeight(rec.heaviest, u) : '-'} last />
             <ListRow label="Best 1RM" detail={rec.best1rm ? fmtWeight(rec.best1rm, u) : '-'} last />
-            <ListRow label="Best set volume" detail={rec.bestSet ? `${fmtWeight(rec.bestSet.kg ?? 0, u)} × ${rec.bestSet.reps}` : '-'} last />
+            <ListRow label="Best set volume" detail={rec.bestSet ? fmtSet(rec.bestSet, ex.kind, u) : '-'} last />
             <ListRow label="Best session volume" detail={rec.bestSession ? fmtWeight(rec.bestSession, u) : '-'} last />
             <Section title="Strength level" />
             {missing > 0 || !rec.best1rm ? (
@@ -86,7 +87,7 @@ export default function ExerciseDetail() {
             <ExerciseGif catalogId={ex.catalogId} />
             <Text style={{ color: colors.muted }}>{ex.muscle} · {ex.equipment}</Text>
             {cat && <Text style={{ color: colors.text }}>Target: <Text style={{ fontWeight: '600' }}>{cat.t}</Text>{cat.s.length ? `\nSecondary: ${cat.s.join(', ')}` : ''}</Text>}
-            {(cat ? cat.i : HOWTO).map((t, i) => <Text key={i} style={{ color: colors.text, fontSize: 16 }}>{i + 1}. {t}</Text>)}
+            {(cat ? catSteps(cat) : HOWTO).map((t, i) => <Text key={i} style={{ color: colors.text, fontSize: 16 }}>{i + 1}. {t}</Text>)}
           </View>
         )}
         {tab === 'how' && (

@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Card, Header, Screen, Section, Stat } from '../../components/ui';
 import { fmtDuration, fmtVolume } from '../../lib/format';
 import { dayKey, muscleDistribution, workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
+import { locale } from '../../lib/i18n';
 
 export const ADVANCED = [
   { type: 'sets', icon: 'git-compare-outline', title: 'Sets per muscle group', sub: 'Number of sets logged per muscle group.' },
@@ -34,7 +36,7 @@ export default function Stats() {
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {days.map((d) => { const k = dayKey(d); const on = sel.includes(k); return (
               <Pressable key={k} onPress={() => setSel(on ? sel.filter((x) => x !== k) : [...sel, k])} style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10, backgroundColor: on ? colors.primary : colors.surface }}>
-                <Text style={{ color: on ? '#fff' : colors.muted, fontSize: 11 }}>{d.toLocaleDateString('en-US', { weekday: 'narrow' }).toUpperCase()}</Text>
+                <Text style={{ color: on ? '#fff' : colors.muted, fontSize: 11 }}>{d.toLocaleDateString(locale(), { weekday: 'narrow' }).toUpperCase()}</Text>
                 <Text style={{ color: on ? '#fff' : colors.text, fontWeight: '700' }}>{d.getDate()}</Text>
                 {worked.has(k) && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: on ? '#fff' : colors.primary, marginTop: 2 }} />}
               </Pressable>); })}

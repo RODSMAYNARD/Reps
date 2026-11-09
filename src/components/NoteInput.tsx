@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TextInput } from 'react-native';
+import { TextInput } from './Text';
 import { colors } from '../lib/theme';
 
 /** No navegador o campo ganha um contorno preto ao focar; aqui não queremos nada em volta. */

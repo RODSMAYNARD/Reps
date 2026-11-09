@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../../components/Text';
 import { NumberSheet, OptionSheet, range } from '../../components/pickers';
 import { Btn, Header, ListRow, Screen, TextLink } from '../../components/ui';
 import { fromDisplayWeight, toDisplayWeight } from '../../lib/format';

@@ -4,7 +4,8 @@ import * as MediaLibrary from 'expo-media-library/legacy';
 import { useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Text } from '../../components/Text';
 import Svg, { Line, Polygon } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { ExerciseThumb } from '../../components/ExerciseThumb';
@@ -14,6 +15,7 @@ import { inMonth, metricValue, Metric, tally } from '../../lib/report';
 import { dayKey } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
+import { locale } from '../../lib/i18n';
 
 const THEMES = [
   { bg: '#030A1E', fg: '#FFFFFF', sub: '#8A93A6', dim: '#0E1A33', accent: '#0A84FF', prev: '#9AA3B2' },
@@ -60,14 +62,14 @@ export default function ReportShare() {
   const y = mY || now.getFullYear(), m = mY ? mM - 1 : now.getMonth();
   const pd = new Date(y, m - 1, 1);
   const cur = inMonth(workouts, y, m), prev = inMonth(workouts, pd.getFullYear(), pd.getMonth());
-  const label = new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const prevLabel = pd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const label = new Date(y, m, 1).toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
+  const prevLabel = pd.toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
   const [page, setPage] = useState(0);
   const [bg, setBg] = useState(0);
   const t = THEMES[bg];
   const refs = useRef<unknown[]>([]);
 
-  const series = Array.from({ length: 12 }, (_, i) => { const d = new Date(y, m - 11 + i, 1); return { l: d.toLocaleDateString('en-US', { month: 'narrow' }), v: inMonth(workouts, d.getFullYear(), d.getMonth()).length }; });
+  const series = Array.from({ length: 12 }, (_, i) => { const d = new Date(y, m - 11 + i, 1); return { l: d.toLocaleDateString(locale(), { month: 'narrow' }), v: inMonth(workouts, d.getFullYear(), d.getMonth()).length }; });
   const smax = Math.max(5, ...series.map((s) => s.v));
   const tc = tally(cur, st.findExercise), tp = tally(prev, st.findExercise);
   const topMuscles = [...tc.muscles].sort((a, b) => b[1] - a[1]).slice(0, 6);

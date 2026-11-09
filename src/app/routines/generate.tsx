@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { Btn, Card, Header, Pill, Screen } from '../../components/ui';
 import { CAT_BY_ID } from '../../lib/catalog';

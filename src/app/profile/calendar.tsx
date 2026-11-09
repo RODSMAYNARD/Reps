@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Header, ListRow, Screen } from '../../components/ui';
 import { fmtDuration } from '../../lib/format';
 import { dayKey } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
+import { locale } from '../../lib/i18n';
 
 export default function CalendarScreen() {
   const { workouts } = useStore();
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
-  const raw = cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const raw = cursor.toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
   const monthLabel = raw.charAt(0).toUpperCase() + raw.slice(1);
   const first = (cursor.getDay() + 6) % 7;
   const dim = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
@@ -43,7 +45,7 @@ export default function CalendarScreen() {
           })}
         </View>
         <Text style={{ color: colors.muted, padding: 16 }}>{monthList.length} workout(s) this month</Text>
-        {monthList.map((w) => <ListRow key={w.id} label={w.title} subtitle={`${new Date(w.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })} · ${fmtDuration(w.durationSec)}`} onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} />)}
+        {monthList.map((w) => <ListRow key={w.id} label={w.title} subtitle={`${new Date(w.date).toLocaleDateString(locale(), { day: '2-digit', month: 'short' })} · ${fmtDuration(w.durationSec)}`} onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} />)}
       </ScrollView>
     </Screen>
   );

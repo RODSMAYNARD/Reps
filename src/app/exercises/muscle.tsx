@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { MuscleTile } from '../../components/MuscleTile';
 import { Btn, Header, Screen, SearchBar } from '../../components/ui';
 import { MUSCLE_OPTIONS } from '../../lib/exerciseOptions';

@@ -3,7 +3,8 @@ import { track } from '../../lib/analytics';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { BarChart, Btn, Header, Screen, Section, TopTabs } from '../../components/ui';
 import { MUSCLE_GROUPS } from '../../lib/constants';
 import { fmtDuration, fmtVolume } from '../../lib/format';
@@ -11,6 +12,7 @@ import { dayKey, workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { Workout } from '../../lib/types';
+import { locale } from '../../lib/i18n';
 
 type Metric = 'workouts' | 'duration' | 'volume' | 'sets';
 const inMonth = (ws: Workout[], y: number, m: number) => ws.filter((w) => { const d = new Date(w.date); return d.getFullYear() === y && d.getMonth() === m; });
@@ -39,11 +41,11 @@ export default function MonthlyReport() {
   const prevDate = useMemo(() => new Date(y, m - 1, 1), [y, m]);
   const cur = useMemo(() => inMonth(workouts, y, m), [workouts, y, m]);
   const prev = useMemo(() => inMonth(workouts, prevDate.getFullYear(), prevDate.getMonth()), [workouts, prevDate]);
-  const title = cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const title = cursor.toLocaleDateString(locale(), { month: 'long', year: 'numeric' });
   const shift = (n: number) => setCursor(new Date(y, m + n, 1));
   const isNow = y === new Date().getFullYear() && m === new Date().getMonth();
 
-  const series = Array.from({ length: 12 }, (_, i) => { const d = new Date(y, m - 11 + i, 1); return { label: d.toLocaleDateString('en-US', { month: 'narrow' }), value: value(inMonth(workouts, d.getFullYear(), d.getMonth()), metric) / (metric === 'duration' ? 3600 : 1) }; });
+  const series = Array.from({ length: 12 }, (_, i) => { const d = new Date(y, m - 11 + i, 1); return { label: d.toLocaleDateString(locale(), { month: 'narrow' }), value: value(inMonth(workouts, d.getFullYear(), d.getMonth()), metric) / (metric === 'duration' ? 3600 : 1) }; });
   const fmtMetric = (k: Metric, v: number) => (k === 'duration' ? fmtDuration(v) : k === 'volume' ? fmtVolume(v, u) : String(Math.round(v)));
 
   const first = (cursor.getDay() + 6) % 7;
@@ -74,7 +76,7 @@ export default function MonthlyReport() {
   const sum: { k: Metric; label: string }[] = [{ k: 'workouts', label: 'Workouts' }, { k: 'duration', label: 'Duration' }, { k: 'volume', label: 'Volume' }, { k: 'sets', label: 'Sets' }];
   return (
     <Screen>
-      <Header title={`${cursor.toLocaleDateString('en-US', { month: 'long' })} Report`} />
+      <Header title={`${cursor.toLocaleDateString(locale(), { month: 'long' })} Report`} />
       <ScrollView testID="monthly-report">
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
           <Ionicons name="chevron-back" size={24} color={colors.text} onPress={() => shift(-1)} testID="report-prev" />
@@ -123,8 +125,8 @@ export default function MonthlyReport() {
             </View>
           ))}
           <View style={{ flexDirection: 'row', gap: 16 }}>
-            <Text style={{ color: colors.faint, fontSize: 12 }}>● {prevDate.toLocaleDateString('en-US', { month: 'long' })}</Text>
-            <Text style={{ color: colors.primary, fontSize: 12 }}>● {cursor.toLocaleDateString('en-US', { month: 'long' })}</Text>
+            <Text style={{ color: colors.faint, fontSize: 12 }}>● {prevDate.toLocaleDateString(locale(), { month: 'long' })}</Text>
+            <Text style={{ color: colors.primary, fontSize: 12 }}>● {cursor.toLocaleDateString(locale(), { month: 'long' })}</Text>
           </View>
         </View>
 

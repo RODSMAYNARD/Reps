@@ -1,7 +1,8 @@
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Btn, Header, IconButton, Screen, Sheet, ListRow } from '../../components/ui';
 import { CAT_BY_EN, catKey } from '../../lib/catalog';
 import { CATEGORY_ROUTINES, PROGRAMS } from '../../lib/constants';

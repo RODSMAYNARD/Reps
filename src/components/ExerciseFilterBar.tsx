@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { track } from '../lib/analytics';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Text } from './Text';
 import { EQUIPMENT_FILTERS, MUSCLE_FILTERS, filterExercises } from '../lib/catalog';
 import { colors, radius } from '../lib/theme';
 import { Exercise } from '../lib/types';

@@ -1,7 +1,8 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Btn, Header, Screen } from '../../components/ui';
 import { fmtDate } from '../../lib/format';
 import { useStore } from '../../lib/store';

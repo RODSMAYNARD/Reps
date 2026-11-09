@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { ScrollView, Share, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { ActiveBar } from '../../components/ActiveBar';
 import { WorkoutCard } from '../../components/WorkoutCard';
 import { Avatar, BarChart, Dialog, Header, HeaderAction, IconButton, PillRow, Screen, Section, Tile } from '../../components/ui';

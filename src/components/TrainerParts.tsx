@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from './Text';
 import { colors, radius } from '../lib/theme';
 import { TrainerWorkout } from '../lib/types';
 import { useStore } from '../lib/store';

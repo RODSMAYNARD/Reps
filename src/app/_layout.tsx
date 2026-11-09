@@ -1,11 +1,15 @@
 import { Stack } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Pressable, Text, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, useColorScheme, View } from 'react-native';
+import { Text } from '../components/Text';
 import { refreshStyles } from '../components/ui';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ReminderSync } from '../components/ReminderSync';
 import { Telemetry } from '../components/Telemetry';
 import { WorkoutNotifier } from '../components/WorkoutNotifier';
 import { wrapRoot } from '../lib/monitoring';
+import { loadLang, useLang } from '../lib/i18n';
 import { StoreProvider, useStore } from '../lib/store';
 import { applyScheme, colors, type Scheme } from '../lib/theme';
 
@@ -22,7 +26,10 @@ function useScheme(): Scheme {
 function Routes() {
   const { ready, session, profile, toast, loadFailed, reload, error } = useStore();
   const scheme = useScheme();
-  if (!ready)
+  const lang = useLang();
+  const [langReady, setLangReady] = useState(false);
+  useEffect(() => { loadLang().finally(() => setLangReady(true)); }, []);
+  if (!ready || !langReady)
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center' }}>
         <ActivityIndicator color={colors.primary} />
@@ -41,7 +48,7 @@ function Routes() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack key={scheme} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack key={`${scheme}-${lang}`} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
@@ -76,6 +83,7 @@ function RootLayout() {
       <StoreProvider>
         <Routes />
         <WorkoutNotifier />
+        <ReminderSync />
         <Telemetry />
       </StoreProvider>
     </SafeAreaProvider>

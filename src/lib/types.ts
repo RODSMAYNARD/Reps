@@ -61,12 +61,15 @@ export type WorkoutPrefs = {
   sounds: boolean; defaultRestSec: number; prevMode: 'any' | 'routine';
   warmupCalc: boolean; warmupFormula: WarmupRow[]; plateRounding: number; dumbbellRounding: number;
   keepAwake: boolean; plateCalc: boolean; plateSets: Record<Units['weight'], PlateSet>; rpe: boolean; smartSuperset: boolean; inlineTimer: boolean; livePR: boolean;
+  /** Lembretes locais (Settings > Reminders): dias (0 = domingo) e horário, aviso após 3 dias sem treinar e meta de treinos por semana (0 = desligada). */
+  remind: boolean; remindDays: number[]; remindHour: number; remindMin: number; nudge: boolean; weeklyGoal: number;
 };
 export const DEFAULT_WARMUP: WarmupRow[] = [{ pct: 40, reps: 5 }, { pct: 60, reps: 5 }, { pct: 80, reps: 3 }];
 export const DEFAULT_WPREFS: WorkoutPrefs = {
   timerSound: 'default', timerVolume: 'high', checkVolume: 'off', prVolume: 'high',
   sounds: true, defaultRestSec: 90, prevMode: 'any', warmupCalc: false, warmupFormula: DEFAULT_WARMUP, plateRounding: 5, dumbbellRounding: 1,
   keepAwake: false, plateCalc: true, plateSets: DEFAULT_PLATE_SETS, rpe: false, smartSuperset: false, inlineTimer: true, livePR: true,
+  remind: false, remindDays: [1, 3, 5], remindHour: 18, remindMin: 0, nudge: false, weeklyGoal: 0,
 };
 
 export type TrainerLevel = 'beginner' | 'intermediate' | 'advanced';

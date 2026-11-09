@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { ReactNode } from 'react';
-import { Pressable, Text, TextStyle, View } from 'react-native';
+import { Pressable, TextStyle, View } from 'react-native';
+import { Text } from './Text';
 import { useStore } from '../lib/store';
 import { colors } from '../lib/theme';
 import { ExerciseThumb } from './ExerciseThumb';

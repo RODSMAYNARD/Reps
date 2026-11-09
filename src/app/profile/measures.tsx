@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Empty, Header, IconButton, LineChart, ListRow, PillRow, Screen, Section, Sheet } from '../../components/ui';
 import { MEASURE_FIELDS } from '../../lib/constants';
 import { fmtBody, fmtDate, toDisplayBody, toDisplayWeight } from '../../lib/format';

@@ -1,3 +1,4 @@
+import type { GymIcon } from './gymIcons';
 import { randomUUID } from './uuid';
 import { STAPLES } from './planner';
 import { Exercise, TrainerExercise, TrainerGoal, TrainerProgram, TrainerSettings, TrainerSplit, TrainerWorkout } from './types';
@@ -32,20 +33,20 @@ export const goalLabel = (g: TrainerGoal) => GOALS.find((x) => x.id === g)!.labe
 /** Divisão sugerida para a frequência (usada ao mudar os dias e a divisão atual não existir). */
 export const bestSplit = (days: number): TrainerSplit => (days === 5 ? 'pplul' : days === 3 ? 'ppl' : days === 4 || days === 2 ? 'ul' : 'ppl');
 
-export type EquipItem = { id: string; label: string; group: string; icon: string; sub?: string };
+export type EquipItem = { id: string; label: string; group: string; icon: GymIcon; sub?: string };
 export const EQUIP: EquipItem[] = [
-  { id: 'dumbbell', label: 'Dumbbell', group: 'Weights and Bars', icon: 'barbell-outline', sub: '2.5kg, 5kg, 7.5kg...' }, { id: 'barbell', label: 'Barbell', group: 'Weights and Bars', icon: 'remove-outline', sub: '20kg' },
-  { id: 'plate', label: 'Plate', group: 'Weights and Bars', icon: 'disc-outline', sub: '1.25kg, 2.5kg, 5kg...' }, { id: 'kettlebell', label: 'Kettlebell', group: 'Weights and Bars', icon: 'basketball-outline' },
-  { id: 'ezbar', label: 'EZ Bar', group: 'Weights and Bars', icon: 'remove-outline' }, { id: 'landmine', label: 'Landmine', group: 'Weights and Bars', icon: 'trending-up-outline' }, { id: 'trapbar', label: 'Trap Bar', group: 'Weights and Bars', icon: 'resize-outline' },
-  { id: 'pullup', label: 'Pull Up Bar', group: 'Benches and Racks', icon: 'remove-outline' }, { id: 'rack', label: 'Squat Rack', group: 'Benches and Racks', icon: 'grid-outline' },
-  { id: 'flatbench', label: 'Flat Bench', group: 'Benches and Racks', icon: 'bed-outline' }, { id: 'adjbench', label: 'Adjustable Bench', group: 'Benches and Racks', icon: 'bed-outline' }, { id: 'dipbar', label: 'Dip Bar', group: 'Benches and Racks', icon: 'accessibility-outline' },
-  { id: 'cable1', label: 'Single Cable Machine', group: 'Machines', icon: 'git-merge-outline' }, { id: 'cable2', label: 'Dual Cable Machine', group: 'Machines', icon: 'git-compare-outline' }, { id: 'latpull', label: 'Lat Pulldown Cable', group: 'Machines', icon: 'arrow-down-outline' },
-  { id: 'legpress', label: 'Leg Press Machine', group: 'Machines', icon: 'fitness-outline' }, { id: 'smith', label: 'Smith Machine', group: 'Machines', icon: 'grid-outline' }, { id: 'tbar', label: 'T-bar', group: 'Machines', icon: 'remove-outline' },
-  { id: 'stack', label: 'Stack Machines', group: 'Machines', icon: 'layers-outline' }, { id: 'platem', label: 'Plate Machines', group: 'Machines', icon: 'disc-outline' },
-  { id: 'treadmill', label: 'Treadmill', group: 'Cardio', icon: 'walk-outline' }, { id: 'rower', label: 'Rowing Machine', group: 'Cardio', icon: 'boat-outline' }, { id: 'spin', label: 'Spinning', group: 'Cardio', icon: 'bicycle-outline' },
-  { id: 'elliptical', label: 'Elliptical Trainer', group: 'Cardio', icon: 'footsteps-outline' }, { id: 'stairs', label: 'Stair Machine', group: 'Cardio', icon: 'trending-up-outline' }, { id: 'airbike', label: 'Air Bike', group: 'Cardio', icon: 'bicycle-outline' },
-  { id: 'susp', label: 'Suspension Band', group: 'Other', icon: 'link-outline' }, { id: 'band', label: 'Resistance Band', group: 'Other', icon: 'reorder-two-outline' }, { id: 'rope', label: 'Battle Rope', group: 'Other', icon: 'infinite-outline' },
-  { id: 'rings', label: 'Rings', group: 'Other', icon: 'ellipse-outline' }, { id: 'jumprope', label: 'Jump Rope', group: 'Other', icon: 'infinite-outline' }, { id: 'medball', label: 'Medicine Ball', group: 'Other', icon: 'football-outline' }, { id: 'other', label: 'Other', group: 'Other', icon: 'ellipsis-horizontal-circle-outline' },
+  { id: 'dumbbell', label: 'Dumbbell', group: 'Weights and Bars', icon: 'dumbbell', sub: '2.5kg, 5kg, 7.5kg...' }, { id: 'barbell', label: 'Barbell', group: 'Weights and Bars', icon: 'barbell', sub: '20kg' },
+  { id: 'plate', label: 'Plate', group: 'Weights and Bars', icon: 'plate', sub: '1.25kg, 2.5kg, 5kg...' }, { id: 'kettlebell', label: 'Kettlebell', group: 'Weights and Bars', icon: 'kettlebell' },
+  { id: 'ezbar', label: 'EZ Bar', group: 'Weights and Bars', icon: 'ezbar' }, { id: 'landmine', label: 'Landmine', group: 'Weights and Bars', icon: 'landmine' }, { id: 'trapbar', label: 'Trap Bar', group: 'Weights and Bars', icon: 'barbell' },
+  { id: 'pullup', label: 'Pull Up Bar', group: 'Benches and Racks', icon: 'pullup' }, { id: 'rack', label: 'Squat Rack', group: 'Benches and Racks', icon: 'rack' },
+  { id: 'flatbench', label: 'Flat Bench', group: 'Benches and Racks', icon: 'bench' }, { id: 'adjbench', label: 'Adjustable Bench', group: 'Benches and Racks', icon: 'bench' }, { id: 'dipbar', label: 'Dip Bar', group: 'Benches and Racks', icon: 'fullbody' },
+  { id: 'cable1', label: 'Single Cable Machine', group: 'Machines', icon: 'cable' }, { id: 'cable2', label: 'Dual Cable Machine', group: 'Machines', icon: 'cable' }, { id: 'latpull', label: 'Lat Pulldown Cable', group: 'Machines', icon: 'cable' },
+  { id: 'legpress', label: 'Leg Press Machine', group: 'Machines', icon: 'legpress' }, { id: 'smith', label: 'Smith Machine', group: 'Machines', icon: 'rack' }, { id: 'tbar', label: 'T-bar', group: 'Machines', icon: 'barbell' },
+  { id: 'stack', label: 'Stack Machines', group: 'Machines', icon: 'machine' }, { id: 'platem', label: 'Plate Machines', group: 'Machines', icon: 'platemachine' },
+  { id: 'treadmill', label: 'Treadmill', group: 'Cardio', icon: 'cardio' }, { id: 'rower', label: 'Rowing Machine', group: 'Cardio', icon: 'rower' }, { id: 'spin', label: 'Spinning', group: 'Cardio', icon: 'bike' },
+  { id: 'elliptical', label: 'Elliptical Trainer', group: 'Cardio', icon: 'walk' }, { id: 'stairs', label: 'Stair Machine', group: 'Cardio', icon: 'stairs' }, { id: 'airbike', label: 'Air Bike', group: 'Cardio', icon: 'bike' },
+  { id: 'susp', label: 'Suspension Band', group: 'Other', icon: 'suspension' }, { id: 'band', label: 'Resistance Band', group: 'Other', icon: 'band' }, { id: 'rope', label: 'Battle Rope', group: 'Other', icon: 'battlerope' },
+  { id: 'rings', label: 'Rings', group: 'Other', icon: 'suspension' }, { id: 'jumprope', label: 'Jump Rope', group: 'Other', icon: 'jumprope' }, { id: 'medball', label: 'Medicine Ball', group: 'Other', icon: 'ball' }, { id: 'other', label: 'Other', group: 'Other', icon: 'other' },
 ];
 const ALL_IDS = EQUIP.map((e) => e.id);
 export const PRESETS: { id: string; label: string; ids: string[] }[] = [

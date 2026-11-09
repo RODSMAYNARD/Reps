@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { Dialog, Empty, Header, Screen } from '../../components/ui';
 import { fmtDate } from '../../lib/format';
 import { useStore } from '../../lib/store';

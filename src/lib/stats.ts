@@ -1,5 +1,6 @@
 import { MUSCLE_GROUPS } from './constants';
 import { Exercise, SetRow, Workout } from './types';
+import { locale } from './i18n';
 
 export const setVolume = (s: SetRow) => (s.type === 'warmup' ? 0 : (s.kg ?? 0) * (s.reps ?? 0));
 export const workoutVolume = (w: Workout) => w.entries.reduce((t, e) => t + e.sets.reduce((a, s) => a + setVolume(s), 0), 0);
@@ -95,7 +96,7 @@ export function weeklySeries(workouts: Workout[], metric: 'duration' | 'volume' 
       (t, w) => t + (metric === 'duration' ? w.durationSec / 3600 : metric === 'volume' ? workoutVolume(w) : w.entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.reps ?? 0), 0), 0)),
       0,
     );
-    return { label: from.toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' }), value };
+    return { label: from.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' }), value };
   });
 }
 

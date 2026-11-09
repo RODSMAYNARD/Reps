@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
+import { Text } from '../../components/Text';
 import { ActiveBar } from '../../components/ActiveBar';
 import { Btn, Card, Dialog, Header, IconButton, ListRow, Screen, Section, Sheet, Tile } from '../../components/ui';
 import { useStore } from '../../lib/store';

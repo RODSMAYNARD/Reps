@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Share, Text, View } from 'react-native';
+import { ScrollView, Share, View } from 'react-native';
+import { Text } from '../../../components/Text';
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { WorkoutMenu } from '../../../components/WorkoutMenu';
 import { Avatar, Header, IconButton, ListRow, Screen, Section, Stat } from '../../../components/ui';
