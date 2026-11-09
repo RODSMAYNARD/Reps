@@ -127,7 +127,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - RevenueCat iOS usa a chave de compras (.p8) já existente da equipe Apple; falta a chave da App Store Connect API (importar produtos). Android: falta o JSON da conta de serviço do Google Play.
 - Falta criar nas lojas e ligar no RevenueCat: produtos `reps_pro_monthly`, `reps_pro_annual` (intro offer 7 dias), `reps_pro_annual_offer` (idem); pacotes $rc_monthly + $rc_annual na `default` e $rc_annual = reps_pro_annual_offer na `exit_offer`; anexar os produtos ao entitlement `pro`.
 - Sentry: `SENTRY_DISABLE_AUTO_UPLOAD=true` nos perfis do `eas.json` até existir o segredo `SENTRY_AUTH_TOKEN` no expo.dev + org `rodsappz`/projeto `reps` no plugin (sem isso o stack trace fica minificado). Exige build novo.
-- TestFlight: grupos internos `Internal Testers` (distribuição automática) e `Team (Expo)`; testador = `rodsappz@gmail.com` (único usuário da equipe Apple). `rodrigo.maynard@gmail.com` só entra como testador interno se for convidado em Users and Access. Há um aviso de novo contrato da Apple para o Account Holder aceitar.
+- TestFlight: grupos internos `Internal Testers` (distribuição automática) e `Team (Expo)`; testador = `rodsappz@gmail.com` (único usuário da equipe Apple). `rodrigo.maynard@gmail.com` só entra como testador interno se for convidado em Users and Access. Contratos da Apple em dia (conferido em 2026-11-09): License Agreement aceito em 2026-11-05, acordos de apps pagos e gratuitos ativos até 2026-12-23 (renovação da conta, £79/ano, automática no cartão).
 - Falta: política de privacidade, apagar conta, consentimento (UE), gravação de sessão (pacote nativo extra do PostHog).
 
 ## Pendências
