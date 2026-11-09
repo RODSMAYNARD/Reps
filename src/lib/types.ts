@@ -42,6 +42,8 @@ export type Workout = {
   routineId?: string | null;
   location?: string | null;
   fromTrainer?: boolean;
+  /** Salvo sem internet, ainda na fila para subir (só no aparelho). */
+  pending?: boolean;
 };
 
 export type RoutineExercise = { unit?: Units['weight']; exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };

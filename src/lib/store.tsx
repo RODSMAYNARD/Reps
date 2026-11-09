@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { randomUUID } from './uuid';
+import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { track } from './analytics';
 import { reportError } from './monitoring';
 import { noteFields, notesOf, workoutText } from './notes';
+import { isNetworkError, OFFLINE_MSG, readOutbox, readSnapshot, saveSnapshot, writeOutbox, type PendingWorkout } from './offline';
 import { playSound } from './sounds';
 import { prFlags, records } from './stats';
 import { CYCLE_WEEKS, generateProgram, suggestSets } from './trainer';
@@ -20,6 +22,12 @@ const EMPTY_PROFILE: Profile = { username: '', displayName: '', bio: '', link: '
 export const elapsedSec = (a: ActiveWorkout, now = Date.now()) => {
   const end = a.pausedAt ? new Date(a.pausedAt).getTime() : now;
   return Math.max(0, Math.floor((end - new Date(a.startedAt).getTime() - a.pausedMs) / 1000));
+};
+
+/** Junta os treinos da fila (ainda não enviados) à lista do servidor, sem repetir, do mais novo para o mais antigo. */
+const mergePending = (queued: Workout[], server: Workout[]) => {
+  const ids = new Set(server.map((w) => w.id));
+  return [...queued.filter((w) => !ids.has(w.id)).map((w) => ({ ...w, pending: true })), ...server].sort((a, b) => +new Date(b.date) - +new Date(a.date));
 };
 
 const byPosition = <T extends { position: number }>(rows: T[] | null | undefined) => [...(rows ?? [])].sort((a, b) => a.position - b.position);
@@ -72,6 +80,10 @@ type Store = {
   /** true quando a carga inicial dos dados falhou (rede/servidor): a raiz mostra "tentar de novo" em vez de cair no onboarding. */
   loadFailed: boolean;
   reload: () => void;
+  /** Sem conexão com o servidor: o app mostra a cópia salva no aparelho e guarda os treinos novos numa fila. */
+  offline: boolean;
+  /** Treinos salvos sem internet esperando para subir. */
+  pendingCount: number;
   // exercícios
   addExercise: (x: Omit<Exercise, 'id'>) => Promise<Exercise | null>;
   removeExercise: (id: string) => Promise<void>;
@@ -139,6 +151,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [reloadTick, setReloadTick] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
@@ -213,7 +227,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setToast(t);
     setTimeout(() => setToast((c) => (c === t ? null : c)), ms);
   }, []);
-  const fail = useCallback((m: string) => { setError(m); showToast(m); }, [showToast]);
+  const fail = useCallback((m: string) => { const msg = isNetworkError(m) ? OFFLINE_MSG : m; setError(msg); showToast(msg); }, [showToast]);
 
   const setActive = useCallback((fn: (a: ActiveWorkout) => ActiveWorkout | null) => {
     const next = activeRef.current ? fn(activeRef.current) : null;
@@ -237,13 +251,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try { const raw = await AsyncStorage.getItem(`reps:active:${uid}`); activeRef.current = raw ? JSON.parse(raw) : null; } catch { activeRef.current = null; }
     setActiveState(activeRef.current);
     const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id,target,secondary_muscles').order('created_at');
-    if (ex.error) { setError(ex.error.message); setLoadFailed(true); return; }
+    if (ex.error) throw ex.error;
     const assets = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}') as Record<string, string>;
     setExercises(ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id, target: r.target ?? null, secondary: r.secondary_muscles ?? [], assetUri: assets[r.id] ?? null }; }));
 
     const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'athlete';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
-    if (pr.error) { setError(pr.error.message); setLoadFailed(true); return; }
+    if (pr.error) throw pr.error;
     if (pr.data) {
       const p = pr.data;
       setProfile({ username: p.username || fallbackName, displayName: p.display_name, bio: p.bio, link: p.link, sex: p.sex, birthYear: p.birth_year, weightKg: p.weight_kg ? Number(p.weight_kg) : null, units: { ...DEFAULT_UNITS, ...p.units }, theme: p.theme, isPrivate: p.is_private, onboarded: p.onboarded });
@@ -264,15 +278,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (page.data.length < 1000) break;
     }
     if (!wk.error) wk = { data: rowsAll, error: null };
-    if (wk.error) { setError(wk.error.message); setLoadFailed(true); return; }
-    setWorkouts(wk.data!.map((w: any) => ({
+    if (wk.error) throw wk.error;
+    const queued = (await readOutbox(uid)).map((p) => p.workout);
+    setPendingCount(queued.length);
+    setWorkouts(mergePending(queued, wk.data!.map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
         exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
         sets: byPosition(e.workout_sets).map((s: any): SetRow => ({ type: s.set_type, kg: Number(s.weight), reps: s.reps })),
       })),
-    } as Workout)));
+    } as Workout))));
 
     const rt = await supabase.from('routines')
       .select('id,title,notes,routine_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,routine_sets(position,set_type,weight,reps))')
@@ -321,6 +337,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }
     setError(null);
     setLoadFailed(false);
+    setOffline(false);
   }, []);
 
   useEffect(() => {
@@ -334,23 +351,104 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Carrega os dados do servidor quando o usuário entra (busca assíncrona).
-    if (userId) load(userId, session?.user.email ?? 'user').catch((e) => { setError(String(e?.message ?? e)); setLoadFailed(true); }).finally(() => setReady(true));
+    if (!userId) return;
+    load(userId, session?.user.email ?? 'user')
+      .catch(async (e) => {
+        // sem internet: abre com a cópia da última carga (e os treinos que estão na fila); sem cópia, mostra "tentar de novo"
+        const snap = await readSnapshot(userId);
+        if (!snap) { setError(String(e?.message ?? e)); setLoadFailed(true); return; }
+        const queued = (await readOutbox(userId)).map((p) => p.workout);
+        exRef.current = snap.exercises;
+        setExercises(snap.exercises); setProfile(snap.profile); setRoutines(snap.routines); setMeasurements(snap.measurements);
+        setWorkouts(mergePending(queued, snap.workouts));
+        setPendingCount(queued.length);
+        const safe = (s: string | null) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
+        trainerRef.current = safe(await AsyncStorage.getItem(`reps:trainer:${userId}`).catch(() => null));
+        prefsRef.current = { ...DEFAULT_WPREFS, ...(safe(await AsyncStorage.getItem(`reps:wprefs:${userId}`).catch(() => null)) ?? {}) };
+        const pn = safe(await AsyncStorage.getItem(`reps:pinned:${userId}`).catch(() => null));
+        pinnedRef.current = { exercise: {}, routine: {}, ...(pn ?? {}) };
+        setTrainerState(trainerRef.current); setWprefsState(prefsRef.current);
+        setError(null); setLoadFailed(false); setOffline(true);
+      })
+      .finally(() => setReady(true));
   }, [userId, session?.user.email, load, reloadTick]);
 
-  const ensure = useCallback(async (ids: string[]): Promise<string[]> => {
+  /** Cria no banco os exercícios do catálogo usados (`cat:<id>`) e devolve os ids reais. Com erro, devolve os ids como vieram + o erro. */
+  const ensureRaw = useCallback(async (ids: string[]): Promise<{ ids: string[]; error: { message: string } | null }> => {
       const have = new Map(exRef.current.filter((e) => e.catalogId).map((e) => [e.catalogId!, e.id]));
       const missing = [...new Set(ids.filter((id) => id.startsWith('cat:')).map((id) => id.slice(4)).filter((cid) => !have.has(cid)))];
       if (missing.length) {
         const rows = missing.flatMap((cid) => { const c = CAT_BY_ID.get(cid); return c ? [{ name: c.n, muscle: c.m, equipment: c.e, kind: c.k, catalog_id: cid }] : []; });
         const { data, error: e } = await supabase.from('exercises').insert(rows).select('id,name,muscle,equipment,kind,catalog_id');
-        if (e) { fail(e.message); return ids; }
+        if (e) return { ids, error: e };
         const added: Exercise[] = data.map((r: any) => { const c = CAT_BY_ID.get(r.catalog_id); return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id }; });
         added.forEach((a) => have.set(a.catalogId!, a.id));
         exRef.current = [...exRef.current.filter((x) => !added.some((a) => a.id === x.id)), ...added];
         setExercises(exRef.current);
       }
-      return ids.map((id) => (id.startsWith('cat:') ? have.get(id.slice(4)) ?? id : id));
-  }, [fail]);
+      return { ids: ids.map((id) => (id.startsWith('cat:') ? have.get(id.slice(4)) ?? id : id)), error: null };
+  }, []);
+  const ensure = useCallback(async (ids: string[]): Promise<string[]> => {
+    const r = await ensureRaw(ids);
+    if (r.error) fail(r.error.message);
+    return r.ids;
+  }, [ensureRaw, fail]);
+
+  /** Envia os treinos da fila (salvos sem internet), um a um e na ordem. Para no primeiro erro. */
+  const flushing = useRef(false);
+  const flushOutbox = useCallback(async () => {
+    if (!userId || flushing.current) return;
+    flushing.current = true;
+    try {
+      let list = await readOutbox(userId);
+      while (list.length) {
+        const { workout: w, fromTrainer } = list[0];
+        const uniq = [...new Set(w.entries.map((e) => e.exerciseId))];
+        const r = await ensureRaw(uniq);
+        if (r.error) break;
+        const idMap = new Map(uniq.map((id, k) => [id, r.ids[k]]));
+        const entries = w.entries.map((e) => ({ ...e, exerciseId: idMap.get(e.exerciseId) ?? e.exerciseId }));
+        const res = await saveWorkoutRpc({ id: w.id, date: w.date, title: w.title, description: w.description, durationSec: w.durationSec, visibility: w.visibility, routineId: w.routineId ?? null, location: w.location ?? null, fromTrainer }, entries)
+          .then((x) => x.error, (x) => x as { message: string });
+        if (res) { if (!isNetworkError(res)) reportError(res, { where: 'outbox' }); break; }
+        list = list.slice(1);
+        await writeOutbox(userId, list);
+        setWorkouts((l) => l.map((x) => (x.id === w.id ? { ...w, entries, pending: undefined } : x)));
+      }
+      setPendingCount(list.length);
+    } finally { flushing.current = false; }
+  }, [userId, ensureRaw]);
+  /** Coloca (ou substitui) um treino na fila. */
+  const enqueue = useCallback(async (p: PendingWorkout) => {
+    if (!userId) return;
+    const list = [...(await readOutbox(userId)).filter((x) => x.workout.id !== p.workout.id), p];
+    await writeOutbox(userId, list);
+    setPendingCount(list.length);
+  }, [userId]);
+
+  // Tenta voltar a falar com o servidor e enviar a fila: ao abrir/voltar ao app e a cada 30 s enquanto estiver offline ou houver fila.
+  useEffect(() => {
+    if (!userId || !ready || (!offline && !pendingCount)) return;
+    const tick = async () => {
+      if (offline) {
+        const ping = await supabase.from('profiles').select('user_id').limit(1).then((x) => x.error, (x) => x);
+        if (!ping) setReloadTick((n) => n + 1);
+        return;
+      }
+      flushOutbox();
+    };
+    tick();
+    const sub = AppState.addEventListener('change', (st) => { if (st === 'active') tick(); });
+    const id = setInterval(tick, 30000);
+    return () => { sub.remove(); clearInterval(id); };
+  }, [userId, ready, offline, pendingCount, flushOutbox]);
+
+  // Cópia local dos dados (para abrir sem internet). Treinos da fila ficam fora: eles vivem no outbox.
+  useEffect(() => {
+    if (!userId || !ready || loadFailed) return;
+    const t = setTimeout(() => saveSnapshot(userId, { profile, exercises, workouts: workouts.filter((w) => !w.pending), routines, measurements }), 1500);
+    return () => clearTimeout(t);
+  }, [userId, ready, loadFailed, profile, exercises, workouts, routines, measurements]);
 
   const allExercises = useMemo<Exercise[]>(() => {
     const byCat = new Map(exercises.filter((e) => e.catalogId).map((e) => [e.catalogId!, e]));
@@ -396,7 +494,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value_startWorkout = (opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string; trainerUid?: string }) => startRef.current(opts);
 
   const value = useMemo<Store>(() => ({
-    loadFailed, reload: () => setReloadTick((n) => n + 1), ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
+    loadFailed, offline, pendingCount, reload: () => setReloadTick((n) => n + 1), ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
     ensureExercises: ensure,
     findExercise: (id) => lookup.get(id),
     wprefs,
@@ -427,7 +525,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const r = await supabase.functions.invoke('delete-account', { method: 'POST' });
       if (r.error || r.data?.error) return r.data?.error ?? r.error?.message ?? 'Could not delete the account.';
       track('account_deleted');
-      if (uid) await AsyncStorage.multiRemove(['reps:active:', 'reps:trainer:', 'reps:wprefs:', 'reps:pinned:', 'reps:report-dismissed:'].map((k) => k + uid)).catch(() => {});
+      if (uid) await AsyncStorage.multiRemove(['reps:active:', 'reps:trainer:', 'reps:wprefs:', 'reps:pinned:', 'reps:report-dismissed:', 'reps:cache:', 'reps:outbox:'].map((k) => k + uid)).catch(() => {});
       await AsyncStorage.removeItem('reps:exassets').catch(() => {});
       await supabase.auth.signOut().catch(() => {});
       return null;
@@ -596,12 +694,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .map((e) => ({ unit: e.unit, exerciseId: e.exerciseId, notes: workoutText(notesOf(e)), restSec: e.restSec, superset: e.superset ?? null, sets: e.sets.filter((s) => s.done).map(({ done: _d, typed: _t, ...s }) => s) }))
         .filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }
-      const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
-      const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((id, k) => [id, realIds[k]]));
+      const uniq = [...new Set(entries.map((e) => e.exerciseId))];
+      const r = await ensureRaw(uniq);
+      if (r.error && !isNetworkError(r.error)) { reportError(r.error, { where: 'save-workout' }); fail(r.error.message); return null; }
+      const idMap = new Map(uniq.map((id, k) => [id, r.ids[k]]));
       entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
-      const w = await saveWorkoutRpc({ id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, routineId: a.fromRoutineId ?? null, location: meta.location || null, fromTrainer: !!a.fromTrainer }, entries);
-      if (w.error) { reportError(w.error, { where: 'save-workout' }); fail(w.error.message); return null; }
+      const err = r.error ?? await saveWorkoutRpc({ id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, routineId: a.fromRoutineId ?? null, location: meta.location || null, fromTrainer: !!a.fromTrainer }, entries)
+        .then((x) => x.error, (x) => x as { message: string });
+      if (err && !isNetworkError(err)) { reportError(err, { where: 'save-workout' }); fail(err.message); return null; }
       const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null, location: meta.location || null };
+      // sem internet: o treino fica no aparelho e sobe sozinho quando a conexão voltar
+      if (err) { saved.pending = true; await enqueue({ workout: saved, fromTrainer: !!a.fromTrainer }); showToast('Saved on this device. It will upload when you are back online.', 4000); }
       if (a.fromTrainer) { saved.fromTrainer = true; advanceTrainer(a.fromTrainer); }
       track('workout_finished', {
         source: a.fromTrainer ? 'trainer' : a.fromRoutineId ? 'routine' : 'empty', duration_min: Math.round(meta.durationSec / 60),
@@ -621,6 +724,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     updateWorkout: async (id, patch) => {
       const old = wkRef.current.find((w) => w.id === id);
       if (!old) return false;
+      if (old.pending) {
+        // ainda na fila: só troca a versão que vai subir
+        const next: Workout = { ...old, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries: patch.entries.map((e) => ({ ...e, sets: e.sets.filter((x) => (x.reps ?? 0) > 0 || (x.kg ?? 0) > 0) })).filter((e) => e.sets.length > 0) };
+        if (!next.entries.length) { fail('A workout needs at least one set.'); return false; }
+        await enqueue({ workout: next, fromTrainer: !!old.fromTrainer });
+        setWorkouts((l) => l.map((w) => (w.id === id ? next : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
+        return true;
+      }
       const entries = patch.entries.map((e) => ({ ...e, sets: e.sets.filter((x) => (x.reps ?? 0) > 0 || (x.kg ?? 0) > 0) })).filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('A workout needs at least one set.'); return false; }
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
@@ -632,6 +743,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return true;
     },
     deleteWorkout: async (id) => {
+      if (wkRef.current.find((w) => w.id === id)?.pending && userId) {
+        const list = (await readOutbox(userId)).filter((x) => x.workout.id !== id);
+        await writeOutbox(userId, list);
+        setPendingCount(list.length);
+        setWorkouts((l) => l.filter((w) => w.id !== id));
+        return;
+      }
       const { error: e } = await supabase.from('workouts').delete().eq('id', id);
       if (e) return fail(e.message);
       setWorkouts((l) => l.filter((w) => w.id !== id));
@@ -693,7 +811,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (e) { fail(e.message); return false; }
       return true;
     },
-  }), [loadFailed, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes]);
+  }), [loadFailed, offline, pendingCount, ensureRaw, enqueue, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes]);
 
   useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

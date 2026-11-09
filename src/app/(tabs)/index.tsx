@@ -13,7 +13,7 @@ import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 
 export default function Home() {
-  const { workouts, startWorkout, session } = useStore();
+  const { workouts, startWorkout, session, offline, pendingCount } = useStore();
   const [target, setTarget] = useState<string | null>(null);
   const streak = weekStreak(workouts);
   const pm = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
@@ -27,6 +27,16 @@ export default function Home() {
 
   const header = (
     <View>
+      {(offline || pendingCount > 0) && (
+        <View testID="offline-banner" style={{ marginHorizontal: 16, marginBottom: 8, padding: 12, borderRadius: radius.md, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Ionicons name={offline ? 'cloud-offline-outline' : 'cloud-upload-outline'} size={22} color={colors.muted} />
+          <Text style={{ flex: 1, color: colors.text }}>
+            {offline ? 'You are offline. Showing data saved on this device.' : ''}
+            {offline && pendingCount > 0 ? ' ' : ''}
+            {pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'workout is' : 'workouts are'} waiting to upload.` : ''}
+          </Text>
+        </View>
+      )}
       {FEATURES.watch && false && (
         <View style={{ padding: 16, gap: 10, borderBottomWidth: 8, borderBottomColor: colors.surface, alignItems: 'center' }}>
           <Ionicons name="watch-outline" size={64} color={colors.text} />
