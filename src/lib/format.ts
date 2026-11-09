@@ -11,6 +11,10 @@ export const fmtVolume = (kg: number, u: Units) => {
   const v = toDisplayWeight(kg, u);
   return `${Math.round(v).toLocaleString('en-US')} ${u.weight}`;
 };
+export const MI = 1609.344;
+export const toDisplayDist = (m: number, u: Units) => (u.distance === 'mi' ? m / MI : m / 1000);
+export const fromDisplayDist = (v: number, u: Units) => (u.distance === 'mi' ? v * MI : v * 1000);
+export const fmtDist = (m: number, u: Units) => `${Math.round(toDisplayDist(m, u) * 100) / 100} ${u.distance}`;
 export const fmtBody = (cm: number, u: Units) => `${r1(u.body === 'cm' ? cm : cm * IN)} ${u.body}`;
 export const toDisplayBody = (cm: number, u: Units) => (u.body === 'cm' ? cm : cm * IN);
 export const fromDisplayBody = (v: number, u: Units) => (u.body === 'cm' ? v : v / IN);

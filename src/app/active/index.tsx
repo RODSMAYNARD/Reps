@@ -18,7 +18,7 @@ import { SwapPanel } from '../../components/SwapPanel';
 import { SwipeRow } from '../../components/SwipeRow';
 import { notesOf } from '../../lib/notes';
 import { PlateSheet } from '../../components/PlateSheet';
-import { hasWeight, weightHeader } from '../../lib/exerciseOptions';
+import { colDecimal, colHeader, colPatch, colValue, fmtSet, hasWeight, setCols, weightHeader } from '../../lib/exerciseOptions';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
 import { fmtClock, fmtDurationLive, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
@@ -256,7 +256,7 @@ export default function ActiveWorkoutScreen() {
                 <Pressable onPress={() => setHelp(HELP.sets)} hitSlop={6} style={{ width: 38 }} testID="help-set"><Text style={h.c}>SET</Text></Pressable>
                 <Pressable onPress={() => setHelp(HELP.previous)} hitSlop={6} style={{ flex: 1.3 }} testID="help-previous"><Text style={h.c}>PREVIOUS</Text></Pressable>
                 {hasWeight(kind) && <Pressable onPress={() => setWsheet(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="weight-header" hitSlop={8}><Ionicons name="barbell-outline" size={14} color={colors.muted} /><Text style={h.c}>{weightHeader(kind, eu.weight)}</Text></Pressable>}
-                <Pressable onPress={() => setHelp(kind === 'duration' ? HELP.time : HELP.reps)} hitSlop={6} style={{ flex: 1 }} testID="help-reps"><Text style={h.c}>{kind === 'duration' ? 'SEC' : 'REPS'}</Text></Pressable>
+                {setCols(kind).map((c) => <Pressable key={c} onPress={() => setHelp(c === 'dist' ? HELP.distance : c === 'reps' && kind !== 'duration' ? HELP.reps : HELP.time)} hitSlop={6} style={{ flex: 1 }} testID={`help-${c}`}><Text style={h.c}>{colHeader(c, kind, eu)}</Text></Pressable>)}
                 <Pressable onPress={() => setHelp(HELP.complete)} hitSlop={6} style={{ width: 38 }} testID="help-complete"><Text style={h.c}>✓</Text></Pressable>
               </View>
               {e.sets.map((s, j) => {
@@ -271,15 +271,15 @@ export default function ActiveWorkoutScreen() {
                     </Pressable>
                     <Pressable
                       style={{ flex: 1.3, alignItems: 'center' }}
-                      onPress={() => prev && st.patchSet(i, j, { kg: prev.kg, reps: prev.reps, typed: true })}>
-                      <Text style={{ color: colors.faint, fontSize: 14 }}>{prev ? (hasWeight(kind) ? `${Math.round(toDisplayWeight(prev.kg ?? 0, eu) * 10) / 10}${eu.weight} × ${prev.reps}` : String(prev.reps)) : '-'}</Text>
+                      onPress={() => prev && st.patchSet(i, j, { kg: prev.kg, reps: prev.reps, seconds: prev.seconds, distM: prev.distM, typed: true })}>
+                      <Text style={{ color: colors.faint, fontSize: 14 }} numberOfLines={1}>{prev ? fmtSet(prev, kind, eu).replace(' kg ', 'kg ').replace(' lbs ', 'lbs ') : '-'}</Text>
                     </Pressable>
                     {hasWeight(kind) && (
                       <View style={{ flex: 1, paddingHorizontal: 6 }}>
                         <NumInput decimal style={inputStyle(s.done)} testID="kg" onFocus={() => { if (blurTimer.current) clearTimeout(blurTimer.current); setKgFocus({ i, j }); }} onBlur={() => { blurTimer.current = setTimeout(() => setKgFocus((f) => (f && f.i === i && f.j === j ? null : f)), 600); }} value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} onChange={(v) => st.patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, eu), typed: true })} />
                       </View>
                     )}
-                    <View style={{ flex: 1, paddingHorizontal: 6 }}><NumInput style={inputStyle(s.done)} testID="reps" value={s.reps} onChange={(v) => st.patchSet(i, j, { reps: v, typed: true })} /></View>
+                    {setCols(kind).map((c) => <View key={c} style={{ flex: 1, paddingHorizontal: 6 }}><NumInput decimal={colDecimal(c)} style={inputStyle(s.done)} testID={c === 'reps' ? 'reps' : `set-${c}`} value={colValue(s, c, eu)} onChange={(v) => st.patchSet(i, j, { ...colPatch(c, v, eu), typed: true })} /></View>)}
                     <Pressable onPress={() => { st.toggleSet(i, j); if (!s.done) setSwapOpen((o) => (o[uid] ? { ...o, [uid]: false } : o)); }} testID="check" style={{ width: 38, alignItems: 'center' }}>
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.success : colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="checkmark" size={18} color={s.done ? '#fff' : colors.faint} />
@@ -509,7 +509,8 @@ const HELP = {
   sets: { title: 'Sets', text: 'Sets are used to indicate in which cycle of the exercise you are in. The options are: warm up, normal, failure and drop set.' },
   previous: { title: 'Previous', text: 'In the "Previous" column, you will find your past performance of that exercise on that specific set.' },
   reps: { title: 'Repetitions', text: 'Repetitions indicate how many times you performed that exercise per set. You should only log completed reps.' },
-  time: { title: 'Time', text: 'Time is the number of seconds you held or performed that exercise in the set. Only log the time you completed.' },
+  distance: { title: 'Distance', text: 'Distance covered in the set, in your distance unit (Settings > Units).' },
+  time: { title: 'Time', text: 'Time you held or performed the exercise in the set (seconds or minutes, as the column shows). Only log the time you completed.' },
   hide: { title: 'Hide only for this workout', text: 'Hides this exercise only in the workout you are doing now. Nothing is deleted: it is not counted in the volume and is not saved with this workout. The next time you do this workout or routine, the exercise appears normally. To bring it back now, tap the hidden exercises row at the bottom of the list.' },
   swap: { title: 'Swap', text: 'Is the gym packed, or do you just want to change the stimulus a little? Pick another exercise that trains the same muscle and use it instead, only in this workout. Your routine does not change, and next time the original comes back. To keep the new exercise for good, open the ⋮ menu of the exercise and choose "Make main exercise".' },
   volume: 'Volume is the aggregate of all the weight lifted in your current workout. Warm-up sets are included.',

@@ -4,7 +4,8 @@ import { AppState, Platform } from 'react-native';
 import { fmtClock, toDisplayWeight } from '../lib/format';
 import { TIMER_SOUNDS, notificationSoundFile, playTimerSound } from '../lib/sounds';
 import { useStore } from '../lib/store';
-import { ActiveWorkout, Units } from '../lib/types';
+import { fmtSet } from '../lib/exerciseOptions';
+import { ActiveWorkout, ExerciseKind, Units } from '../lib/types';
 
 const LIVE = 'workout-live';
 const REST_END = 'rest-end';
@@ -33,14 +34,15 @@ async function setup() {
 }
 
 /** Primeira série ainda não feita: exercício, nº da série e valores. */
-function nextSet(a: ActiveWorkout, u: Units, name: (id: string) => string | undefined) {
+function nextSet(a: ActiveWorkout, u: Units, name: (id: string) => string | undefined, kindOf: (id: string) => ExerciseKind | undefined = () => undefined) {
   for (let i = 0; i < a.entries.length; i++) {
     const e = a.entries[i];
     if (e.hidden) continue;
     const j = e.sets.findIndex((s) => !s.done);
     if (j < 0) continue;
     const s = e.sets[j];
-    const val = s.kg ? `${Math.round(toDisplayWeight(s.kg, u) * 10) / 10} ${u.weight} x ${s.reps ?? 0} reps` : `${s.reps ?? 0} reps`;
+    const k = kindOf(e.exerciseId);
+    const val = !k || k === 'weight_reps' ? (s.kg ? `${Math.round(toDisplayWeight(s.kg, u) * 10) / 10} ${u.weight} x ${s.reps ?? 0} reps` : `${s.reps ?? 0} reps`) : fmtSet(s, k, u);
     return { i, j, title: name(e.exerciseId) ?? 'Workout', text: `Set ${j + 1}/${e.sets.length} - ${val}` };
   }
   return null;
@@ -80,7 +82,7 @@ export function WorkoutNotifier() {
       else if (id === 'minus15') s.adjustRest(-15);
       else if (id === 'plus15') s.adjustRest(15);
       else if (id === 'complete' && s.active) {
-        const n = nextSet(s.active, s.profile.units, (x) => s.findExercise(x)?.name);
+        const n = nextSet(s.active, s.profile.units, (x) => s.findExercise(x)?.name, (x) => s.findExercise(x)?.kind);
         if (n) s.toggleSet(n.i, n.j);
       }
     });
@@ -95,7 +97,7 @@ export function WorkoutNotifier() {
         const bg = bgRef.current;
         if (!active || !bg) { await Notifications.dismissNotificationAsync(LIVE).catch(() => {}); return; }
         if (!ready.current) await setup();
-        const n = nextSet(active, profile.units, (x) => st.findExercise(x)?.name);
+        const n = nextSet(active, profile.units, (x) => st.findExercise(x)?.name, (x) => st.findExercise(x)?.kind);
         const left = rest ? Math.max(0, Math.round((rest.endsAt - Date.now()) / 1000)) : 0;
         const resting = !!rest && left > 0;
         if (!alive) return;
@@ -125,7 +127,7 @@ export function WorkoutNotifier() {
   useEffect(() => {
     Notifications.cancelScheduledNotificationAsync(REST_END).catch(() => {});
     if (!rest || rest.endsAt <= Date.now() + 1000) return;
-    const n = active ? nextSet(active, profile.units, (x) => st.findExercise(x)?.name) : null;
+    const n = active ? nextSet(active, profile.units, (x) => st.findExercise(x)?.name, (x) => st.findExercise(x)?.kind) : null;
     Notifications.scheduleNotificationAsync({
       identifier: REST_END,
       content: { title: 'Rest is over', body: n ? `${n.title} — ${n.text}` : 'Time for your next set.', sound: audible ? notificationSoundFile(wprefs.timerSound) : undefined, data: { restEnd: true } },

@@ -11,7 +11,8 @@ import { BodyMap, Region, regionsOf } from '../../components/BodyMap';
 import { Confetti } from '../../components/Confetti';
 import { Btn, Screen, Sheet } from '../../components/ui';
 import { track } from '../../lib/analytics';
-import { fmtVolume, fmtWeight } from '../../lib/format';
+import { fmtSet } from '../../lib/exerciseOptions';
+import { fmtVolume } from '../../lib/format';
 import { workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
@@ -189,7 +190,7 @@ export default function WorkoutDone() {
     'Here is a workout I just finished. Please analyze it: what went well, what I could improve, and what to do next session.',
     '',
     `${w.title} — ${shortDur(w.durationSec)}, ${fmtVolume(vol, u)} total volume, ${sets} sets`,
-    ...exs.map((e) => `- ${e.ex?.name ?? 'Exercise'}: ${e.sets.map((s) => (s.kg ? `${fmtWeight(s.kg, u)} × ${s.reps ?? 0}` : `${s.reps ?? 0} reps`)).join(', ')}`),
+    ...exs.map((e) => `- ${e.ex?.name ?? 'Exercise'}: ${e.sets.map((s) => fmtSet(s, e.ex?.kind, u)).join(', ')}`),
   ].join('\n');
 
   const capture = async () => { const r = refs.current[page]; if (!r) return null; return captureRef(r as Parameters<typeof captureRef>[0], { format: 'png', quality: 1 }); };

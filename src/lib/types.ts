@@ -1,6 +1,7 @@
 import { DEFAULT_PLATE_SETS, type PlateSet } from './plates';
 export type SetType = 'warmup' | 'normal' | 'failure' | 'drop';
-export type ExerciseKind = 'weight_reps' | 'reps' | 'duration' | 'weighted_bodyweight' | 'assisted_bodyweight';
+/** `duration` (antigo) guarda os segundos em `reps`; os tipos com distância/tempo novos usam `seconds` e `distM`. */
+export type ExerciseKind = 'weight_reps' | 'reps' | 'duration' | 'weighted_bodyweight' | 'assisted_bodyweight' | 'duration_weight' | 'distance_duration' | 'weight_distance';
 export type Units = { weight: 'kg' | 'lbs'; distance: 'km' | 'mi'; body: 'cm' | 'in' };
 
 export type Profile = {
@@ -20,7 +21,7 @@ export type Profile = {
 /** `target`: músculo específico (mesmos nomes do catálogo: Lats, Traps...); `secondary`: outros músculos trabalhados; `assetUri`: imagem (só no aparelho). */
 export type Exercise = { id: string; name: string; muscle: string; equipment: string; kind: ExerciseKind; catalogId?: string | null; target?: string | null; secondary?: string[]; assetUri?: string | null };
 
-export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null };
+export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null; /** distância em metros */ distM?: number | null };
 /** `typed`: o usuário digitou kg/reps (ou tocou em PREVIOUS); ao finalizar, séries digitadas e sem ✓ passam a valer, como no Hevy. */
 export type ActiveSet = SetRow & { done: boolean; typed?: boolean };
 /** Tipo da nota do exercício: do treino (vai no post), fixada no exercício ou fixada na rotina (as fixadas não vão no post). */

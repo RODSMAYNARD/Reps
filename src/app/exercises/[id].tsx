@@ -6,6 +6,7 @@ import { NoteInput } from '../../components/NoteInput';
 import { ExerciseGif } from '../../components/ExerciseThumb';
 import { CAT_BY_ID } from '../../lib/catalog';
 import { Btn, Card, Dialog, Header, IconButton, LineChart, ListRow, PillRow, Screen, Section, Sheet, TopTabs } from '../../components/ui';
+import { fmtSet } from '../../lib/exerciseOptions';
 import { fmtDate, fmtWeight, toDisplayWeight } from '../../lib/format';
 import { exerciseSeries, records } from '../../lib/stats';
 import { useStore } from '../../lib/store';
@@ -75,7 +76,7 @@ export default function ExerciseDetail() {
             {sessions.map((w) => (
               <View key={w.id} style={{ padding: 16, gap: 4, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                 <Text onPress={() => router.push({ pathname: '/feed/workout/[id]', params: { id: w.id } })} style={{ color: colors.primary, fontWeight: '600' }}>{w.title} · {fmtDate(w.date)}</Text>
-                {w.entries.find((e) => e.exerciseId === ex.id)!.sets.map((s, i) => <Text key={i} style={{ color: colors.text }}>{i + 1}. {fmtWeight(s.kg ?? 0, u)} × {s.reps}</Text>)}
+                {w.entries.find((e) => e.exerciseId === ex.id)!.sets.map((s, i) => <Text key={i} style={{ color: colors.text }}>{i + 1}. {fmtSet(s, ex.kind, u)}</Text>)}
               </View>
             ))}
           </View>

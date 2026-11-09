@@ -4,14 +4,15 @@ import { ScrollView, Share, Text, View } from 'react-native';
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { WorkoutMenu } from '../../../components/WorkoutMenu';
 import { Avatar, Header, IconButton, ListRow, Screen, Section, Stat } from '../../../components/ui';
-import { fmtDateTime, fmtDuration, fmtVolume, fmtWeight } from '../../../lib/format';
+import { fmtSet } from '../../../lib/exerciseOptions';
+import { fmtDateTime, fmtDuration, fmtVolume } from '../../../lib/format';
 import { muscleDistribution, workoutSets, workoutVolume } from '../../../lib/stats';
 import { useStore } from '../../../lib/store';
 import { colors } from '../../../lib/theme';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { workouts, exercises, profile } = useStore();
+  const { workouts, exercises, profile, findExercise } = useStore();
   const w = workouts.find((x) => x.id === id);
   const [menu, setMenu] = useState(false);
   const [more, setMore] = useState(false);
@@ -53,7 +54,7 @@ export default function WorkoutDetail() {
             <View style={{ padding: 16, paddingBottom: 6 }}><ExerciseLabel exerciseId={e.exerciseId} nameStyle={{ color: colors.primary, fontWeight: '600' }} /></View>
             {e.notes ? <Text style={{ paddingHorizontal: 16, color: colors.muted }}>{e.notes}</Text> : null}
             <View style={{ flexDirection: 'row', paddingHorizontal: 16 }}><Text style={{ width: 50, color: colors.muted, fontSize: 12 }}>SET</Text><Text style={{ color: colors.muted, fontSize: 12 }}>WEIGHT & REPS</Text></View>
-            {e.sets.map((s, j) => <View key={j} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: j % 2 ? colors.surface : colors.bg }}><Text style={{ width: 50, fontWeight: '600', color: s.type === 'warmup' ? colors.warn : colors.text }}>{s.type === 'warmup' ? 'W' : s.type === 'failure' ? 'F' : s.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((x) => x.type === 'normal').length}</Text><Text style={{ color: colors.text }}>{fmtWeight(s.kg ?? 0, u)} × {s.reps} reps</Text></View>)}
+            {e.sets.map((s, j) => <View key={j} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: j % 2 ? colors.surface : colors.bg }}><Text style={{ width: 50, fontWeight: '600', color: s.type === 'warmup' ? colors.warn : colors.text }}>{s.type === 'warmup' ? 'W' : s.type === 'failure' ? 'F' : s.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((x) => x.type === 'normal').length}</Text><Text style={{ color: colors.text }}>{(k => !k || k === 'weight_reps' ? `${fmtSet(s, k, u)}${s.kg ? ' reps' : ''}` : fmtSet(s, k, u))(findExercise(e.exerciseId)?.kind)}</Text></View>)}
           </View>
         ))}
       </ScrollView>

@@ -6,6 +6,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { CAT_BY_ID, CATALOG, catToExercise } from './catalog';
 import { track } from './analytics';
 import { reportError } from './monitoring';
+import { setHasValue } from './exerciseOptions';
 import { noteFields, notesOf, workoutText } from './notes';
 import { isNetworkError, OFFLINE_MSG, readOutbox, readSnapshot, saveSnapshot, writeOutbox, type PendingWorkout } from './offline';
 import { playSound } from './sounds';
@@ -23,6 +24,10 @@ export const elapsedSec = (a: ActiveWorkout, now = Date.now()) => {
   const end = a.pausedAt ? new Date(a.pausedAt).getTime() : now;
   return Math.max(0, Math.floor((end - new Date(a.startedAt).getTime() - a.pausedMs) / 1000));
 };
+
+/** Tempo e distância só entram na série quando existem (tipos com distância/tempo). */
+const withExtra = (r: SetRow, s: { duration_sec?: number | null; distance_m?: number | string | null }): SetRow =>
+  ({ ...r, ...(s.duration_sec != null ? { seconds: s.duration_sec } : {}), ...(s.distance_m != null ? { distM: Number(s.distance_m) } : {}) });
 
 /** Junta os treinos da fila (ainda não enviados) à lista do servidor, sem repetir, do mais novo para o mais antigo. */
 const mergePending = (queued: Workout[], server: Workout[]) => {
@@ -47,7 +52,7 @@ const saveWorkoutRpc = (w: { id: string; date: string; title: string; descriptio
     },
     p_entries: entries.map((e) => ({
       exercise_id: e.exerciseId, notes: e.notes, rest_sec: e.restSec, superset: e.superset ?? null, weight_unit: e.unit ?? null,
-      sets: e.sets.map((s) => ({ set_type: s.type, weight: s.kg ?? 0, reps: s.reps ?? 0 })),
+      sets: e.sets.map((s) => ({ set_type: s.type, weight: s.kg ?? 0, reps: s.reps ?? 0, duration_sec: s.seconds ?? null, distance_m: s.distM ?? null })),
     })),
   });
 
@@ -271,7 +276,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let wk: { data: any[] | null; error: { message: string } | null } = { data: [], error: null };
     for (let from = 0; ; from += 1000) {
       const page = await supabase.from('workouts')
-      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type))')
+      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type,duration_sec,distance_m))')
       .order('performed_at', { ascending: false }).range(from, from + 999);
       if (page.error) { wk = { data: null, error: page.error }; break; }
       rowsAll.push(...page.data);
@@ -286,18 +291,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
         exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
-        sets: byPosition(e.workout_sets).map((s: any): SetRow => ({ type: s.set_type, kg: Number(s.weight), reps: s.reps })),
+        sets: byPosition(e.workout_sets).map((s: any): SetRow => withExtra({ type: s.set_type, kg: Number(s.weight), reps: s.reps }, s)),
       })),
     } as Workout))));
 
     const rt = await supabase.from('routines')
-      .select('id,title,notes,routine_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,routine_sets(position,set_type,weight,reps))')
+      .select('id,title,notes,routine_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,routine_sets(position,set_type,weight,reps,duration_sec,distance_m))')
       .order('created_at', { ascending: false });
     if (!rt.error) setRoutines(rt.data.map((r: any): Routine => ({
       id: r.id, title: r.title, notes: r.notes,
       exercises: byPosition(r.routine_exercises).map((e: any) => ({
         exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
-        sets: byPosition(e.routine_sets).map((s: any): SetRow => ({ type: s.set_type, kg: s.weight == null ? null : Number(s.weight), reps: s.reps })),
+        sets: byPosition(e.routine_sets).map((s: any): SetRow => withExtra({ type: s.set_type, kg: s.weight == null ? null : Number(s.weight), reps: s.reps }, s)),
       })),
     })));
     const ms = await supabase.from('measurements').select('id,measured_on,values,photo_uri').order('measured_on', { ascending: false });
@@ -579,7 +584,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           // campos vazios/zerados vêm preenchidos com o que foi feito da última vez
           const last = lastSetsOf(e.exerciseId, opts?.routine?.id);
           const p = last.length ? last[Math.min(j, last.length - 1)] : null;
-          return p && !s.kg ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, done: false } : { ...s, done: false };
+          return p && !s.kg ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, seconds: s.seconds ?? p.seconds, distM: s.distM ?? p.distM, done: false } : { ...s, done: false };
         }),
       }));
       track('workout_started', { source: opts?.trainerUid ? 'trainer' : opts?.routine ? 'routine' : opts?.entries ? 'copy' : 'empty', exercises: entries.length });
@@ -610,7 +615,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     addEntries: (ids) => setActive((a) => ({ ...a, entries: [...a.entries, ...ids.map((id): ActiveEntry => {
       const last = lastSetsOf(id, activeRef.current?.fromRoutineId);
       const pins = readPins('exercise', id).map((text): EntryNote => ({ id: randomUUID(), text, kind: 'exercise' }));
-      return { uid: randomUUID(), exerciseId: id, ...noteFields(pins), restSec: prefsRef.current.defaultRestSec, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, done: false })) : [newSet()] };
+      return { uid: randomUUID(), exerciseId: id, ...noteFields(pins), restSec: prefsRef.current.defaultRestSec, sets: last.length ? last.map((p): ActiveSet => ({ type: p.type, kg: p.kg, reps: p.reps, seconds: p.seconds, distM: p.distM, done: false })) : [newSet()] };
     })] })),
     removeEntry: (i) => setActive((a) => ({ ...a, entries: a.entries.filter((_, k) => k !== i) })),
     routinePins: (routineId, exerciseId) => readPins('routine', exerciseId, routineId),
@@ -657,13 +662,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const sets = e.sets.map((s, j): ActiveSet => {
         if (s.done) return s;
         const p = last.length ? last[Math.min(j, last.length - 1)] : null;
-        return p ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, typed: false } : { ...s, kg: null, typed: false };
+        return p ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, seconds: p.seconds, distM: p.distM, typed: false } : { ...s, kg: null, seconds: null, distM: null, typed: false };
       });
       return { ...e, exerciseId: id, swappedFrom: id === original ? undefined : original, madeMain: undefined, sets };
     }) })),
     replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, exerciseId } : e)) })),
     patchEntry: (i, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...patch } : e)) })),
-    addSet: (i) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: [...e.sets, { ...newSet(), kg: e.sets.at(-1)?.kg ?? null, reps: e.sets.at(-1)?.reps ?? null }] } : e)) })),
+    addSet: (i) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: [...e.sets, { ...newSet(), kg: e.sets.at(-1)?.kg ?? null, reps: e.sets.at(-1)?.reps ?? null, seconds: e.sets.at(-1)?.seconds ?? null, distM: e.sets.at(-1)?.distM ?? null }] } : e)) })),
     patchSet: (i, j, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, ...patch } : s)) } : e)) })),
     removeSet: (i, j) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: e.sets.filter((_, n) => n !== j) } : e)) })),
     toggleSet: (i, j) => {
@@ -683,7 +688,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       ? { ...a, pausedMs: a.pausedMs + (Date.now() - new Date(a.pausedAt).getTime()), pausedAt: null }
       : { ...a, pausedAt: new Date().toISOString() }),
     setStartTime: (iso) => setActive((a) => ({ ...a, dateAt: iso })),
-    completeTypedSets: () => setActive((a) => ({ ...a, entries: a.entries.map((e) => (e.hidden ? e : { ...e, sets: e.sets.map((s) => (!s.done && s.typed && ((s.kg ?? 0) > 0 || (s.reps ?? 0) > 0) ? { ...s, done: true } : s)) })) })),
+    completeTypedSets: () => setActive((a) => ({ ...a, entries: a.entries.map((e) => (e.hidden ? e : { ...e, sets: e.sets.map((s) => (!s.done && s.typed && setHasValue(s) ? { ...s, done: true } : s)) })) })),
     setElapsed: (sec) => setActive((a) => ({ ...a, pausedMs: 0, pausedAt: a.pausedAt ? new Date().toISOString() : null, startedAt: new Date(Date.now() - sec * 1000).toISOString() })),
     discardActive: () => { track('workout_discarded'); setActive(() => null); setRest(null); },
     finishActive: async (meta) => {
@@ -726,13 +731,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (!old) return false;
       if (old.pending) {
         // ainda na fila: só troca a versão que vai subir
-        const next: Workout = { ...old, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries: patch.entries.map((e) => ({ ...e, sets: e.sets.filter((x) => (x.reps ?? 0) > 0 || (x.kg ?? 0) > 0) })).filter((e) => e.sets.length > 0) };
+        const next: Workout = { ...old, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries: patch.entries.map((e) => ({ ...e, sets: e.sets.filter(setHasValue) })).filter((e) => e.sets.length > 0) };
         if (!next.entries.length) { fail('A workout needs at least one set.'); return false; }
         await enqueue({ workout: next, fromTrainer: !!old.fromTrainer });
         setWorkouts((l) => l.map((w) => (w.id === id ? next : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
         return true;
       }
-      const entries = patch.entries.map((e) => ({ ...e, sets: e.sets.filter((x) => (x.reps ?? 0) > 0 || (x.kg ?? 0) > 0) })).filter((e) => e.sets.length > 0);
+      const entries = patch.entries.map((e) => ({ ...e, sets: e.sets.filter(setHasValue) })).filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('A workout needs at least one set.'); return false; }
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
       const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((x, k) => [x, realIds[k]]));

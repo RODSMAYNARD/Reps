@@ -7,6 +7,7 @@ import { NumInput } from '../../components/NumInput';
 import { RestSheet } from '../../components/pickers';
 import { Banner, Btn, Dialog, Header, HeaderAction, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
+import { colDecimal, colHeader, colPatch, colValue, hasWeight, setCols } from '../../lib/exerciseOptions';
 import { fmtRest, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
 import { setPickHandler } from '../../lib/picker';
 import { useGate } from '../../lib/gate';
@@ -59,8 +60,8 @@ export default function EditRoutine() {
             <Pressable onPress={() => setRestSheet(i)} style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 }}><Ionicons name="timer-outline" size={18} color={colors.primary} /><Text style={{ color: colors.primary }}>Rest: {fmtRest(e.restSec)}</Text></Pressable>
             <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 4 }}>
               <Text style={[hd, { width: 44 }]}>SET</Text>
-              {nameOf(e.exerciseId)?.kind !== 'reps' && nameOf(e.exerciseId)?.kind !== 'duration' && <Text style={[hd, { flex: 1 }]}>{u.weight.toUpperCase()}</Text>}
-              <Text style={[hd, { flex: 1 }]}>{nameOf(e.exerciseId)?.kind === 'duration' ? 'SEC' : 'REPS'}</Text>
+              {hasWeight(nameOf(e.exerciseId)?.kind) && <Text style={[hd, { flex: 1 }]}>{u.weight.toUpperCase()}</Text>}
+              {setCols(nameOf(e.exerciseId)?.kind).map((c) => <Text key={c} style={[hd, { flex: 1 }]}>{colHeader(c, nameOf(e.exerciseId)?.kind, u)}</Text>)}
             </View>
             {e.sets.map((s, j) => {
               const t = SET_TYPES.find((x) => x.type === s.type)!;
@@ -68,12 +69,12 @@ export default function EditRoutine() {
               return (
                 <View key={j} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: j % 2 ? colors.surface : colors.bg }}>
                   <Pressable onPress={() => setTypeSheet({ i, j })} style={{ width: 44, alignItems: 'center', paddingVertical: 10 }}><Text style={{ color: s.type === 'normal' ? colors.text : t.color, fontWeight: '700' }}>{lb}</Text></Pressable>
-                  {nameOf(e.exerciseId)?.kind !== 'reps' && nameOf(e.exerciseId)?.kind !== 'duration' && <View style={{ flex: 1 }}><NumInput decimal value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u) })} /></View>}
-                  <View style={{ flex: 1 }}><NumInput value={s.reps} onChange={(v) => patchSet(i, j, { reps: v })} /></View>
+                  {hasWeight(nameOf(e.exerciseId)?.kind) && <View style={{ flex: 1 }}><NumInput decimal value={s.kg == null ? null : Math.round(toDisplayWeight(s.kg, u) * 10) / 10} onChange={(v) => patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u) })} /></View>}
+                  {setCols(nameOf(e.exerciseId)?.kind).map((c) => <View key={c} style={{ flex: 1 }}><NumInput decimal={colDecimal(c)} value={colValue(s, c, u)} onChange={(v) => patchSet(i, j, colPatch(c, v, u))} /></View>)}
                 </View>
               );
             })}
-            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}><Btn title="Add set" icon="add" variant="secondary" onPress={() => setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: [...x.sets, { type: 'normal', kg: x.sets.at(-1)?.kg ?? null, reps: x.sets.at(-1)?.reps ?? null }] } : x)))} /></View>
+            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}><Btn title="Add set" icon="add" variant="secondary" onPress={() => setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: [...x.sets, { type: 'normal', kg: x.sets.at(-1)?.kg ?? null, reps: x.sets.at(-1)?.reps ?? null, seconds: x.sets.at(-1)?.seconds ?? null, distM: x.sets.at(-1)?.distM ?? null }] } : x)))} /></View>
           </View>
         ))}
         <View style={{ padding: 16 }}><Btn title="Add exercise" icon="add" onPress={add} testID="routine-add-exercise" /></View>
