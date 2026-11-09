@@ -17,14 +17,12 @@ export type Plan = 'month' | 'year' | 'offer';
 type Region = 'US' | 'BR';
 export const regionOf = (): Region => (getLocales()[0]?.regionCode === 'BR' ? 'BR' : 'US');
 
-const MONTHLY: Record<Region, number> = { US: 4.99, BR: 19 };
-const r2 = (n: number) => Math.round(n * 100) / 100;
-/** Preços de exemplo: anual = 12 meses com 20% de desconto; oferta de saída = anual com mais 30% de desconto. */
-export const mockPrices = (region: Region = regionOf()) => {
-  const month = MONTHLY[region];
-  const year = r2(month * 12 * 0.8);
-  return { month, year, offer: r2(year * 0.7), region };
+/** Preços de prévia (sem RevenueCat): os mesmos cadastrados na App Store (faixas da Apple, 2026-11-09). Com o RevenueCat ligado, o preço vem da loja. */
+const PRICES: Record<Region, { month: number; year: number; offer: number }> = {
+  US: { month: 4.99, year: 47.9, offer: 33.49 },
+  BR: { month: 19.9, year: 182.9, offer: 127.9 },
 };
+export const mockPrices = (region: Region = regionOf()) => ({ ...PRICES[region], region });
 export const money = (n: number, region: Region = regionOf()) => (region === 'BR' ? `R$ ${n.toFixed(2).replace('.', ',')}` : `$${n.toFixed(2)}`);
 
 // --- estado de assinante (fora do React, com hook) ---
