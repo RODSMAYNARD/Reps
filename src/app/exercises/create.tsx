@@ -42,7 +42,8 @@ export default function CreateExercise() {
   };
 
   const save = async () => {
-    const muscle = MUSCLE_OPTIONS.find((m) => m.label === d.muscle);
+    // exercício antigo com grupo fora da lista (ex.: "Back" sem target): se o músculo não foi trocado, mantém o valor salvo
+    const muscle = MUSCLE_OPTIONS.find((m) => m.label === d.muscle) ?? (editing && d.muscle === editing.muscle ? { label: editing.muscle, muscle: editing.muscle, target: editing.target ?? undefined } : undefined);
     if (!d.name.trim()) return showToast('Enter an exercise name.');
     if (!d.equipment) return showToast('Select the equipment.');
     if (!muscle) return showToast('Select the primary muscle group.');

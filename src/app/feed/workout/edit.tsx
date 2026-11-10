@@ -34,6 +34,8 @@ export default function EditWorkout() {
   const [dirty, setDirty] = useState(false);
   const [ask, setAsk] = useState(false);
   if (!w) return <Screen><Header title="Edit Workout" /></Screen>;
+  // o campo mostra minutos arredondados: se não mexeram nele, mantém a duração original com os segundos
+  const durationSec = minutes === Math.round(w.durationSec / 60) ? w.durationSec : Math.max(0, (minutes ?? 0) * 60);
   const touch = <T,>(fn: (v: T) => void) => (v: T) => { setDirty(true); fn(v); };
   const patchSet = (i: number, j: number, p: Partial<SavedEntry['sets'][number]>) => { setDirty(true); setEntries((l) => l.map((e, k) => (k === i ? { ...e, sets: e.sets.map((x, n) => (n === j ? { ...x, ...p } : x)) } : e))); };
   const addSet = (i: number) => { setDirty(true); setEntries((l) => l.map((e, k) => (k === i ? { ...e, sets: [...e.sets, { ...(e.sets.at(-1) ?? { type: 'normal' as const, kg: null, reps: null }), type: 'normal' as const }] } : e))); };
@@ -41,7 +43,7 @@ export default function EditWorkout() {
   const delEx = (i: number) => { setDirty(true); setEntries((l) => l.filter((_, k) => k !== i)); };
   const save = async () => {
     setBusy(true);
-    const ok = await st.updateWorkout(w.id, { title: title.trim(), description: desc, date, visibility: vis, location: place.trim() || null, durationSec: Math.max(0, (minutes ?? 0) * 60), entries });
+    const ok = await st.updateWorkout(w.id, { title: title.trim(), description: desc, date, visibility: vis, location: place.trim() || null, durationSec, entries });
     setBusy(false);
     if (ok) { track('workout_edited'); st.showToast('Workout updated'); router.back(); }
   };
@@ -60,7 +62,7 @@ export default function EditWorkout() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 }}>
           <Text style={{ color: colors.muted, flex: 1 }}>Duration (min)</Text>
           <View style={{ width: 90, backgroundColor: colors.surface, borderRadius: radius.sm }}><NumInput value={minutes} onChange={touch(setMinutes)} testID="edit-minutes" /></View>
-          <Text style={{ color: colors.muted }}>{fmtDuration((minutes ?? 0) * 60)}</Text>
+          <Text style={{ color: colors.muted }}>{fmtDuration(durationSec)}</Text>
         </View>
         <Pressable onPress={() => setDateSheet(true)} style={row} testID="edit-date"><Ionicons name="calendar-outline" size={26} color={colors.text} /><Text style={lbl}>Date</Text><Text style={{ color: colors.muted }}>{label}</Text><Ionicons name="chevron-forward" size={20} color={colors.muted} /></Pressable>
         <View style={row}><Ionicons name="location-outline" size={26} color={colors.text} /><TextInput value={place} onChangeText={touch(setPlace)} placeholder="Add location" placeholderTextColor={colors.muted} style={{ flex: 1, fontSize: 18, color: colors.text }} testID="edit-location" />{!!place && <Ionicons name="close" size={22} color={colors.muted} onPress={() => { setDirty(true); setPlace(''); }} />}</View>

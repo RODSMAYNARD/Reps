@@ -1,6 +1,6 @@
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { Ionicons } from '@expo/vector-icons';
-import { GymIcon } from '../../../components/GymIcon';
+import { IconCircle } from '../../../components/IconCircle';
 import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -8,6 +8,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Text } from '../../../components/Text';
 import { Check, OptionRow } from '../../../components/TrainerParts';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, SearchBar, Sheet, Toggle } from '../../../components/ui';
+import { equipImage } from '../../../lib/iconImages';
 import { setPickHandler } from '../../../lib/picker';
 import { useStore } from '../../../lib/store';
 import { colors, radius } from '../../../lib/theme';
@@ -121,7 +122,7 @@ export default function TrainerOption() {
                   const on = draft.equipment.includes(it.id);
                   return (
                     <Pressable key={it.id} onPress={() => set({ preset: 'custom', equipment: on ? draft.equipment.filter((x) => x !== it.id) : [...draft.equipment, it.id] })} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.surface }} testID={`equip-${it.id}`}>
-                      <View style={{ width: 52, alignItems: 'center' }}><GymIcon name={it.icon} size={30} color={colors.text} /></View>
+                      <IconCircle source={equipImage(it.id) ?? equipImage(it.icon)} size={52} />
                       <View style={{ flex: 1 }}><Text style={{ fontSize: 18, color: colors.text }}>{it.label}</Text>{!!it.sub && <Text style={{ color: colors.muted }}>{it.sub}</Text>}</View>
                       <View style={{ width: 30, height: 30, borderRadius: 8, borderWidth: on ? 0 : 1.5, borderColor: colors.border, backgroundColor: on ? colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{on && <Ionicons name="checkmark" size={20} color="#fff" />}</View>
                     </Pressable>

@@ -272,10 +272,14 @@ export function Sheet({ visible, onClose, title, subtitle, children, left, right
 }
 
 export type DialogAction = { label: string; onPress?: () => void; primary?: boolean; danger?: boolean };
-export function Dialog({ visible, title, message, actions, onClose, children }: { visible: boolean; title?: string; message?: string; actions: DialogAction[]; onClose?: () => void; children?: React.ReactNode }) {
+/** Pop-up central. Com o teclado aberto, o espaço livre encolhe (KeyboardAvoidingView na raiz do Modal) e o diálogo sobe junto.
+ * `hasInput` (tem campo de texto): o diálogo fica também nos 60% de cima, onde o teclado não chega, para o campo e o botão de salvar
+ * continuarem visíveis mesmo se o aviso do teclado não chegar ao Modal (no Android o Modal é edge-to-edge e não encolhe sozinho). */
+export function Dialog({ visible, title, message, actions, onClose, children, hasInput }: { visible: boolean; title?: string; message?: string; actions: DialogAction[]; onClose?: () => void; children?: React.ReactNode; hasInput?: boolean }) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: 24 }}>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: colors.overlay }}>
+      <View style={{ flex: 1, maxHeight: hasInput ? '60%' : undefined, justifyContent: 'center', padding: 24 }}>
         <View style={{ backgroundColor: colors.bg, borderRadius: radius.lg, padding: 20, gap: 14 }}>
           {!!title && <Text style={{ fontSize: 17, fontWeight: '700', textAlign: 'center', color: colors.text }}>{title}</Text>}
           {!!message && <Text style={{ fontSize: 15, textAlign: 'center', color: colors.text }}>{message}</Text>}
@@ -292,6 +296,7 @@ export function Dialog({ visible, title, message, actions, onClose, children }: 
           </View>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

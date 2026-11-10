@@ -10,10 +10,12 @@ import { DEFAULT_WARMUP } from '../../lib/types';
 
 const PLATE = [10, 5, 2.5, 1.25, 0.5];
 const DUMB = [5, 2.5, 2, 1, 0.5];
-const kgLabel = (v: number) => `${v} kg`;
+// o arredondamento vale na unidade do exercício (lbs para quem usa lbs)
+const stepLabel = (v: number, unit: string) => `${v} ${unit}`;
 
 export default function WarmupSettings() {
-  const { wprefs: p, setWprefs } = useStore();
+  const { wprefs: p, setWprefs, profile } = useStore();
+  const unit = profile.units.weight;
   const [method, setMethod] = useState(false);
   const [pick, setPick] = useState<'plate' | 'dumb' | null>(null);
   const f = p.warmupFormula;
@@ -25,24 +27,27 @@ export default function WarmupSettings() {
         <Text style={{ color: colors.muted, fontSize: 16, padding: 16 }}>Use the warm-up calculator to quickly add percentage-based warm-up sets to exercises.</Text>
         <Toggle label="Warm-up Calculator" subtitle="When active, tap the three dots next to an exercise and choose “Add warm-up sets”." value={p.warmupCalc} onChange={(v) => setWprefs({ warmupCalc: v })} />
         <ListRow label="Warmup Method" detail={f.map((r) => `${r.pct}%×${r.reps}`).join(' · ')} onPress={() => setMethod(true)} testID="warmup-method" />
-        <ListRow label="Plate Rounding" detail={kgLabel(p.plateRounding)} subtitle="Preferred plate weight increments for your warm-up calculations." onPress={() => setPick('plate')} />
-        <ListRow label="Dumbbell Rounding" detail={kgLabel(p.dumbbellRounding)} subtitle="Preferred dumbbell weight increments for your warm-up calculations." onPress={() => setPick('dumb')} last />
+        <ListRow label="Plate Rounding" detail={stepLabel(p.plateRounding, unit)} subtitle="Preferred plate weight increments for your warm-up calculations." onPress={() => setPick('plate')} />
+        <ListRow label="Dumbbell Rounding" detail={stepLabel(p.dumbbellRounding, unit)} subtitle="Preferred dumbbell weight increments for your warm-up calculations." onPress={() => setPick('dumb')} last />
       </ScrollView>
 
       <Sheet visible={method} onClose={() => setMethod(false)} title="Warmup Method">
-        <View style={{ backgroundColor: colors.bg, borderRadius: 12, overflow: 'hidden' }}>
-          <Text style={{ textAlign: 'center', color: colors.muted, paddingVertical: 8 }}>Formula (% of your working weight × reps)</Text>
-          {f.map((r, i) => (
-            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: colors.surface }}>
-              <Text style={{ width: 40, color: colors.warn, fontWeight: '800', fontSize: 20 }}>W</Text>
-              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                <View style={{ width: 70 }}><NumInput value={r.pct} onChange={(v) => setF(f.map((x, k) => (k === i ? { ...x, pct: Math.max(1, Math.min(100, v ?? 1)) } : x)))} style={{ color: colors.primary, fontSize: 20 }} /></View>
-                <Text style={{ color: colors.primary, fontSize: 20 }}>% ×</Text>
-                <View style={{ width: 60 }}><NumInput value={r.reps} onChange={(v) => setF(f.map((x, k) => (k === i ? { ...x, reps: Math.max(1, v ?? 1) } : x)))} style={{ color: colors.primary, fontSize: 20 }} /></View>
+        {/* o Sheet já sobe com o teclado (KeyboardAvoidingView); o scroll deixa fechar o teclado numérico tocando fora do campo e rolar em tela pequena. Botões fixos embaixo. */}
+        <ScrollView keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }}>
+          <View style={{ backgroundColor: colors.bg, borderRadius: 12, overflow: 'hidden' }}>
+            <Text style={{ textAlign: 'center', color: colors.muted, paddingVertical: 8 }}>Formula (% of your working weight × reps)</Text>
+            {f.map((r, i) => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: colors.surface }}>
+                <Text style={{ width: 40, color: colors.warn, fontWeight: '800', fontSize: 20 }}>W</Text>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 70 }}><NumInput value={r.pct} onChange={(v) => setF(f.map((x, k) => (k === i ? { ...x, pct: Math.max(1, Math.min(100, v ?? 1)) } : x)))} style={{ color: colors.primary, fontSize: 20 }} /></View>
+                  <Text style={{ color: colors.primary, fontSize: 20 }}>% ×</Text>
+                  <View style={{ width: 60 }}><NumInput value={r.reps} onChange={(v) => setF(f.map((x, k) => (k === i ? { ...x, reps: Math.max(1, v ?? 1) } : x)))} style={{ color: colors.primary, fontSize: 20 }} /></View>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        </ScrollView>
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
           <Btn title="Remove Set" icon="remove" variant="secondary" style={{ flex: 1 }} disabled={f.length <= 1} onPress={() => setF(f.slice(0, -1))} />
           <Btn title="Add Set" icon="add" variant="secondary" style={{ flex: 1 }} disabled={f.length >= 6} onPress={() => setF([...f, { pct: Math.min(100, (f.at(-1)?.pct ?? 60) + 10), reps: 3 }])} />
@@ -55,7 +60,7 @@ export default function WarmupSettings() {
         {(pick === 'plate' ? PLATE : DUMB).map((v, i, a) => {
           const def = pick === 'plate' ? 5 : 1;
           const cur = pick === 'plate' ? p.plateRounding : p.dumbbellRounding;
-          return <ListRow key={v} label={`${kgLabel(v)}${v === def ? ' (default)' : ''}`} last={i === a.length - 1} right={cur === v ? <Ionicons name="checkmark" size={22} color={colors.primary} /> : undefined}
+          return <ListRow key={v} label={`${stepLabel(v, unit)}${v === def ? ' (default)' : ''}`} last={i === a.length - 1} right={cur === v ? <Ionicons name="checkmark" size={22} color={colors.primary} /> : undefined}
             onPress={() => { setWprefs(pick === 'plate' ? { plateRounding: v } : { dumbbellRounding: v }); setPick(null); }} />;
         })}
       </Sheet>

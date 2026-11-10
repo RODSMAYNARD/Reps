@@ -1,7 +1,8 @@
 import type { GymIcon } from './gymIcons';
+import { LB } from './format';
 import { randomUUID } from './uuid';
-import { STAPLES } from './planner';
-import { Exercise, TrainerExercise, TrainerGoal, TrainerProgram, TrainerSettings, TrainerSplit, TrainerWorkout } from './types';
+import { STAPLES, isRepKind } from './planner';
+import { Exercise, TrainerExercise, TrainerGoal, TrainerProgram, TrainerSettings, TrainerSplit, TrainerWorkout, Units } from './types';
 
 export const CYCLE_WEEKS = 6;
 
@@ -27,8 +28,9 @@ export const SPLITS: { id: TrainerSplit; label: string; sub: string; days: numbe
   { id: 'ul', label: 'Upper / Lower', sub: 'Alternate upper and lower body days for focused training and recovery.', days: [2, 4, 6] },
   { id: 'ppl', label: 'Push Pull Legs', sub: 'Group workouts by movement pattern for more volume and structure.', days: [3, 6] },
 ];
-export const splitLabel = (s: TrainerSplit) => SPLITS.find((x) => x.id === s)!.label;
-export const goalLabel = (g: TrainerGoal) => GOALS.find((x) => x.id === g)!.label;
+// programas gravados por versões antigas podem não ter o campo: rótulo vazio em vez de quebrar a tela
+export const splitLabel = (s: TrainerSplit) => SPLITS.find((x) => x.id === s)?.label ?? '';
+export const goalLabel = (g: TrainerGoal) => GOALS.find((x) => x.id === g)?.label ?? '';
 
 /** Divisão sugerida para a frequência (usada ao mudar os dias e a divisão atual não existir). */
 export const bestSplit = (days: number): TrainerSplit => (days === 5 ? 'pplul' : days === 3 ? 'ppl' : days === 4 || days === 2 ? 'ul' : 'ppl');
@@ -82,6 +84,12 @@ export const INJURIES: { id: string; label: string; avoid: RegExp }[] = [
   { id: 'neck', label: 'Neck', avoid: /shrug|upright row|behind/ },
 ];
 
+/** Cardio em ordem de preferência e o aparelho que cada um exige (no catálogo esteira, bike etc. são só "Machine" e a corda é "Other"); `run` = correr no lugar, sem aparelho. */
+const CARDIO: [RegExp, string[]][] = [[/treadmill/, ['treadmill']], [/stationary bike/, ['spin', 'airbike']], [/elliptical|cross trainer/, ['elliptical']], [/stepmill/, ['stairs']], [/jump rope/, ['jumprope']], [/^run$/, []]];
+
+/** Chave estável do exercício: `cat:<id>` para os do catálogo (o id real só aparece depois de usado), senão o id. */
+export const exKey = (e: Exercise) => (e.catalogId ? `cat:${e.catalogId}` : e.id);
+
 type Kind = 'push' | 'pull' | 'legs' | 'upper' | 'lower' | 'full';
 const SLOTS: Record<Kind, [string, number][]> = {
   push: [['Chest', 2], ['Shoulders', 2], ['Triceps', 1], ['Abs', 1]], pull: [['Back', 3], ['Biceps', 2], ['Abs', 1]],
@@ -119,19 +127,23 @@ export const VOLUME_MIN = 10, VOLUME_MAX = 20;
 export const volumeMin = (muscle: string) => (muscle === 'Calves' ? 8 : muscle === 'Abs' || muscle === 'Glutes' ? 6 : VOLUME_MIN);
 const MAIN_MUSCLES = ['Chest', 'Back', 'Shoulders', 'Quads', 'Hamstrings', 'Biceps', 'Triceps', 'Calves', 'Glutes', 'Abs'];
 
-/** Ajusta o volume: músculos principais abaixo de 10 séries/semana ganham séries (máx. 5 por exercício); acima de 20 perdem. */
-function balanceVolume(workouts: TrainerWorkout[], find: (id: string) => Exercise | undefined, more: (muscle: string, have: Set<string>) => TrainerExercise | null) {
+/** Grupo em foco: piso semanal 4 séries acima do normal (senão o ajuste de volume nivelava tudo no mínimo e o foco não somava nada). */
+const FOCUS_EXTRA = 4;
+
+/** Ajusta o volume: músculos principais abaixo de 10 séries/semana (foco: +4) ganham séries (máx. 5 por exercício); acima de 20 perdem. */
+function balanceVolume(workouts: TrainerWorkout[], find: (id: string) => Exercise | undefined, more: (muscle: string, w: TrainerWorkout) => TrainerExercise | null, focus: string[]) {
   const totals = weeklySets(workouts, find);
   for (const mu of MAIN_MUSCLES) {
     const list = workouts.flatMap((w) => w.exercises).filter((e) => find(e.exerciseId)?.muscle === mu);
     if (!list.length) continue;
+    const min = volumeMin(mu) + (focus.includes(mu) ? FOCUS_EXTRA : 0);
     let guard = 0;
-    while ((totals.get(mu) ?? 0) < volumeMin(mu) && guard++ < 30) {
+    while ((totals.get(mu) ?? 0) < min && guard++ < 30) {
       const e = list.filter((x) => x.sets < 5).sort((a, b) => a.sets - b.sets)[0];
       if (!e) {
         // todos os exercícios do músculo já estão no teto: adiciona outro exercício no treino onde ele aparece
         const w = workouts.find((x) => x.exercises.some((y) => find(y.exerciseId)?.muscle === mu && y.sets >= 5));
-        const add = w ? more(mu, new Set(w.exercises.map((y) => y.exerciseId))) : null;
+        const add = w ? more(mu, w) : null;
         if (!w || !add) break;
         const at = w.exercises.map((y) => find(y.exerciseId)?.muscle).lastIndexOf(mu);
         w.exercises.splice(at + 1, 0, add); list.push(add);
@@ -149,12 +161,14 @@ function balanceVolume(workouts: TrainerWorkout[], find: (id: string) => Exercis
   }
 }
 
-/** Progressão dupla: sobe a carga quando todas as séries bateram o topo da faixa; senão tenta +1 rep. */
-export function suggestSets(last: { type: string; kg: number | null; reps: number | null }[], e: { sets: number; repMin: number; repMax: number; kind: string }, equipment: string) {
+/** Progressão dupla: sobe a carga quando todas as séries bateram o topo da faixa; senão tenta +1 rep.
+ * `unit` = unidade de quem treina (perfil ou a do exercício): o passo é 2,5 kg (halter/kettlebell 2 kg) ou 5 lb (halter/kettlebell 2,5 lb), sempre gravado em kg. */
+export function suggestSets(last: { type: string; kg: number | null; reps: number | null }[], e: { sets: number; repMin: number; repMax: number; kind: string }, equipment: string, unit: Units['weight'] = 'kg') {
   const work = last.filter((x) => x.type !== 'warmup');
   if (!work.length || e.kind === 'duration') return null;
   const top = Math.max(...work.map((x) => x.kg ?? 0));
-  const inc = equipment === 'Dumbbell' || equipment === 'Kettlebell' ? 2 : equipment === 'Body weight' ? 0 : 2.5;
+  const small = equipment === 'Dumbbell' || equipment === 'Kettlebell';
+  const inc = equipment === 'Body weight' ? 0 : unit === 'lbs' ? (small ? 2.5 : 5) / LB : small ? 2 : 2.5;
   const allTop = work.every((x) => (x.reps ?? 0) >= e.repMax);
   return Array.from({ length: e.sets }, (_, j) => {
     const p = work[Math.min(j, work.length - 1)];
@@ -168,64 +182,89 @@ export function programSummary(s: TrainerSettings) {
   return `This is a ${s.frequency}-day ${splitLabel(s.split)} program that targets all your muscle groups${focus}, designed for ${s.goal === 'strength' ? 'strength gain' : s.goal === 'hypertrophy' ? 'muscle growth' : 'fat loss'}.`;
 }
 
-export function generateProgram(s: TrainerSettings, exercises: Exercise[], enOf: (e: Exercise) => string | undefined, seed: number, name: string, cycle = 1, prev?: TrainerProgram | null): TrainerProgram {
+/** Gera o programa. `prev` = programa atual: na renovação (variedade, reiniciar) os exercícios dele vão para o fim da fila;
+ * com `keep` (mudou um ajuste) os do mesmo treino vêm primeiro e ficam os mesmos uids e o mesmo próximo treino. A ordem da semana (Reorder) é mantida. */
+export function generateProgram(settings: TrainerSettings, exercises: Exercise[], enOf: (e: Exercise) => string | undefined, seed: number, name: string, cycle = 1, prev?: TrainerProgram | null, keep = false): TrainerProgram {
+  // programas gravados por versões antigas podem não ter os campos novos
+  const s: TrainerSettings = { ...DEFAULT_TRAINER, ...settings };
+  const gear = s.equipment.length ? s.equipment : presetIds(s.preset);
   const rand = rng(seed * 7919 + cycle);
-  const allowedEq = allowedEquipment(s.equipment);
+  const allowedEq = allowedEquipment(gear);
   const avoid = s.injuries.map((i) => INJURIES.find((x) => x.id === i)?.avoid).filter(Boolean) as RegExp[];
   const byEn = new Map<string, Exercise>();
   exercises.forEach((e) => { const n = enOf(e); if (n) byEn.set(n.toLowerCase(), e); });
-  const bad = (e: Exercise) => s.excluded.includes(e.id) || avoid.some((r) => r.test((enOf(e) ?? e.name).toLowerCase()));
+  // ids guardados (excluídos, programa anterior) podem ser `cat:<id>` ou o id real que o exercício ganha depois de usado: compara pela chave estável
+  const byId = new Map(exercises.map((e) => [e.id, e]));
+  const keyOf = (id: string) => { const e = byId.get(id); return e ? exKey(e) : id; };
+  const excluded = new Set(s.excluded.map(keyOf));
+  const bad = (e: Exercise) => excluded.has(exKey(e)) || avoid.some((r) => r.test((enOf(e) ?? e.name).toLowerCase()));
   const ok = (e: Exercise) => allowedEq.has(e.equipment) && !bad(e);
   const loose = /bench press|squat|deadlift|row\b|pulldown|pull-up|chin-up|push-up|dip\b|curl|press|raise|extension|fly\b|lunge|crunch|thrust|bridge|pushdown|calf/;
-  const noisy = /punch|jab|hook|boxing|\(2\)|bradford|assisted|stability ball|exercise ball|bosu|wheel|isometric|one arm|one leg|single|kneeling|v\. \d|male|stretch|\bhold\b|jerk|clean|snatch|kick|inside|outside|pike|cobra/;
+  // `pov` = o mesmo exercício filmado de outro ângulo ("(side pov)", "(back pov)"); "butterfly yoga pose" entrava por causa de "fly"
+  const noisy = /punch|jab|hook|boxing|\(2\)|bradford|assisted|stability ball|exercise ball|bosu|wheel|isometric|one arm|one leg|single|kneeling|v\. \d|male|stretch|\bhold\b|jerk|clean|snatch|kick|inside|outside|pike|cobra|\bpov\b|yoga/;
   const lower = ['Quads', 'Hamstrings', 'Glutes', 'Calves'];
   const pool = (muscle: string) => {
     const st = (STAPLES[muscle] ?? []).flatMap((n) => byEn.get(n) ?? []).filter((e) => ok(e) && e.muscle === muscle);
     if (st.length >= 2) return st;
-    const extra = exercises.filter((e) => e.muscle === muscle && ok(e) && e.kind !== 'duration' && loose.test((enOf(e) ?? '').toLowerCase()) && !noisy.test((enOf(e) ?? '').toLowerCase()) && !(lower.includes(muscle) && /push-up|pull-up|\bdip\b/.test((enOf(e) ?? '').toLowerCase()))).slice(0, 8);
-    return [...st, ...extra];
+    const extra = exercises.filter((e) => e.muscle === muscle && ok(e) && isRepKind(e.kind) && loose.test((enOf(e) ?? '').toLowerCase()) && !noisy.test((enOf(e) ?? '').toLowerCase()) && !(lower.includes(muscle) && /push-up|pull-up|\bdip\b/.test((enOf(e) ?? '').toLowerCase()))).slice(0, 8);
+    return [...new Set([...st, ...extra])];
   };
   const shuffle = <T,>(a: T[]) => a.map((x) => [rand(), x] as const).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
-  const prevSet = new Set(cycle > 1 && prev ? prev.workouts.flatMap((w) => w.exercises.map((e) => e.exerciseId)) : []);
-  const restBase = RESTS.find((r) => r.id === s.rest)!.sec;
+  const keysIn = (ws: TrainerWorkout[]) => new Set(ws.flatMap((w) => w.exercises.map((e) => keyOf(e.exerciseId))));
+  const prevSet = prev && !keep ? keysIn(prev.workouts) : new Set<string>();
+  /** Exercícios que já estavam neste treino (só com `keep`). */
+  const mineOf = (title: string) => { const old = keep ? prev?.workouts.find((w) => w.title === title) : undefined; return old ? keysIn([old]) : new Set<string>(); };
+  const rank = (e: Exercise, mine: Set<string>) => (mine.has(exKey(e)) ? -1 : prevSet.has(exKey(e)) ? 1 : 0);
+  /** Candidatos do músculo embaralhados: os que já estavam neste treino primeiro (`keep`), os do programa anterior por último (renovação). */
+  const pick = (muscle: string, mine: Set<string>) => shuffle(pool(muscle)).sort((a, b) => rank(a, mine) - rank(b, mine));
+  const restBase = RESTS.find((r) => r.id === s.rest)?.sec ?? 120;
   const target = s.duration === 40 ? 4 : s.duration === 60 ? 6 : 8;
   const sets = s.level === 'beginner' ? 2 : 3;
-  const focusM = s.focus ? FOCUS_MUSCLES[s.focus] : [];
+  const focusM = (s.focus && FOCUS_MUSCLES[s.focus]) || [];
   const toTE = (e: Exercise): TrainerExercise => {
     const comp = COMPOUND.test((enOf(e) ?? '').toLowerCase());
     const [lo, hi] = s.goal === 'strength' ? (comp ? [4, 6] : [10, 12]) : s.goal === 'hypertrophy' ? (comp ? [6, 10] : [10, 15]) : [12, 15];
     return { exerciseId: e.id, sets: s.goal === 'strength' && comp ? sets + 1 : sets, repMin: lo, repMax: hi, restSec: e.kind === 'reps' ? Math.min(60, restBase) : restBase, kind: e.kind };
   };
+  // cardio: só o que o equipamento permite (antes todo mundo recebia a corda), na ordem de preferência
+  const cname = (e: Exercise) => (enOf(e) ?? e.name).toLowerCase();
+  const cardioOk = (e: Exercise) => { const need = CARDIO.find(([r]) => r.test(cname(e)))?.[1]; return e.muscle === 'Cardio' && e.kind === 'duration' && !bad(e) && (need ? !need.length || need.some((i) => gear.includes(i)) : allowedEq.has(e.equipment)); };
+  const cardioPool = s.cardio ? exercises.filter(cardioOk) : [];
+  const cardio = CARDIO.map(([r]) => cardioPool.find((e) => r.test(cname(e)))).find(Boolean) ?? cardioPool[0];
   const kinds = kindsFor(s.split, s.frequency);
   const seen: Record<string, number> = {};
-  const used = new Set<string>();
   const workouts: TrainerWorkout[] = kinds.map((k) => {
     seen[k] = (seen[k] ?? 0) + 1;
     const dup = kinds.filter((x) => x === k).length > 1;
     const letter = dup && k !== 'full' ? ` ${'ABC'[seen[k] - 1] ?? seen[k]}` : dup ? ` ${seen[k]}` : '';
+    const title = `${LABEL[k]}${letter}`;
+    const mine = mineOf(title);
     const chosen: Exercise[] = [];
-    const take = (muscle: string, n: number) => {
-      const c = shuffle(pool(muscle)).sort((a, b) => Number(prevSet.has(a.id)) - Number(prevSet.has(b.id)));
-      c.filter((e) => !chosen.includes(e)).slice(0, n).forEach((e) => chosen.push(e));
-    };
+    const take = (muscle: string, n: number) => pick(muscle, mine).filter((e) => !chosen.includes(e)).slice(0, n).forEach((e) => chosen.push(e));
     // corpo inteiro: gira a ordem dos músculos a cada dia para cobrir todos ao longo da semana
     const rot = k === 'full' ? ((seen[k] - 1) * 3) % SLOTS.full.length : 0;
     const slots = k === 'full' ? [...SLOTS.full.slice(rot), ...SLOTS.full.slice(0, rot)] : SLOTS[k];
     for (const [m, n] of slots) take(m, n);
+    const list = chosen.slice(0, target);
+    // foco: um exercício a mais do grupo escolhido, somado depois do corte pela duração (antes era cortado junto)
     const fm = slots.map((x) => x[0]).find((m) => focusM.includes(m));
-    if (fm) take(fm, 1 + chosen.filter((e) => e.muscle === fm).length);
-    const list = chosen.slice(0, target + (fm ? 1 : 0));
-    list.forEach((e) => used.add(e.id));
+    const fx = fm ? pick(fm, mine).find((e) => !list.includes(e)) : undefined;
+    if (fx) { const at = list.map((e) => e.muscle).lastIndexOf(fx.muscle); list.splice(at < 0 ? list.length : at + 1, 0, fx); }
     const exs: TrainerExercise[] = list.map(toTE);
-    if (s.cardio) {
-      const c = exercises.find((e) => e.muscle === 'Cardio' && e.kind === 'duration' && !bad(e) && /bike|jump rope|run|treadmill|rower|row/.test((enOf(e) ?? '').toLowerCase())) ?? exercises.find((e) => e.muscle === 'Cardio' && !bad(e));
-      if (c) { const ce: TrainerExercise = { exerciseId: c.id, sets: 1, repMin: 600, repMax: 600, restSec: 0, kind: c.kind }; if (s.cardioWhere === 'start') exs.unshift(ce); else exs.push(ce); }
-    }
-    return { uid: randomUUID(), kind: k, title: `${LABEL[k]}${letter}`, notes: DESC[k], exercises: exs };
+    if (cardio) { const ce: TrainerExercise = { exerciseId: cardio.id, sets: 1, repMin: 600, repMax: 600, restSec: 0, kind: cardio.kind }; if (s.cardioWhere === 'start') exs.unshift(ce); else exs.push(ce); }
+    const old = keep ? prev?.workouts.find((w) => w.title === title) : undefined;
+    return { uid: old?.uid ?? randomUUID(), kind: k, title, notes: DESC[k], exercises: exs };
   });
-  balanceVolume(workouts, (id) => exercises.find((e) => e.id === id), (muscle, have) => {
-    const c = shuffle(pool(muscle)).find((e) => !have.has(e.id));
+  balanceVolume(workouts, (id) => byId.get(id), (muscle, w) => {
+    const have = new Set(w.exercises.map((y) => y.exerciseId));
+    const c = pick(muscle, mineOf(w.title)).find((e) => !have.has(e.id));
     return c ? { ...toTE(c), sets: 3 } : null;
-  });
-  return { id: prev?.id ?? randomUUID(), name, startedAt: prev && cycle > 1 ? new Date().toISOString() : new Date().toISOString(), cycle, seed, completed: 0, settings: s, workouts, nextUid: workouts[0]?.uid ?? '' };
+  }, focusM);
+  // mantém a ordem da semana escolhida pelo usuário (Reorder); treino que não existia vai para o fim
+  const pos = (t: string) => { const i = prev ? prev.workouts.findIndex((w) => w.title === t) : -1; return i < 0 ? 99 : i; };
+  if (prev) workouts.sort((a, b) => pos(a.title) - pos(b.title));
+  // mudou um ajuste: o próximo treino continua o mesmo (mesmo uid ou, se ele sumiu, a mesma posição na semana)
+  const at = keep && prev ? prev.workouts.findIndex((w) => w.uid === prev.nextUid) : -1;
+  const next = (keep ? workouts.find((w) => w.uid === prev?.nextUid) : undefined) ?? workouts[Math.max(0, Math.min(at, workouts.length - 1))];
+  return { id: prev?.id ?? randomUUID(), name, startedAt: new Date().toISOString(), cycle, seed, completed: 0, settings: s, workouts, nextUid: next?.uid ?? '' };
 }

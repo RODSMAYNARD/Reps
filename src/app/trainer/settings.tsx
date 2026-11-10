@@ -6,7 +6,8 @@ import { Text } from '../../components/Text';
 import { Dialog, Header, ListRow, Screen, Section } from '../../components/ui';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
-import { LEVELS, PRESETS, RESTS, VARIETY, goalLabel, programSummary, splitLabel } from '../../lib/trainer';
+import { DEFAULT_TRAINER, LEVELS, PRESETS, RESTS, VARIETY, goalLabel, programSummary, splitLabel } from '../../lib/trainer';
+import { TrainerSettings } from '../../lib/types';
 import { useTrainerApply } from '../../lib/useTrainerApply';
 
 export default function ProgramSettings() {
@@ -15,7 +16,8 @@ export default function ProgramSettings() {
   const [ask, setAsk] = useState<'restart' | 'delete' | null>(null);
   const t = st.trainer;
   if (!t) return <Screen><Header title="Program Settings" /></Screen>;
-  const s = t.settings;
+  // programas gravados por versões antigas podem não ter os campos novos: completa com o padrão para a tela não quebrar
+  const s: TrainerSettings = { ...DEFAULT_TRAINER, ...t.settings };
   const go = (k: string) => () => router.push({ pathname: '/trainer/option/[key]', params: { key: k } });
   const R = (icon: string, label: string, detail: string, k: string, last = false) => <ListRow icon={icon as never} label={label} subtitle={detail} onPress={go(k)} last={last} testID={`set-${k}`} />;
   return (
@@ -25,12 +27,12 @@ export default function ProgramSettings() {
         <Text style={{ fontSize: 26, fontWeight: '700', color: colors.text, padding: 16, paddingBottom: 6 }}>{t.name}</Text>
         <Text style={{ color: colors.muted, fontSize: 17, paddingHorizontal: 16, paddingBottom: 14 }}>{programSummary(s)}</Text>
         <Section title="Modify My Program" />
-        {R('speedometer-outline', 'Level', LEVELS.find((x) => x.id === s.level)!.label, 'level')}
+        {R('speedometer-outline', 'Level', LEVELS.find((x) => x.id === s.level)?.label ?? '', 'level')}
         {R('barbell-outline', 'Equipment', PRESETS.find((p) => p.id === s.preset)?.label ?? 'Custom', 'equipment')}
         {R('body-outline', 'Focus Muscle Group', s.focus ?? 'Balanced', 'focus')}
         {R('alarm-outline', 'Workout Duration', `${s.duration}min`, 'duration')}
-        {R('timer-outline', 'Rest Timer Length', RESTS.find((r) => r.id === s.rest)!.label, 'rest')}
-        {R('git-network-outline', 'Program Variety', VARIETY.find((v) => v.id === s.variety)!.label, 'variety')}
+        {R('timer-outline', 'Rest Timer Length', RESTS.find((r) => r.id === s.rest)?.label ?? '', 'rest')}
+        {R('git-network-outline', 'Program Variety', VARIETY.find((v) => v.id === s.variety)?.label ?? '', 'variety')}
         {R('pulse-outline', 'Cardio', s.cardio ? 'Active' : 'Inactive', 'cardio')}
         {R('ban-outline', 'Excluded Exercises', s.excluded.length ? `${s.excluded.length} excluded` : 'None', 'excluded')}
         {R('bandage-outline', 'Injuries', s.injuries.length ? `${s.injuries.length} injur${s.injuries.length > 1 ? 'ies' : 'y'}` : 'None', 'injuries', true)}

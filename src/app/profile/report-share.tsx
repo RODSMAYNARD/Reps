@@ -144,8 +144,8 @@ export default function ReportShare() {
     )),
     F('Top Exercises', (
       <View style={{ gap: 14 }}>
-        {topEx.map((e) => (
-          <View key={e.name} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        {topEx.map((e, i) => (
+          <View key={`${e.name}-${i}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#fff', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}><ExerciseThumb catalogId={e.catalogId} size={56} /></View>
             <View style={{ flex: 1 }}><Text style={{ color: t.fg, fontSize: 18 }} numberOfLines={1}>{e.name}</Text><Text style={{ color: t.sub, fontSize: 16 }}>{e.n} {e.n === 1 ? 'time' : 'times'}</Text></View>
           </View>

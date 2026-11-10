@@ -33,7 +33,7 @@ export function WorkoutCard({ w, onMenu }: { w: Workout; onMenu?: () => void }) 
         <Stat label="Sets" value={String(w.entries.reduce((t, e) => t + e.sets.length, 0))} />
       </View>
       <View style={{ gap: 4 }}>
-        {shown.map((e) => <ExerciseLabel key={e.exerciseId} exerciseId={e.exerciseId} size={36} prefix={`${e.sets.length} × `} nameStyle={{ fontSize: 15 }} numberOfLines={1} />)}
+        {shown.map((e, i) => <ExerciseLabel key={`${e.exerciseId}-${i}`} exerciseId={e.exerciseId} size={36} prefix={`${e.sets.length} × `} nameStyle={{ fontSize: 15 }} numberOfLines={1} />)}
         {w.entries.length > 3 && <Text style={{ color: colors.muted }}>See {w.entries.length - 3} more exercise(s)</Text>}
       </View>
       <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>

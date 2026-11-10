@@ -6,12 +6,10 @@ import { Text } from './Text';
 import { EQUIPMENT_FILTERS, MUSCLE_FILTERS, filterExercises } from '../lib/catalog';
 import { colors, radius } from '../lib/theme';
 import { Exercise } from '../lib/types';
-import { GymIcon } from './GymIcon';
+import { IconCircle } from './IconCircle';
 import { MuscleTile } from './MuscleTile';
 import { Sheet } from './ui';
-import type { GymIcon as GymIconName } from '../lib/gymIcons';
-
-const EQUIP_ICON: Record<string, GymIconName> = { none: 'bodyweight', barbell: 'barbell', dumbbell: 'dumbbell', kettlebell: 'kettlebell', machine: 'machine', cable: 'cable', band: 'band', other: 'other' };
+import { equipImage } from '../lib/iconImages';
 
 type Tile = { id: string; label: string; icon: string };
 
@@ -22,7 +20,7 @@ function Grid({ tiles, sel, onToggle, equip }: { tiles: Tile[]; sel: string[]; o
         const on = sel.includes(t.id);
         return (
           <Pressable key={t.id} onPress={() => onToggle(t.id)} testID={`filter-${t.id}`} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bg, borderRadius: radius.md, padding: 12, borderWidth: 2, borderColor: on ? colors.primary : 'transparent' }}>
-            {equip ? <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}><GymIcon name={EQUIP_ICON[t.id] ?? 'other'} size={30} color={on ? colors.primary : colors.text} /></View> : <MuscleTile muscle={t.label} on={on} />}
+            {equip ? <IconCircle source={equipImage(t.id)} /> : <MuscleTile label={t.label} />}
             <Text style={{ flex: 1, fontSize: 16, color: colors.text }} numberOfLines={2}>{t.label}</Text>
             {on && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
           </Pressable>

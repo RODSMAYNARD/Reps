@@ -6,7 +6,7 @@ export default function Pro() {
   return (
     <Screen>
       <Header title="Reps Pro" />
-      <Paywall source="settings" freeLabel="Back" onContinueFree={() => router.back()} />
+      <Paywall source="settings" freeLabel="Back" onContinueFree={() => router.back()} onPurchased={() => router.back()} />
     </Screen>
   );
 }

@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dialog } from '../../components/ui';
+import { FEATURES } from '../../lib/constants';
 import { colors } from '../../lib/theme';
 
 export function SocialButton({ icon, label, onPress, color }: { icon: any; label: string; onPress: () => void; color?: string }) {
@@ -27,15 +28,16 @@ export default function Welcome() {
           <Text style={{ color: '#9AA3AF', fontSize: 15, marginTop: 6 }}>Log workouts. See progress.</Text>
         </View>
         <View style={{ gap: 10 }}>
-          <SocialButton icon="logo-apple" label="Sign up with Apple" onPress={() => setSoon(true)} />
-          <SocialButton icon="logo-google" label="Sign up with Google" onPress={() => setSoon(true)} />
+          {/* Apple/Google ainda sem login nativo: escondidos até FEATURES.socialLogin (nada de "Coming soon") */}
+          {FEATURES.socialLogin && <SocialButton icon="logo-apple" label="Sign up with Apple" onPress={() => setSoon(true)} />}
+          {FEATURES.socialLogin && <SocialButton icon="logo-google" label="Sign up with Google" onPress={() => setSoon(true)} />}
           <SocialButton icon="mail-outline" label="Sign up with email" onPress={() => router.push('/signup')} />
           <Pressable onPress={() => router.push('/login')} style={{ alignItems: 'center', paddingVertical: 14 }}>
             <Text style={{ color: '#fff' }}>Already have an account? <Text style={{ color: '#4DA3FF' }}>Log in</Text></Text>
           </Pressable>
         </View>
       </SafeAreaView>
-      <Dialog visible={soon} title="Coming soon" message="This kind of login needs native setup and will be enabled in the published version. Use email for now." actions={[{ label: 'Ok', primary: true, onPress: () => setSoon(false) }]} />
+      {FEATURES.socialLogin && <Dialog visible={soon} title="Coming soon" message="This kind of login needs native setup and will be enabled in the published version. Use email for now." actions={[{ label: 'Ok', primary: true, onPress: () => setSoon(false) }]} />}
     </View>
   );
 }

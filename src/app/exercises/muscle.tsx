@@ -26,7 +26,7 @@ export default function SelectMuscle() {
           const on = many ? sel.includes(m.label) : getDraft().muscle === m.label;
           return (
             <Pressable key={m.label} testID={`muscle-${m.label}`} onPress={() => (many ? setSel(on ? sel.filter((x) => x !== m.label) : [...sel, m.label]) : (patchDraft({ muscle: m.label }), router.back()))} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10 }}>
-              <MuscleTile muscle={m.muscle} target={m.target} />
+              <MuscleTile label={m.label} />
               <Text style={{ flex: 1, fontSize: 16, color: colors.text }}>{m.label}</Text>
               {many ? (
                 <View style={{ width: 22, height: 22, borderRadius: 5, borderWidth: on ? 0 : 1.5, borderColor: colors.faint, backgroundColor: on ? colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>{on && <Ionicons name="checkmark" size={16} color="#fff" />}</View>

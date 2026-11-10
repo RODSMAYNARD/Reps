@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { NumInput } from '../../components/NumInput';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +19,7 @@ import { SwapPanel } from '../../components/SwapPanel';
 import { SwipeRow } from '../../components/SwipeRow';
 import { notesOf } from '../../lib/notes';
 import { PlateSheet } from '../../components/PlateSheet';
-import { colDecimal, colHeader, colPatch, colValue, fmtSet, hasWeight, setCols, weightHeader } from '../../lib/exerciseOptions';
+import { colDecimal, colHeader, colPatch, colValue, fmtSet, hasWeight, setCols, setHasValue, weightHeader } from '../../lib/exerciseOptions';
 import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { SET_TYPES } from '../../lib/constants';
 import { fmtClock, fmtDurationLive, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
@@ -32,7 +32,7 @@ import { ActiveEntry, ActiveSet, Exercise, Units } from '../../lib/types';
 
 export default function ActiveWorkoutScreen() {
   const st = useStore();
-  const { active, profile, rest } = st;
+  const { active, profile, rest, skipRest } = st;
   const now = useNow(1000, true);
   const [setSheet, setSetSheet] = useState<{ i: number; j: number } | null>(null);
   const [restSheet, setRestSheet] = useState<number | null>(null);
@@ -71,6 +71,20 @@ export default function ActiveWorkoutScreen() {
   }, [keepAwake]);
   const u = profile.units;
   const insets = useSafeAreaInsets();
+  // teclado aberto: a barra de descanso (fixa embaixo) some, para não ficar por cima do campo em foco
+  const [kbUp, setKbUp] = useState(false);
+  useEffect(() => {
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', () => setKbUp(true));
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbUp(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+  // fim do descanso: quem encerra é o WorkoutNotifier (toca o som e só depois encerra). Aqui fica só a rede de segurança, com folga:
+  // encerrar antes do fim cancelava o som (o relógio arredondado chegava a 0 meio segundo antes)
+  useEffect(() => { if (rest && now - rest.endsAt >= 1500) skipRest(); }, [rest, now, skipRest]);
+  /** Chave estável de cada série por exercício (o store não guarda id por série): apagar uma série não leva o campo em foco para outra.
+   * `k` = chaves gravadas; as que faltam são `${uid}:${n + ...}`, calculadas na hora (estáveis enquanto nada é apagado ou inserido no meio). */
+  const [setKeys, setSetKeys] = useState<Record<string, { k: string[]; n: number }>>({});
 
   if (!active)
     return (
@@ -85,7 +99,8 @@ export default function ActiveWorkoutScreen() {
   const allCollapsed = shown.length > 0 && shown.every((x) => collapsed[uidOf(x.e, x.i)]);
   const setAll = (v: boolean) => setCollapsed(Object.fromEntries(shown.map((x) => [uidOf(x.e, x.i), v])));
   const doneSets = shown.flatMap((x) => x.e.sets.filter((s) => s.done));
-  const volume = doneSets.reduce((t, s) => t + setVolume(s), 0);
+  // por exercício: o tipo decide o que conta (sem aquecimento, assistido nem cardio), igual ao treino salvo
+  const volume = shown.reduce((t, x) => { const k = exOf(x.e.exerciseId)?.kind; return t + x.e.sets.reduce((a, s) => a + (s.done ? setVolume(s, k) : 0), 0); }, 0);
   const worked = active ? active.entries.filter((e) => !e.hidden && e.sets.some((s) => s.done)).map((e) => exOf(e.exerciseId)) : [];
   const litPrimary = [...new Set(worked.flatMap((x) => [...regionsOf(x?.muscle), ...regionsOf(x?.target)]))] as Region[];
   const litSecondary = [...new Set(worked.flatMap((x) => (x?.secondary ?? []).flatMap(regionsOf)))] as Region[];
@@ -115,16 +130,36 @@ export default function ActiveWorkoutScreen() {
     );
   };
 
+  const keysOf = (uid: string, len: number) => { const s = setKeys[uid], k = s?.k ?? [], n = s?.n ?? 0; return Array.from({ length: len }, (_, j) => k[j] ?? `${uid}:${n + j - k.length}`); };
+  /** Primeiro número ainda não usado nas chaves da entrada. */
+  const nextKey = (uid: string, len: number) => { const s = setKeys[uid]; return (s?.n ?? 0) + Math.max(0, len - (s?.k.length ?? 0)); };
+  const putKeys = (uid: string, k: string[], n: number) => setSetKeys((o) => ({ ...o, [uid]: { k, n } }));
+  /** Apaga a série j do exercício i (a chave dela sai junto; o foco do KG acompanha a série). */
+  const dropSet = (i: number, j: number) => {
+    const e = active.entries[i];
+    if (!e) return;
+    const uid = uidOf(e, i), len = e.sets.length;
+    putKeys(uid, keysOf(uid, len).filter((_, x) => x !== j), nextKey(uid, len));
+    setKgFocus((f) => (!f || f.i !== i || f.j < j ? f : f.j === j ? null : { i, j: f.j - 1 }));
+    st.removeSet(i, j);
+  };
+
   const pickFor = (cb: (ids: string[]) => void, single = false) => { setPickHandler(cb); router.push({ pathname: '/exercises/pick', params: single ? { single: '1' } : {} }); };
   const addWarmups = (i: number) => {
     const e = active.entries[i];
+    const eu: Units = e.unit ? { ...u, weight: e.unit } : u;
     const work = e.sets.filter((x) => x.type !== 'warmup');
     const base = Math.max(0, ...work.map((x) => x.kg ?? 0));
     if (!base) return st.showToast('Enter a working weight first.');
     const eq = exOf(e.exerciseId)?.equipment ?? '';
+    // arredonda na unidade em que o peso aparece neste exercício (degrau 5 = 5 kg ou 5 lbs) e volta para kg: em lbs, arredondar o kg dava pesos que não fecham com as anilhas
     const inc = /dumbbell/i.test(eq) ? st.wprefs.dumbbellRounding : st.wprefs.plateRounding;
-    const rows = st.wprefs.warmupFormula.map((r) => ({ type: 'warmup' as const, kg: Math.max(inc, Math.round((base * r.pct) / 100 / inc) * inc), reps: r.reps, done: false }));
-    st.patchEntry(i, { sets: [...rows, ...e.sets.filter((x) => x.type !== 'warmup' || x.done || (x.kg ?? 0) > 0)] });
+    const top = toDisplayWeight(base, eu);
+    const rows = st.wprefs.warmupFormula.map((r) => ({ type: 'warmup' as const, kg: fromDisplayWeight(Math.max(inc, Math.round((top * r.pct) / 100 / inc) * inc), eu), reps: r.reps, done: false }));
+    const keep = (x: ActiveSet) => x.type !== 'warmup' || x.done || (x.kg ?? 0) > 0;
+    const uid = uidOf(e, i), len = e.sets.length, ks = keysOf(uid, len), n = nextKey(uid, len);
+    putKeys(uid, [...rows.map((_, w) => `${uid}:${n + w}`), ...ks.filter((_, j) => keep(e.sets[j]))], n + rows.length);
+    st.patchEntry(i, { sets: [...rows, ...e.sets.filter(keep)] });
   };
   /** Ids de catálogo dos OUTROS exercícios do treino: não são oferecidos como troca. */
   const swapExclude = (i: number) => new Set(active.entries.flatMap((x, k) => (k === i ? [] : [exOf(x.exerciseId)?.catalogId ?? ''])).filter(Boolean) as string[]);
@@ -153,14 +188,15 @@ export default function ActiveWorkoutScreen() {
     st.showToast(`${name} is now the main exercise${where}.`, 6000);
   };
   const goSave = () => router.push('/active/save');
-  const hasTyped = shown.some((x) => x.e.sets.some((s) => !s.done && s.typed && ((s.kg ?? 0) > 0 || (s.reps ?? 0) > 0)));
+  // mesma regra do completeTypedSets: qualquer valor digitado conta (peso, reps, tempo ou distância)
+  const hasTyped = shown.some((x) => x.e.sets.some((s) => !s.done && s.typed && setHasValue(s)));
   const finish = () => {
     if (doneSets.length === 0 && !hasTyped) return st.showToast('Complete at least one set.');
     st.completeTypedSets();
     goSave();
   };
-  const restLeft = rest ? Math.max(0, Math.round((rest.endsAt - now) / 1000)) : 0;
-  if (rest && restLeft <= 0) setTimeout(() => st.skipRest(), 0);
+  // arredonda para cima: o relógio só mostra 0:00 quando o descanso acabou de verdade (o fim é tratado no efeito lá em cima)
+  const restLeft = rest ? Math.max(0, Math.min(rest.total, Math.ceil((rest.endsAt - now) / 1000))) : 0;
 
   const label = (e: ActiveEntry, s: ActiveSet, j: number) => {
     const t = SET_TYPES.find((x) => x.type === s.type)!;
@@ -170,6 +206,9 @@ export default function ActiveWorkoutScreen() {
 
   return (
     <Screen>
+      {/* teclado: no iOS a lista abre espaço e rola até o campo em foco sozinha (automaticallyAdjustKeyboardInsets); no Android (edge-to-edge,
+          o sistema não empurra nada) o KeyboardAvoidingView encolhe a lista e ela rola até o campo em foco. Fica na raiz da tela: a conta dele usa a posição relativa ao pai */}
+      <KeyboardAvoidingView behavior="padding" enabled={Platform.OS === 'android'} style={{ flex: 1 }}>
       <Header left="down" titleAlign="left" title={sw.startedAt || sw.acc > 0 ? <Text style={{ color: colors.primary, fontSize: 16, fontVariant: ['tabular-nums'] }} testID="header-stopwatch">{fmtStopwatch(swMs(sw, swNow))}</Text> : statsOff ? <Text style={{ color: colors.primary, fontSize: 16 }} testID="header-duration">{fmtDurationLive(elapsed)}</Text> : 'Log Workout'} right={<>
         <IconButton name="alarm-outline" onPress={() => setTimerSheet(true)} testID="open-timer" />
         <HeaderAction label="Finish" primary onPress={finish} />
@@ -196,7 +235,7 @@ export default function ActiveWorkoutScreen() {
           {scrolled && <Pressable onPress={() => setStatsOff(true)} hitSlop={8} testID="stats-close" style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={18} color={colors.text} /></Pressable>}
         </View>
       )}
-      {!reordering && <View style={{ flex: 1 }}><ScrollView contentContainerStyle={{ paddingBottom: rest ? 100 : 40 }} keyboardShouldPersistTaps="handled" scrollEventThrottle={16}
+      {!reordering && <View style={{ flex: 1 }}><ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: rest ? 100 : 40 }} keyboardShouldPersistTaps="handled" scrollEventThrottle={16}
         onScroll={(ev) => { const y = ev.nativeEvent.contentOffset.y; setScrolled(y > 6); if (y <= 2) setStatsOff(false); }}>
         {shown.length > 1 && (
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 18, paddingHorizontal: 16, paddingTop: 12 }}>
@@ -217,7 +256,8 @@ export default function ActiveWorkoutScreen() {
           const uid = uidOf(e, i);
           const isCollapsed = !!collapsed[uid];
           const prevSets = st.previousSets(e.exerciseId);
-          const prs = prFlags(records(st.workouts, st.realExerciseId(e.exerciseId)), e.sets);
+          const prs = prFlags(records(st.workouts, st.realExerciseId(e.exerciseId)), e.sets, kind);
+          const keys = keysOf(uid, e.sets.length);
           const eu: Units = e.unit ? { ...u, weight: e.unit } : u;
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
@@ -264,7 +304,7 @@ export default function ActiveWorkoutScreen() {
                 const lb = label(e, s, j);
                 const prev = prevSets[j] ?? null;
                 return (
-                  <SwipeRow key={j} onDelete={() => st.removeSet(i, j)}><View testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
+                  <SwipeRow key={keys[j]} onDelete={() => dropSet(i, j)}><View testID="set-row" style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, backgroundColor: s.done ? colors.successSoft : colors.bg }}>
                     <Pressable onPress={() => setSetSheet({ i, j })} style={{ width: 38, alignItems: 'center', paddingVertical: 6 }} testID="set-type">
                       <View style={{ width: 35, height: 35, borderRadius: 8, backgroundColor: s.done ? colors.bg : colors.surface, alignItems: 'center', justifyContent: 'center' }}>
                         {prs[j] ? <Ionicons name="ribbon" size={20} color="#F5C400" /> : <Text style={{ color: lb.color, fontWeight: '700', fontSize: 16 }}>{lb.text}</Text>}
@@ -321,8 +361,9 @@ export default function ActiveWorkoutScreen() {
         </Pressable>
       )}
       </View>}
+      </KeyboardAvoidingView>
 
-      {rest && !reordering && (
+      {rest && !reordering && !kbUp && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: insets.bottom }}>
           <View style={{ height: 4, backgroundColor: colors.surfaceAlt }}><View style={{ height: 4, backgroundColor: colors.primary, width: `${Math.min(100, (restLeft / rest.total) * 100)}%` }} /></View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10 }}>
@@ -426,7 +467,7 @@ export default function ActiveWorkoutScreen() {
             right={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ color: t.color || colors.text, fontWeight: '700', width: 16 }}>{t.badge || '1'}</Text><Ionicons name="help-circle-outline" size={20} color={colors.faint} onPress={() => setHelpType(t.help)} /></View>}
             onPress={() => { st.patchSet(setSheet!.i, setSheet!.j, { type: t.type }); setSetSheet(null); }} />
         ))}
-        <ListRow icon="close" label="Remove Set" danger last onPress={() => { st.removeSet(setSheet!.i, setSheet!.j); setSetSheet(null); }} />
+        <ListRow icon="close" label="Remove Set" danger last onPress={() => { dropSet(setSheet!.i, setSheet!.j); setSetSheet(null); }} />
       </Sheet>
       {/* explicação do "Hide only for this workout": pop-over no centro (o menu fecha antes, para nada ficar empilhado) */}
       <Dialog visible={!!statHelp} message={statHelp ?? ''} onClose={() => setStatHelp(null)} actions={[{ label: 'Ok', primary: true, onPress: () => setStatHelp(null) }]} />
@@ -470,7 +511,7 @@ export default function ActiveWorkoutScreen() {
         <ListRow icon="eye-off-outline" label="Hide only for this workout" testID="hide-exercise"
           after={<Pressable onPress={() => { setMenu(null); setHidePop(true); }} hitSlop={12} testID="hide-help"><Ionicons name="help-circle-outline" size={20} color={colors.faint} /></Pressable>}
           onPress={() => { const i = menu; setMenu(null); if (i !== null) { st.patchEntry(i, { hidden: true }); st.showToast('Hidden only for this workout. Nothing was deleted.'); } }} />
-        <ListRow icon="remove-circle-outline" label="Reduce sets" testID="reduce-sets" onPress={() => { const i = menu!; setMenu(null); const n = active.entries[i].sets.length; if (n > 1) st.removeSet(i, n - 1); else st.showToast('An exercise needs at least one set.'); }} />
+        <ListRow icon="remove-circle-outline" label="Reduce sets" testID="reduce-sets" onPress={() => { const i = menu!; setMenu(null); const n = active.entries[i].sets.length; if (n > 1) dropSet(i, n - 1); else st.showToast('An exercise needs at least one set.'); }} />
         <ListRow icon="swap-vertical" label="Reorder exercises" onPress={() => { setMenu(null); setReordering(true); }} />
         <ListRow icon="trash-outline" label="Remove Exercise" danger last onPress={() => { const i = menu!; setMenu(null); setConfirm({ title: 'Remove exercise?', message: 'Its sets in this workout will be lost.', label: 'Remove', run: () => st.removeEntry(i) }); }} />
       </Sheet>
@@ -514,7 +555,7 @@ const HELP = {
   time: { title: 'Time', text: 'Time you held or performed the exercise in the set (seconds or minutes, as the column shows). Only log the time you completed.' },
   hide: { title: 'Hide only for this workout', text: 'Hides this exercise only in the workout you are doing now. Nothing is deleted: it is not counted in the volume and is not saved with this workout. The next time you do this workout or routine, the exercise appears normally. To bring it back now, tap the hidden exercises row at the bottom of the list.' },
   swap: { title: 'Swap', text: 'Is the gym packed, or do you just want to change the stimulus a little? Pick another exercise that trains the same muscle and use it instead, only in this workout. Your routine does not change, and next time the original comes back. To keep the new exercise for good, open the ⋮ menu of the exercise and choose "Make main exercise".' },
-  volume: 'Volume is the aggregate of all the weight lifted in your current workout. Warm-up sets are included.',
+  volume: 'Volume is the aggregate of all the weight lifted in your current workout. Warm-up sets are not included.',
   setsTotal: 'Sets are the total number of completed sets in your current workout. Warm-up sets are included.',
   complete: { title: 'Complete', text: 'The checkmark is a feature to help you keep track of which exercises you have completed.' },
 };

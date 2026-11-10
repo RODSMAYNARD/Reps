@@ -74,7 +74,7 @@ export default function WorkoutDone() {
   const vol = workoutVolume(w);
   const sets = workoutSets(w);
   const stats: [string, string][] = [['Duration', shortDur(w.durationSec)], ['Volume', fmtVolume(vol, u)], ['Sets', String(sets)]];
-  const exs = w.entries.map((e) => ({ n: e.sets.length, ex: st.findExercise(e.exerciseId), sets: e.sets }));
+  const exs = w.entries.map((e) => ({ n: e.sets.length, ex: st.findExercise(e.exerciseId), sets: e.sets, unit: e.unit }));
   const primary = [...new Set(exs.flatMap((e) => [...regionsOf(e.ex?.muscle), ...regionsOf(e.ex?.target)]))] as Region[];
   const secondary = [...new Set(exs.flatMap((e) => (e.ex?.secondary ?? []).flatMap(regionsOf)))] as Region[];
   const lift = [...LIFTS].reverse().find(([kg]) => vol >= kg);
@@ -191,7 +191,8 @@ export default function WorkoutDone() {
     'Here is a workout I just finished. Please analyze it: what went well, what I could improve, and what to do next session.',
     '',
     `${w.title} — ${shortDur(w.durationSec)}, ${fmtVolume(vol, u)} total volume, ${sets} sets`,
-    ...exs.map((e) => `- ${e.ex?.name ?? 'Exercise'}: ${e.sets.map((s) => fmtSet(s, e.ex?.kind, u)).join(', ')}`),
+    // peso na unidade escolhida para o exercício (Weight Input), senão a do perfil
+    ...exs.map((e) => `- ${e.ex?.name ?? 'Exercise'}: ${e.sets.map((s) => fmtSet(s, e.ex?.kind, e.unit ? { ...u, weight: e.unit } : u)).join(', ')}`),
   ].join('\n');
 
   const capture = async () => { const r = refs.current[page]; if (!r) return null; return captureRef(r as Parameters<typeof captureRef>[0], { format: 'png', quality: 1 }); };

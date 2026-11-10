@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Pressable, ScrollView, View } from 'react-native';
 import { Text, TextInput } from '../../components/Text';
 import { NumInput } from '../../components/NumInput';
 import { Dialog, Header, HeaderAction, ListRow, Screen, Section, Sheet } from '../../components/ui';
@@ -43,30 +43,32 @@ export default function LogMeasures() {
   return (
     <Screen>
       <Header left="cancel" title="Log Measurements" right={<HeaderAction label="Save" disabled={!any} onPress={save} />} />
-      <ScrollView keyboardShouldPersistTaps="handled">
-        <ListRow label="Date" detail={date.toLocaleDateString(locale(), { day: '2-digit', month: 'long', year: 'numeric' })} onPress={existing ? undefined : () => setSheet(true)} last />
-        <Section title="Progress photo" />
-        <View style={{ paddingHorizontal: 16 }}>
-          {photo ? (
-            <View><Image source={{ uri: photo }} style={{ width: 120, height: 160, borderRadius: 12 }} /><Pressable onPress={() => setPhoto(null)} style={{ position: 'absolute', left: 6, top: 6, backgroundColor: '#000a', borderRadius: 12 }}><Ionicons name="close" size={20} color="#fff" /></Pressable></View>
-          ) : (
-            <Pressable onPress={pick} style={{ width: 120, height: 160, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, alignItems: 'center', justifyContent: 'center', gap: 6 }}><Ionicons name="camera-outline" size={28} color={colors.primary} /><Text style={{ color: colors.primary }}>Add</Text></Pressable>
-          )}
-          <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Your photo is stored privately in your account.</Text>
-        </View>
-        <Section title="Measurements" />
-        {MEASURE_FIELDS.map((f) => {
-          const unit = f.unit === 'weight' ? u.weight : f.unit === 'body' ? u.body : '%';
-          return (
-            <View key={f.key} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.surface }}>
-              <Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>{f.label} ({unit})</Text>
-              <View style={{ width: 110 }}><NumInput decimal placeholder="-" value={vals[f.key]} onChange={(v) => setVals({ ...vals, [f.key]: v })} style={{ textAlign: 'right' }} /></View>
-            </View>
-          );
-        })}
-        {existing && <Text onPress={() => setDel(true)} style={{ color: colors.danger, textAlign: 'center', padding: 24 }}>Delete entry</Text>}
-        <TextInput style={{ height: 0 }} />
-      </ScrollView>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          <ListRow label="Date" detail={date.toLocaleDateString(locale(), { day: '2-digit', month: 'long', year: 'numeric' })} onPress={existing ? undefined : () => setSheet(true)} last />
+          <Section title="Progress photo" />
+          <View style={{ paddingHorizontal: 16 }}>
+            {photo ? (
+              <View><Image source={{ uri: photo }} style={{ width: 120, height: 160, borderRadius: 12 }} /><Pressable onPress={() => setPhoto(null)} style={{ position: 'absolute', left: 6, top: 6, backgroundColor: '#000a', borderRadius: 12 }}><Ionicons name="close" size={20} color="#fff" /></Pressable></View>
+            ) : (
+              <Pressable onPress={pick} style={{ width: 120, height: 160, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.faint, alignItems: 'center', justifyContent: 'center', gap: 6 }}><Ionicons name="camera-outline" size={28} color={colors.primary} /><Text style={{ color: colors.primary }}>Add</Text></Pressable>
+            )}
+            <Text style={{ color: colors.muted, fontSize: 12, marginTop: 6 }}>Your photo is stored privately in your account.</Text>
+          </View>
+          <Section title="Measurements" />
+          {MEASURE_FIELDS.map((f) => {
+            const unit = f.unit === 'weight' ? u.weight : f.unit === 'body' ? u.body : '%';
+            return (
+              <View key={f.key} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.surface }}>
+                <Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>{f.label} ({unit})</Text>
+                <View style={{ width: 110 }}><NumInput decimal placeholder="-" value={vals[f.key]} onChange={(v) => setVals({ ...vals, [f.key]: v })} style={{ textAlign: 'right' }} /></View>
+              </View>
+            );
+          })}
+          {existing && <Text onPress={() => setDel(true)} style={{ color: colors.danger, textAlign: 'center', padding: 24 }}>Delete entry</Text>}
+          <TextInput style={{ height: 0 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
       <Sheet visible={sheet} onClose={() => setSheet(false)} title="Entry date">
         {[0, 1, 2, 3, 7, 14, 30].map((d) => <ListRow key={d} label={d === 0 ? 'Today' : d === 1 ? 'Yesterday' : `${d} days ago`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setSheet(false); }} />)}
       </Sheet>

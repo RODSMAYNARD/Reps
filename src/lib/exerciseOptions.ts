@@ -69,7 +69,7 @@ export const colPatch = (col: SetCol, v: number | null, u: Units): Partial<SetRo
   col === 'reps' ? { reps: v } : col === 'sec' ? { seconds: v } : col === 'min' ? { seconds: v == null ? null : Math.round(v * 60) } : { distM: v == null ? null : fromDisplayDist(v, u) };
 export const colDecimal = (col: SetCol) => col === 'min' || col === 'dist';
 /** A série tem algum valor (peso, repetições, tempo ou distância). */
-/** Uma série em texto conforme o tipo: "60 kg × 8", "0:45", "5 km · 25:00", "40 kg × 50 m". */
+/** Uma série em texto conforme o tipo: "60 kg × 8", "+20 kg × 8" (peso extra), "−20 kg × 8" (ajuda), "0:45", "5 km · 25:00", "40 kg × 50 m". */
 export const fmtSet = (s: SetRow, kind: ExerciseKind | undefined, u: Units) => {
   const kg = (s.kg ?? 0) > 0 ? fmtWeight(s.kg!, u) : '';
   const t = fmtClock(s.seconds ?? 0), d = fmtDist(s.distM ?? 0, u);
@@ -77,7 +77,8 @@ export const fmtSet = (s: SetRow, kind: ExerciseKind | undefined, u: Units) => {
   if (kind === 'distance_duration') return `${d} · ${t}`;
   if (kind === 'weight_distance') return kg ? `${kg} × ${d}` : d;
   if (kind === 'duration') return fmtClock(s.reps ?? 0);
-  return kg ? `${kg} × ${s.reps ?? 0}` : `${s.reps ?? 0} reps`;
+  const sign = kind === 'weighted_bodyweight' ? '+' : kind === 'assisted_bodyweight' ? '−' : '';
+  return kg ? `${sign}${kg} × ${s.reps ?? 0}` : `${s.reps ?? 0} reps`;
 };
 export const setHasValue = (s: SetRow) => (s.kg ?? 0) > 0 || (s.reps ?? 0) > 0 || (s.seconds ?? 0) > 0 || (s.distM ?? 0) > 0;
 /** Rótulo da coluna de peso no treino: KG, +KG (com peso extra) ou -KG (com ajuda). */

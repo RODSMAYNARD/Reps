@@ -10,7 +10,7 @@ import { fmtDuration, fmtStartTime, fmtVolume } from '../../lib/format';
 import { setVolume } from '../../lib/stats';
 import { elapsedSec, useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
-import { Workout } from '../../lib/types';
+import { SetRow, Workout } from '../../lib/types';
 
 const VIS: { id: Workout['visibility']; label: string }[] = [{ id: 'everyone', label: 'Everyone' }, { id: 'followers', label: 'Followers' }, { id: 'private', label: 'Only me' }];
 
@@ -30,25 +30,27 @@ export default function SaveWorkout() {
   const [locAsk, setLocAsk] = useState(false);
   const [locDraft, setLocDraft] = useState('');
   if (!active) return null;
-  const done = active.entries.flatMap((e) => e.sets.filter((s) => s.done));
+  // exercícios escondidos só neste treino não contam (nem vão no treino salvo)
+  const shown = active.entries.filter((e) => !e.hidden);
+  const done = shown.flatMap((e) => e.sets.filter((s) => s.done));
+  const volume = shown.reduce((t, e) => { const k = st.findExercise(e.exerciseId)?.kind; return t + e.sets.reduce((a, s) => a + (s.done ? setVolume(s, k) : 0), 0); }, 0);
   const dur = elapsedSec(active);
   const when = new Date(active.dateAt ?? active.startedAt);
 
   const keyOf = (id: string) => { const c = st.findExercise(id)?.catalogId; return c ? `cat:${c}` : id; };
   const routine = active.fromRoutineId ? st.routines.find((r) => r.id === active.fromRoutineId) ?? null : null;
-  const performed = active.entries.filter((e) => !e.hidden).map((e) => ({ key: keyOf(e.exerciseId), sets: e.sets.filter((x) => x.done).map(({ done: _d, typed: _t, ...x }) => x) })).filter((e) => e.sets.length > 0);
-  const sameSets = (a: { kg: number | null; reps: number | null }[], b: { kg: number | null; reps: number | null }[]) => a.length === b.length && a.every((x, k) => (x.kg ?? 0) === (b[k].kg ?? 0) && (x.reps ?? 0) === (b[k].reps ?? 0));
+  // a troca (Swap) vale só para este treino: o exercício trocado fica fora da comparação e da atualização (a rotina segue com o original, sem ganhar o substituto)
+  const performed = shown.filter((e) => !e.swappedFrom).map((e) => ({ id: e.exerciseId, key: keyOf(e.exerciseId), restSec: e.restSec, unit: e.unit, sets: e.sets.filter((x) => x.done).map(({ done: _d, typed: _t, ...x }): SetRow => x) })).filter((e) => e.sets.length > 0);
+  const sameSets = (a: SetRow[], b: SetRow[]) => a.length === b.length && a.every((x, k) => (x.kg ?? 0) === (b[k].kg ?? 0) && (x.reps ?? 0) === (b[k].reps ?? 0) && (x.seconds ?? 0) === (b[k].seconds ?? 0) && (x.distM ?? 0) === (b[k].distM ?? 0));
   const changed = !!routine && performed.some((p) => { const r = routine.exercises.find((x) => keyOf(x.exerciseId) === p.key); return !r || !sameSets(r.sets, p.sets); });
 
   const save = async (updateRoutine = false) => {
     setBusy(true);
     const w = await st.finishActive({ title: title.trim() || 'Workout', description: desc, visibility: vis, date: when.toISOString(), durationSec: dur, location: place.trim() || null });
     if (w && updateRoutine && routine) {
+      // chaves calculadas ANTES de salvar; exercício novo entra com o id do próprio treino (um `cat:<id>` serve: o saveRoutine acha o exercício criado ao salvar)
       const exercises = routine.exercises.map((r) => { const p = performed.find((x) => x.key === keyOf(r.exerciseId)); return p ? { ...r, sets: p.sets } : r; });
-      performed.filter((p) => !routine.exercises.some((r) => keyOf(r.exerciseId) === p.key)).forEach((p) => {
-        const en = w.entries.find((e) => keyOf(e.exerciseId) === p.key);
-        if (en) exercises.push({ exerciseId: en.exerciseId, notes: '', restSec: en.restSec, sets: p.sets });
-      });
+      performed.filter((p) => !routine.exercises.some((r) => keyOf(r.exerciseId) === p.key)).forEach((p) => exercises.push({ exerciseId: p.id, notes: '', restSec: p.restSec, unit: p.unit, sets: p.sets }));
       await st.saveRoutine({ ...routine, exercises });
     }
     setBusy(false);
@@ -73,7 +75,7 @@ export default function SaveWorkout() {
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: colors.surface }}>
           <Stat label="Duration" value={fmtDuration(dur)} color={colors.primary} />
-          <Stat label="Volume" value={fmtVolume(done.reduce((t, x) => t + setVolume(x), 0), profile.units)} />
+          <Stat label="Volume" value={fmtVolume(volume, profile.units)} />
           <Stat label="Sets" value={String(done.length)} />
         </View>
 
@@ -109,7 +111,7 @@ export default function SaveWorkout() {
       <Sheet visible={whenSheet} onClose={() => setWhenSheet(false)} title="Date">
         <StartTimeWheels value={when} onChange={(d) => st.setStartTime(d.toISOString())} />
       </Sheet>
-      <Dialog visible={locAsk} title="Location" onClose={() => setLocAsk(false)}
+      <Dialog visible={locAsk} title="Location" hasInput onClose={() => setLocAsk(false)}
         actions={[{ label: 'Cancel', onPress: () => setLocAsk(false) }, { label: 'Save', primary: true, onPress: () => { setPlace(locDraft.trim()); setLocAsk(false); } }]}>
         <TextInput value={locDraft} onChangeText={setLocDraft} autoFocus placeholder="Gym or place name" placeholderTextColor={colors.faint} style={{ backgroundColor: colors.surface, borderRadius: 10, padding: 12, fontSize: 16, color: colors.text }} testID="location-input" />
       </Dialog>

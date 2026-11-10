@@ -21,7 +21,8 @@ export const readSnapshot = async (uid: string): Promise<Snapshot | null> => {
 };
 
 /** Treino salvo sem internet, esperando para subir. As entradas podem ter ids `cat:` (o exercício é criado no banco ao enviar). */
-export type PendingWorkout = { workout: Workout; fromTrainer: boolean };
+export type PendingWorkout = { workout: Workout; fromTrainer: boolean; failed?: string };
+// `failed`: o servidor recusou (não é falta de rede); a fila segue com os outros e esse tenta de novo na próxima carga do app
 
 export const readOutbox = async (uid: string): Promise<PendingWorkout[]> => {
   try { const raw = await AsyncStorage.getItem(`reps:outbox:${uid}`); return raw ? JSON.parse(raw) : []; } catch { return []; }

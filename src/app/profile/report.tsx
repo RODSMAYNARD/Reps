@@ -7,7 +7,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { BarChart, Btn, Header, Screen, Section, TopTabs } from '../../components/ui';
 import { MUSCLE_GROUPS } from '../../lib/constants';
-import { fmtDuration, fmtVolume } from '../../lib/format';
+import { fmtDuration, fmtVolume, toDisplayWeight } from '../../lib/format';
 import { dayKey, workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
@@ -88,7 +88,8 @@ export default function MonthlyReport() {
         </View>
 
         <View style={{ paddingHorizontal: 16, gap: 10 }}>
-          <BarChart data={series} highlightLast />
+          {/* volume vem em kg: o rótulo segue a unidade do perfil */}
+          <BarChart data={series} highlightLast format={metric === 'volume' ? (v) => String(Math.round(toDisplayWeight(v, u))) : undefined} />
           <TopTabs items={sum.map((s) => ({ id: s.k, label: s.label }))} value={metric} onChange={(v) => setMetric(v as Metric)} />
         </View>
 
@@ -144,7 +145,7 @@ export default function MonthlyReport() {
         <Section title="Top exercises" />
         <View style={{ paddingHorizontal: 16, gap: 10 }}>
           {topEx.length === 0 && <Text style={{ color: colors.muted }}>No exercises logged.</Text>}
-          {topEx.map((e) => <View key={e.name} style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.text, flex: 1 }} numberOfLines={1}>{e.name}</Text><Text style={{ color: colors.muted }}>{e.n} {e.n === 1 ? 'time' : 'times'}</Text></View>)}
+          {topEx.map((e, i) => <View key={`${e.name}-${i}`} style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.text, flex: 1 }} numberOfLines={1}>{e.name}</Text><Text style={{ color: colors.muted }}>{e.n} {e.n === 1 ? 'time' : 'times'}</Text></View>)}
         </View>
 
         {cur.length > 0 && (

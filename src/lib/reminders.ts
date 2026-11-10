@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { AndroidImportance } from 'expo-notifications';
 import { Platform } from 'react-native';
 import { getLang } from './i18n';
 import type { Workout, WorkoutPrefs } from './types';
@@ -9,6 +10,9 @@ import type { Workout, WorkoutPrefs } from './types';
  */
 const PREFIX = 'reps-rem-';
 const DAY = 86400000;
+/** Canal do Android. O antigo (`reminders`) foi criado com importância errada (MIN) e o Android nunca sobe a importância de um canal existente: id novo + o antigo apagado uma vez. */
+const CHANNEL = 'reminders-v2';
+let oldChannelDropped = false;
 
 const txt = (en: string, pt: string) => (getLang() === 'pt' ? pt : en);
 const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
@@ -17,27 +21,43 @@ const weekStart = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); 
 
 export const remindersOn = (p: WorkoutPrefs) => p.remind || p.nudge || p.weeklyGoal > 0;
 
+/** Permissão de notificações: 'granted'; 'denied' (dá para pedir de novo); 'blocked' (só nos ajustes do aparelho). Com `ask`, pede quando ainda dá. */
+export async function reminderPermission(ask: boolean): Promise<'granted' | 'denied' | 'blocked'> {
+  if (Platform.OS === 'web') return 'blocked';
+  try {
+    const cur = await Notifications.getPermissionsAsync();
+    if (cur.granted) return 'granted';
+    if (!cur.canAskAgain) return 'blocked';
+    if (!ask) return 'denied';
+    const r = await Notifications.requestPermissionsAsync();
+    return r.granted ? 'granted' : r.canAskAgain ? 'denied' : 'blocked';
+  } catch { return 'blocked'; }
+}
+
 /** Pede a permissão de notificações (ao ligar um lembrete). Devolve se ficou permitido. */
-export async function askReminderPermission() {
-  if (Platform.OS === 'web') return false;
-  const cur = await Notifications.getPermissionsAsync();
-  if (cur.granted) return true;
-  if (!cur.canAskAgain) return false;
-  return (await Notifications.requestPermissionsAsync()).granted;
+export const askReminderPermission = async () => (await reminderPermission(true)) === 'granted';
+
+/** Cancela todos os lembretes agendados (antes de reagendar, ao sair da conta e ao apagar a conta). */
+export async function cancelReminders() {
+  if (Platform.OS === 'web') return;
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(all.filter((n) => n.identifier.startsWith(PREFIX)).map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
+  } catch { /* sem módulo nativo: nada agendado */ }
 }
 
 export async function syncReminders(p: WorkoutPrefs, workouts: Workout[]) {
   if (Platform.OS === 'web') return;
   try {
-    const all = await Notifications.getAllScheduledNotificationsAsync();
-    await Promise.all(all.filter((n) => n.identifier.startsWith(PREFIX)).map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)));
+    await cancelReminders();
+    if (Platform.OS === 'android' && !oldChannelDropped) { oldChannelDropped = true; await Notifications.deleteNotificationChannelAsync('reminders').catch(() => {}); }
     if (!remindersOn(p) || !(await Notifications.getPermissionsAsync()).granted) return;
-    if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync('reminders', { name: txt('Reminders', 'Lembretes'), importance: 3 as Notifications.AndroidImportance });
+    if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync(CHANNEL, { name: txt('Reminders', 'Lembretes'), importance: AndroidImportance.DEFAULT });
 
     const now = new Date();
     const at = (d: Date) => { const x = new Date(d); x.setHours(p.remindHour, p.remindMin, 0, 0); return x; };
     const schedule = (id: string, date: Date, title: string, body: string) => date > now &&
-      Notifications.scheduleNotificationAsync({ identifier: PREFIX + id, content: { title, body }, trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: 'reminders' } });
+      Notifications.scheduleNotificationAsync({ identifier: PREFIX + id, content: { title, body }, trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date, channelId: CHANNEL } });
     const trainedOn = (d: Date) => workouts.some((w) => sameDay(new Date(w.date), d));
     const jobs: (Promise<string> | false)[] = [];
 

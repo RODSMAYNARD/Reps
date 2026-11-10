@@ -68,7 +68,12 @@ export const DEMO_ATHLETES = [
 ];
 
 /** Recursos que ainda não têm backend: ficam ESCONDIDOS (e não "Coming soon") até existirem. Ligar uma bandeira só depois de implementar de verdade. */
-export const FEATURES = { social: false, watch: false, integrations: false, coach: false, dataImport: false, workoutLink: false, proGating: false };
+export const FEATURES = { social: false, watch: false, integrations: false, coach: false, dataImport: false, workoutLink: false, proGating: false, socialLogin: false };
 
 /** E-mail de suporte (troque aqui quando houver um endereço próprio). */
 export const SUPPORT_EMAIL = 'rodrigo.maynard@gmail.com';
+
+/** Termos de uso (App Store 3.1.2): o EULA padrão da Apple até existir um texto próprio publicado. */
+export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+/** Política de privacidade: vazia até ser publicada numa URL pública (rascunho em `docs/legal/privacy-policy.md`). Vazio = link escondido. */
+export const PRIVACY_URL: string = '';

@@ -6,7 +6,7 @@ import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { BarChart, Card, Empty, Header, PillRow, Screen, Stat } from '../../components/ui';
 import { MUSCLES } from '../../lib/constants';
 import { fmtDuration, fmtVolume, fmtWeight } from '../../lib/format';
-import { muscleDistribution, records, workoutSets, workoutVolume } from '../../lib/stats';
+import { canonId, exerciseOf, muscleDistribution, recordsMap, workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { ADVANCED } from './stats';
@@ -25,9 +25,14 @@ export default function StatsDetail() {
     const from = nowTs - 2 * n * 86400000, to = nowTs - n * 86400000;
     return muscleDistribution(workouts.filter((w) => { const t = new Date(w.date).getTime(); return t >= from && t < to; }), exercises);
   }, [workouts, exercises, range, nowTs]);
+  // recordes de todos os exercícios numa passada só (antes era um `records()` por linha, cada um refazendo o mapa inteiro)
+  const rmap = useMemo(() => (type === 'leaderboard' ? recordsMap(workouts) : null), [type, workouts, exercises]); // eslint-disable-line react-hooks/exhaustive-deps -- `exercises` muda o tipo/id canônico que recordsMap lê pelo lookup do store
   const rangePills = <PillRow value={range} onChange={setRange} items={[{ id: '7', label: '7 days' }, { id: '30', label: '30 days' }, { id: '90', label: '3 months' }, { id: '365', label: '1 year' }]} />;
 
-  const mainEx = exercises.map((e) => ({ e, n: workouts.reduce((t, w) => t + (w.entries.find((x) => x.exerciseId === e.id)?.sets.length ?? 0), 0) })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+  // séries por exercício numa passada só; soma todas as entradas (o exercício pode aparecer 2x) e junta o `cat:<id>` de treinos na fila
+  const mainCount = new Map<string, number>();
+  if (type === 'main') workouts.forEach((w) => w.entries.forEach((x) => { const k = canonId(x.exerciseId); mainCount.set(k, (mainCount.get(k) ?? 0) + x.sets.length); }));
+  const mainEx = [...mainCount].flatMap(([k, n]) => { const e = exerciseOf(k) ?? exercises.find((x) => x.id === k); return e && n > 0 ? [{ e, n }] : []; }).sort((a, b) => b.n - a.n);
   const month = workouts.filter((w) => new Date(w.date).getMonth() === new Date().getMonth() && new Date(w.date).getFullYear() === new Date().getFullYear());
   const heat = (name: string) => { const v = cur.find((d) => d.name === name)?.pct ?? 0; return v; };
 
@@ -51,12 +56,13 @@ export default function StatsDetail() {
               <Text style={{ fontWeight: '700', color: v > 40 ? '#fff' : colors.text }}>{g}</Text><Text style={{ color: v > 40 ? '#fff' : colors.muted }}>{v}%</Text></View>); })}
         </View><Text style={{ color: colors.muted, padding: 16 }}>Darker means more sets for that group ({MUSCLES.length} muscles grouped into 6 regions).</Text></View>)}
         {type === 'main' && (<View>{mainEx.length === 0 && <Empty text="Complete workouts to see your most frequent exercises." />}{mainEx.map(({ e, n }, i) => <View key={e.id} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.id} prefix={`${i + 1}. `} right={<Text style={{ color: colors.muted }}>{n} sets</Text>} /></View>)}</View>)}
-        {type === 'leaderboard' && (<View>{exercises.filter((e) => e.kind === 'weight_reps').map((e) => { const r = records(workouts, e.id); return <View key={e.id} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.id} right={<Text style={{ color: colors.muted }}>{r.best1rm ? fmtWeight(r.best1rm, u) : '—'}</Text>} /></View>; })}</View>)}
+        {type === 'leaderboard' && (<View>{exercises.filter((e) => e.kind === 'weight_reps').map((e) => { const r = rmap?.get(e.id); return <View key={e.id} style={{ paddingHorizontal: 16, paddingVertical: 8 }}><ExerciseLabel exerciseId={e.id} right={<Text style={{ color: colors.muted }}>{r?.best1rm ? fmtWeight(r.best1rm, u) : '—'}</Text>} /></View>; })}</View>)}
         {type === 'monthly' && (
           <View style={{ padding: 16, gap: 14 }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{new Date().toLocaleDateString(locale(), { month: 'long', year: 'numeric' })}</Text>
             <Card style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Stat label="Workouts" value={String(month.length)} /><Stat label="Duration" value={fmtDuration(month.reduce((t, w) => t + w.durationSec, 0))} /><Stat label="Volume" value={fmtVolume(month.reduce((t, w) => t + workoutVolume(w), 0), u)} /><Stat label="Sets" value={String(month.reduce((t, w) => t + workoutSets(w), 0))} /></Card>
-            <BarChart data={Array.from({ length: 4 }, (_, i) => ({ label: `W${i + 1}`, value: month.filter((w) => Math.floor((new Date(w.date).getDate() - 1) / 7) === i).length }))} />
+            {/* 5 faixas de 7 dias: os dias 29–31 caem na W5 */}
+            <BarChart data={Array.from({ length: 5 }, (_, i) => ({ label: `W${i + 1}`, value: month.filter((w) => Math.floor((new Date(w.date).getDate() - 1) / 7) === i).length }))} />
             {month.length === 0 && <Empty text="No workouts this month yet." />}
           </View>
         )}

@@ -31,13 +31,22 @@ export default function GeneratePlan() {
   const [seed, setSeed] = useState(1);
   const [plan, setPlan] = useState<{ name: string; routines: PlannedRoutine[] } | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Rotinas deste plano já gravadas: se falhar no meio (ex.: sem internet), tentar de novo continua daqui sem duplicar. */
+  const [saved, setSaved] = useState(0);
 
-  const make = (s: number) => { setSeed(s); setPlan(generatePlan({ goal, days, level, gear, seed: s }, exercises, (e) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.en : undefined))); };
+  const make = (s: number) => { setSeed(s); setSaved(0); setPlan(generatePlan({ goal, days, level, gear, seed: s }, exercises, (e) => (e.catalogId ? CAT_BY_ID.get(e.catalogId)?.en : undefined))); };
   const save = async () => {
-    if (!plan) return;
+    if (!plan || busy) return;
     setBusy(true);
-    for (const r of plan.routines) await saveRoutine({ title: `${plan.name} · ${r.title}`, notes: r.notes, exercises: r.exercises });
+    let n = saved;
+    for (const r of plan.routines.slice(saved)) {
+      if (!(await saveRoutine({ title: `${plan.name} · ${r.title}`, notes: r.notes, exercises: r.exercises }))) break;
+      n++;
+    }
+    setSaved(n);
     setBusy(false);
+    // falhou: o store já mostrou o erro; fica na tela com o plano para tentar de novo
+    if (n < plan.routines.length) return;
     showToast(`Plan saved: ${plan.routines.length} routines`);
     router.back();
   };

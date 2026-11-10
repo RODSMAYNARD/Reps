@@ -7,9 +7,13 @@ import { colors, radius } from '../lib/theme';
 import { ExerciseThumb } from './ExerciseThumb';
 
 const ROW = 64;
+/** Tempo segurando a linha parada até ela "levantar" para arrastar; antes disso o gesto é da lista (rolar). */
+const HOLD_MS = 250;
+/** Mexeu mais que isso antes de levantar: é rolagem, não arrastar. */
+const SLOP = 10;
 export type ReorderItem = { key: string; title: string; subtitle: string; catalogId?: string | null };
 
-/** Touch, hold and drag a row up or down. Calls onMove(from, to) on release. */
+/** Touch, hold and drag a row up or down. Calls onMove(from, to) on release. A quick swipe scrolls the list. */
 export function ReorderList({ items, onMove }: { items: ReorderItem[]; onMove: (from: number, to: number) => void }) {
   const [drag, setDrag] = useState<{ i: number; dy: number } | null>(null);
   const target = drag ? Math.max(0, Math.min(items.length - 1, Math.round(drag.i + drag.dy / ROW))) : -1;
@@ -33,21 +37,34 @@ function Row({ item, index, count, drag, target, setDrag, onMove }: {
   const cnt = useRef(count);
   const mv = useRef(onMove);
   useEffect(() => { idx.current = index; cnt.current = count; mv.current = onMove; });
-  const [pan] = useState(() =>
-    PanResponder.create({
+  // A linha só "levanta" depois de HOLD_MS parada. Até lá ela não bloqueia a rolagem nativa e cede o gesto à lista,
+  // senão a lista não rolava (o toque em qualquer linha virava arrasto). Levantada, a lista para de rolar (scrollEnabled).
+  const armed = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pan] = useState(() => {
+    const stop = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; const was = armed.current; armed.current = false; return was; };
+    return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderGrant: () => setDrag({ i: idx.current, dy: 0 }),
-      onPanResponderMove: (_e, g) => setDrag({ i: idx.current, dy: g.dy }),
+      onMoveShouldSetPanResponder: () => armed.current,
+      onShouldBlockNativeResponder: () => false,
+      onPanResponderTerminationRequest: () => !armed.current,
+      onPanResponderGrant: () => {
+        stop();
+        timer.current = setTimeout(() => { timer.current = null; armed.current = true; setDrag({ i: idx.current, dy: 0 }); }, HOLD_MS);
+      },
+      onPanResponderMove: (_e, g) => {
+        if (armed.current) setDrag({ i: idx.current, dy: g.dy });
+        else if (timer.current && (Math.abs(g.dx) > SLOP || Math.abs(g.dy) > SLOP)) stop();
+      },
       onPanResponderRelease: (_e, g) => {
+        if (!stop()) return;
         const to = Math.max(0, Math.min(cnt.current - 1, Math.round(idx.current + g.dy / ROW)));
         setDrag(null);
         if (to !== idx.current) mv.current(idx.current, to);
       },
-      onPanResponderTerminate: () => setDrag(null),
-    }),
-  );
+      onPanResponderTerminate: () => { if (stop()) setDrag(null); },
+    });
+  });
 
   let y = index * ROW;
   let z = 0;

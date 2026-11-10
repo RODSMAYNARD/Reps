@@ -1,4 +1,4 @@
-import { Exercise, RoutineExercise } from './types';
+import { Exercise, ExerciseKind, RoutineExercise } from './types';
 
 export type Goal = 'hypertrophy' | 'strength' | 'fatloss';
 export type Level = 'beginner' | 'intermediate' | 'advanced';
@@ -180,6 +180,9 @@ export const STAPLES: Record<string, string[]> = {
 
 const rng = (seed: number) => { let s = seed || 1; return () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296); };
 
+/** Tipos medidos em repetições (os de tempo/distância não servem para "3×10"). */
+export const isRepKind = (k: ExerciseKind) => k === 'weight_reps' || k === 'reps' || k === 'weighted_bodyweight' || k === 'assisted_bodyweight';
+
 export function generatePlan(o: PlanOpts, exercises: Exercise[], enOf?: (e: Exercise) => string | undefined): { name: string; routines: PlannedRoutine[] } {
   const rand = rng(o.seed);
   const p = PARAMS[o.goal];
@@ -188,11 +191,13 @@ export function generatePlan(o: PlanOpts, exercises: Exercise[], enOf?: (e: Exer
   exercises.forEach((e) => { const n = enOf?.(e); if (n) byEn.set(n.toLowerCase(), e); });
   const loose = /bench press|squat|deadlift|row\b|pulldown|pull-up|chin-up|push-up|dip\b|curl|press|raise|extension|fly\b|lunge|crunch|thrust|bridge|pushdown|calf/;
   const noisy = /punch|jab|hook|boxing|\(2\)|bradford|assisted|stability ball|exercise ball|bosu|wheel|isometric|one arm|one leg|single|kneeling|v\. \d|male|stretch|\bhold\b|jerk|clean|snatch/;
+  // só exercícios do próprio músculo e medidos em repetições (a lista de clássicos tem nomes de outro músculo no catálogo, ex.: "cable kickback" = tríceps, "mountain climber" = cardio por tempo)
+  const fits = (e: Exercise, muscle: string) => e.muscle === muscle && isRepKind(e.kind) && allowed(e);
   const pool = (muscle: string) => {
-    const staples = (STAPLES[muscle] ?? []).flatMap((n) => byEn.get(n) ?? []).filter(allowed);
+    const staples = (STAPLES[muscle] ?? []).flatMap((n) => byEn.get(n) ?? []).filter((e) => fits(e, muscle));
     if (staples.length) return staples;
     // sem clássico para esse equipamento: tenta algo comum do mesmo músculo, senão pula o grupo
-    return exercises.filter((e) => e.muscle === muscle && allowed(e) && e.kind !== 'duration' && enOf && loose.test((enOf(e) ?? '').toLowerCase()) && !noisy.test((enOf(e) ?? '').toLowerCase())).slice(0, 6);
+    return exercises.filter((e) => fits(e, muscle) && enOf && loose.test((enOf(e) ?? '').toLowerCase()) && !noisy.test((enOf(e) ?? '').toLowerCase())).slice(0, 6);
   };
   const shuffle = <T,>(a: T[]) => a.map((x) => [rand(), x] as const).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
   const kinds = splitFor(o.days);

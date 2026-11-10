@@ -16,10 +16,12 @@ export default function RoutinePreview() {
   const tpl = (src === 'program' ? PROGRAMS.find((p) => p.id === id)?.routines : CATEGORY_ROUTINES[id])?.[Number(idx)];
   const [more, setMore] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [saving, setSaving] = useState(false);
   const exs = (tpl?.exercises ?? []).flatMap((n) => CAT_BY_EN.get(n) ?? []);
   const toRoutineExercises = (): RoutineExercise[] => exs.map((c) => ({ exerciseId: catKey(c), notes: '', restSec: c.k === 'duration' ? 0 : 90, sets: [1, 2, 3].map(() => ({ type: 'normal' as const, kg: null, reps: c.k === 'duration' ? 30 : 10 })) }));
   const saved = routines.some((r) => r.title === tpl?.title);
-  const save = async () => { if (!tpl) return; const r = await saveRoutine({ title: tpl.title, notes: tpl.notes, exercises: toRoutineExercises() }); if (r) showToast('Routine saved to your library'); };
+  // trava de duplo toque: dois toques rápidos salvavam a rotina duas vezes
+  const save = async () => { if (!tpl || saving) return; setSaving(true); const r = await saveRoutine({ title: tpl.title, notes: tpl.notes, exercises: toRoutineExercises() }); setSaving(false); if (r) showToast('Routine saved to your library'); };
   return (
     <Screen>
       <Header title={tpl?.title ?? 'Routine'} right={<IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} />} />
@@ -27,7 +29,7 @@ export default function RoutinePreview() {
         <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{tpl?.title}</Text>
         <Text style={{ color: colors.text }} numberOfLines={more ? undefined : 2}>{tpl?.notes}</Text>
         <Text onPress={() => setMore(!more)} style={{ color: colors.muted }}>{more ? 'show less' : 'show more'}</Text>
-        {saved ? <Btn title="Saved to your library" variant="secondary" disabled onPress={() => {}} /> : <Btn title="Save routine" onPress={save} testID="save-routine" />}
+        {saved ? <Btn title="Saved to your library" variant="secondary" disabled onPress={() => {}} /> : <Btn title="Save routine" onPress={save} loading={saving} testID="save-routine" />}
         {exs.map((e) => (
           <View key={e.id} style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             <View style={{ width: 4, alignSelf: 'stretch', backgroundColor: colors.purple, borderRadius: 2 }} />

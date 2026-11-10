@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["expo", "start", "--web"],
       "port": 8081
+    },
+    {
+      "name": "icon-gen",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/icons/server.mjs"],
+      "port": 8099
     }
   ]
 }

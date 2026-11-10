@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 import { Text } from './Text';
 import { track } from '../lib/analytics';
+import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '../lib/constants';
+import { locale, tr } from '../lib/i18n';
 import { Offers, Plan, buy, loadOffers, mockPrices, money, rcEnabled, restore, usePro } from '../lib/purchases';
 import { colors, radius } from '../lib/theme';
 import { Btn, Dialog, TextLink } from './ui';
@@ -17,23 +19,39 @@ const FAQ = [
   ['What if I get a new device?', 'Log in with the same account and use “Restore purchases”.'],
 ];
 
-/** Texto de preço de um plano: usa o preço real da loja (RevenueCat) quando existe, senão o preço de exemplo. */
+type Product = NonNullable<Offers['year']>['product'];
+
+/** Valor calculado na moeda da loja (quando a loja não manda o texto pronto). */
+const fmt = (n: number, code: string) => { try { return new Intl.NumberFormat(locale(), { style: 'currency', currency: code }).format(n); } catch { return `${code} ${n.toFixed(2)}`; } };
+
+/**
+ * Textos de preço: o preço real da loja (RevenueCat) quando existe, senão o preço de exemplo.
+ * Comparações (anual "se pagar por mês", % de economia, preço riscado da oferta) só com os dois produtos da loja na mesma moeda;
+ * sem dar para calcular, somem (nunca misturam preço da loja com preço de exemplo).
+ */
 function useLabels(offers: Offers | null) {
   const m = mockPrices();
-  const real = (p: Plan) => offers?.[p]?.product.priceString;
-  const per = (p: Plan, n: number) => offers?.[p] ? `${offers[p]!.product.currencyCode} ${(offers[p]!.product.price / 12).toFixed(2)}` : money(n / 12, m.region);
+  const mo = offers?.month?.product, yr = offers?.year?.product, of = offers?.offer?.product;
+  /** `real` com os dois produtos na mesma moeda; `mock` sem nenhum dos dois (preços de exemplo); `null` quando só um existe ou as moedas diferem. */
+  const cmp = <T,>(a: Product | undefined, b: Product | undefined, real: (a: Product, b: Product) => T, mock: T): T | null =>
+    !a && !b ? mock : a && b && a.currencyCode === b.currencyCode ? real(a, b) : null;
+  const perMonth = (p: Product | undefined, n: number) => (p ? p.pricePerMonthString ?? fmt(p.price / 12, p.currencyCode) : money(n / 12, m.region));
+  const save = cmp(mo, yr, (a, b) => Math.round((1 - b.price / (a.price * 12)) * 100), Math.round((1 - m.year / (m.month * 12)) * 100));
   return {
-    month: real('month') ?? money(m.month, m.region),
-    year: real('year') ?? money(m.year, m.region),
-    offer: real('offer') ?? money(m.offer, m.region),
-    yearPerMonth: per('year', m.year),
-    offerPerMonth: per('offer', m.offer),
-    monthFull: money(m.month * 12, m.region),
-    yearFull: money(m.year, m.region),
+    month: mo?.priceString ?? money(m.month, m.region),
+    year: yr?.priceString ?? money(m.year, m.region),
+    offer: of?.priceString ?? money(m.offer, m.region),
+    yearPerMonth: perMonth(yr, m.year),
+    offerPerMonth: perMonth(of, m.offer),
+    monthFull: cmp(mo, yr, (a) => a.pricePerYearString ?? fmt(a.price * 12, a.currencyCode), money(m.month * 12, m.region)),
+    yearFull: cmp(yr, of, (a) => a.priceString, money(m.year, m.region)),
+    badge: save && save > 0 ? `${tr('SAVE')} ${save}%` : undefined,
   };
 }
 
-export function Paywall({ onContinueFree, freeLabel = 'Continue for free', source = 'paywall' }: { onContinueFree: () => void; freeLabel?: string; source?: string }) {
+const openUrl = (url: string) => { Linking.openURL(url).catch(() => {}); };
+
+export function Paywall({ onContinueFree, onPurchased, freeLabel = 'Continue for free', source = 'paywall' }: { onContinueFree: () => void; onPurchased?: () => void; freeLabel?: string; source?: string }) {
   const [plan, setPlan] = useState<Plan>('year');
   const [open, setOpen] = useState<number | null>(null);
   const [dlg, setDlg] = useState<string | null>(null);
@@ -41,6 +59,8 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
   const [exit, setExit] = useState(false);
   const [busy, setBusy] = useState(false);
   const shown = useRef(false);
+  /** Roda depois do "Ok" do aviso de compra/restauração bem-sucedida: quem abriu o paywall segue (onboarding conclui, ajustes volta). */
+  const after = useRef<(() => void) | null>(null);
   const isPro = usePro();
   const L = useLabels(offers);
   useEffect(() => { track('paywall_viewed', { source, mode: rcEnabled ? 'live' : 'preview' }); loadOffers().then(setOffers); }, [source]);
@@ -50,7 +70,7 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
     const r = await buy(p, offers);
     setBusy(false);
     setExit(false);
-    if (r === 'ok') { setDlg('Welcome to Reps Pro! 🎉'); return; }
+    if (r === 'ok') { after.current = onPurchased ?? null; setDlg('Welcome to Reps Pro! 🎉'); return; }
     if (r === 'preview') setDlg(__DEV__ ? 'Preview mode: real purchases turn on as soon as the store products and RevenueCat keys are configured. Prices shown here are examples.' : "Purchases aren't available right now. Please try again later.");
     if (r === 'error') setDlg('The purchase could not be completed. You were not charged.');
   };
@@ -94,7 +114,7 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
             </View>
           ))}
         </View>
-        {card({ id: 'year', title: 'Yearly', price: `7 days free, then ${L.year} / year`, sub: `${L.yearPerMonth} / month · ${L.monthFull} if paid monthly`, badge: 'SAVE 20%' })}
+        {card({ id: 'year', title: 'Yearly', price: `7 days free, then ${L.year} / year`, sub: `${L.yearPerMonth} / month${L.monthFull ? ` · ${L.monthFull} if paid monthly` : ''}`, badge: L.badge })}
         {card({ id: 'month', title: 'Monthly', price: `${L.month} / month`, sub: 'No free trial. Cancel anytime.' })}
         <Btn title={plan === 'year' ? 'Start 7-day free trial' : 'Subscribe'} loading={busy} onPress={() => pay(plan)} testID="paywall-subscribe" />
         <Text style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>{plan === 'year' ? `Free for 7 days, then ${L.year} per year.` : `${L.month} per month.`} Renews automatically. Cancel anytime in your store settings.</Text>
@@ -111,8 +131,13 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
         ))}
         <View style={{ alignItems: 'center', gap: 8, paddingTop: 6 }}>
           <Text style={{ color: colors.muted }}>Problems with your subscription?</Text>
-          <TextLink title="Contact us" onPress={() => Linking.openURL('mailto:rodrigo.maynard@gmail.com')} />
-          <TextLink title="Restore purchases" onPress={async () => { const r = await restore(); setDlg(r === 'ok' ? 'Purchases restored. Welcome back!' : r === 'none' ? 'No purchases found to restore.' : r === 'preview' ? (__DEV__ ? 'Preview mode: nothing to restore yet.' : 'Nothing to restore right now.') : 'Could not restore purchases. Try again.'); }} />
+          <TextLink title="Contact us" onPress={() => openUrl(`mailto:${SUPPORT_EMAIL}`)} />
+          <TextLink title="Restore purchases" onPress={async () => { const r = await restore(); if (r === 'ok') after.current = onPurchased ?? null; setDlg(r === 'ok' ? 'Purchases restored. Welcome back!' : r === 'none' ? 'No purchases found to restore.' : r === 'preview' ? (__DEV__ ? 'Preview mode: nothing to restore yet.' : 'Nothing to restore right now.') : 'Could not restore purchases. Try again.'); }} />
+          {/* App Store 3.1.2: termos e privacidade no fluxo de compra (privacidade só depois de publicada) */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 20, paddingTop: 4 }}>
+            <TextLink title="Terms of Use" onPress={() => openUrl(TERMS_URL)} />
+            {!!PRIVACY_URL && <TextLink title="Privacy Policy" onPress={() => openUrl(PRIVACY_URL)} />}
+          </View>
         </View>
       </ScrollView>
 
@@ -123,7 +148,7 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
             <Text style={{ fontSize: 24, fontWeight: '800', color: colors.text, textAlign: 'center' }}>Wait! Before you go…</Text>
             <Text style={{ color: colors.muted, textAlign: 'center' }}>Get the yearly plan for even less. This offer is only available right now.</Text>
             <View style={{ alignItems: 'center' }}>
-              <Text style={{ color: colors.muted, textDecorationLine: 'line-through', fontSize: 18 }}>{L.yearFull} / year</Text>
+              {!!L.yearFull && <Text style={{ color: colors.muted, textDecorationLine: 'line-through', fontSize: 18 }}>{L.yearFull} / year</Text>}
               <Text style={{ fontSize: 34, fontWeight: '800', color: colors.text }}>{L.offer}<Text style={{ fontSize: 16, fontWeight: '500' }}> / year</Text></Text>
               <Text style={{ color: colors.success, fontWeight: '700' }}>only {L.offerPerMonth} / month</Text>
             </View>
@@ -133,7 +158,7 @@ export function Paywall({ onContinueFree, freeLabel = 'Continue for free', sourc
           </View>
         </View>
       </Modal>
-      <Dialog visible={!!dlg} message={dlg ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setDlg(null) }]} />
+      <Dialog visible={!!dlg} message={dlg ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => { setDlg(null); const f = after.current; after.current = null; f?.(); } }]} />
     </View>
   );
 }
