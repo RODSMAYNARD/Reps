@@ -75,5 +75,5 @@ export const SUPPORT_EMAIL = 'rodrigo.maynard@gmail.com';
 
 /** Termos de uso (App Store 3.1.2): o EULA padrão da Apple até existir um texto próprio publicado. */
 export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
-/** Política de privacidade: vazia até ser publicada numa URL pública (rascunho em `docs/legal/privacy-policy.md`). Vazio = link escondido. */
+/** Política de privacidade publicada numa URL pública (texto em `docs/legal/privacy-policy.md`). Vazio = os links abrem a tela do app (`/privacy`, ver `lib/legal.ts`). */
 export const PRIVACY_URL: string = '';

@@ -52,6 +52,8 @@ function Routes() {
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
+        {/* política de privacidade: aberta em qualquer momento (cadastro, onboarding, paywall, About) */}
+        <Stack.Screen name="privacy" />
         <Stack.Protected guard={!!session && !profile.onboarded}>
           <Stack.Screen name="(onboarding)" />
         </Stack.Protected>

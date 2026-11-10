@@ -136,7 +136,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Sentry: `SENTRY_DISABLE_AUTO_UPLOAD=true` nos perfis do `eas.json` até existir o segredo `SENTRY_AUTH_TOKEN` no expo.dev + org `rodsappz`/projeto `reps` no plugin (sem isso o stack trace fica minificado). Exige build novo.
 - TestFlight: grupos internos `Internal Testers` (distribuição automática) e `Team (Expo)`; testador = `rodsappz@gmail.com` (único usuário da equipe Apple). `rodrigo.maynard@gmail.com` só entra como testador interno se for convidado em Users and Access. Contratos da Apple em dia (conferido em 2026-11-09): License Agreement aceito em 2026-11-05, acordos de apps pagos e gratuitos ativos até 2026-12-23 (renovação da conta, £79/ano, automática no cartão).
 - Falta: publicar a política de privacidade (`PRIVACY_URL`), consentimento (UE), gravação de sessão (pacote nativo extra do PostHog).
-- Links legais (2026-11-09): `TERMS_URL` (EULA padrão da Apple) e `PRIVACY_URL` (vazio = link escondido) em `lib/constants.ts`, usados no rodapé do Paywall, em About e no texto do Sign up (exigência 3.1.2 da App Store para assinaturas).
+- Links legais (2026-11-09): `TERMS_URL` (EULA padrão da Apple) e `PRIVACY_URL` em `lib/constants.ts`, abertos por `openTerms`/`openPrivacy` (`lib/legal.ts`) no rodapé do Paywall, em About e no texto do Sign up (exigência 3.1.2 da App Store para assinaturas). Com `PRIVACY_URL` vazio, a privacidade abre a tela do próprio app `src/app/privacy.tsx` (rota pública, fora dos grupos protegidos; texto em inglês e português, resumo de `docs/legal/privacy-policy.md`). A App Store Connect ainda exige uma URL pública.
 - Paywall: comparações ("X if paid monthly", "SAVE N%", preço riscado da oferta de saída) vêm dos produtos da loja quando carregados e na mesma moeda; senão somem (os preços de exemplo só valem sem produto). Compra/restauração com sucesso chama `onPurchased` (onboarding marca `onboarded` e registra plano 'pro'; settings/pro volta).
 - `Telemetry.tsx`: logout do RevenueCat e reset do PostHog só quando o usuário SAI (uid de algo → null), não a cada abertura.
 - Login social: os botões Apple/Google/Facebook ficam escondidos por `FEATURES.socialLogin = false` (antes abriam "Coming soon", motivo de recusa na revisão).
@@ -147,7 +147,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Conferir amostras das traduções (feitas por IA) e corrigir termos
 - Supabase > Authentication: ativar "Leaked password protection" (único alerta do advisor de segurança em 2026-11-09) e decidir confirmação de e-mail
 - Apple/Google sign-in nativos (os botões ficam escondidos por `FEATURES.socialLogin` até existirem)
-- Publicar a política de privacidade numa URL e preencher `PRIVACY_URL` em `lib/constants.ts` (o link some enquanto estiver vazio)
+- Publicar a política de privacidade numa URL (a App Store Connect exige) e preencher `PRIVACY_URL` em `lib/constants.ts` (até lá os links abrem a tela `/privacy` do app)
 
 ## Regras do dono (builds)
 - NÃO disparar builds (Android/iOS) nem enviar ao TestFlight sem autorização expressa do Rodrigo na mensagem. Implementar, validar (`tsc`, lint) e commitar; perguntar antes de buildar.
@@ -219,6 +219,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 ## Modo offline (2026-11-09, `lib/offline.ts`)
 - Cópia dos dados da última carga em `reps:cache:<uid>` (perfil, exercícios, até 300 treinos, rotinas, medidas). Sem internet ao abrir, o app usa a cópia (`store.offline = true`, aviso no Início); sem cópia, mostra "Can't load your data".
 - Treino salvo sem rede vai para a fila `reps:outbox:<uid>` (`Workout.pending`, "Waiting to upload" no cartão). A fila sobe sozinha (a cada 30 s, ao voltar ao app e após a carga); exercícios `cat:` são criados no banco nessa hora. Editar/apagar treino pendente mexe só na fila. Rotinas, medidas e perfil offline: mensagem "You're offline" (sem fila).
+- Treino da fila apagado no aparelho durante o envio: se o servidor não conseguir apagar na hora, o id vai para `reps:deletes:<uid>` (`readDeletes`/`writeDeletes`); a carga esconde esses treinos e tenta apagar de novo.
 - Treino da fila recusado pelo servidor ganha `Workout.uploadError` e o cartão mostra em vermelho "Couldn't upload. It will try again next time you open the app.".
 - Toda mudança na fila passa por `withOutbox` (uma de cada vez). O envio mexe só no item enviado: editado durante o envio sobe de novo; apagado durante o envio é apagado também no servidor. Erro do servidor (não de rede) marca o item `failed` e a fila segue com os outros; os falhos tentam de novo uma vez a cada carga do app.
 - `ensureRaw` (cria os exercícios do catálogo no banco) roda uma chamada por vez e busca antes os que já existem (outro aparelho, resposta perdida), em vez de quebrar com chave duplicada.

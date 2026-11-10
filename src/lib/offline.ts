@@ -30,3 +30,11 @@ export const readOutbox = async (uid: string): Promise<PendingWorkout[]> => {
 
 export const writeOutbox = (uid: string, list: PendingWorkout[]) =>
   (list.length ? AsyncStorage.setItem(`reps:outbox:${uid}`, JSON.stringify(list)) : AsyncStorage.removeItem(`reps:outbox:${uid}`)).catch(() => {});
+
+/** Treinos apagados no aparelho que o servidor ainda não apagou (o pedido falhou): somem da lista ao carregar e o app tenta apagar de novo. */
+export const readDeletes = async (uid: string): Promise<string[]> => {
+  try { const raw = await AsyncStorage.getItem(`reps:deletes:${uid}`); return raw ? JSON.parse(raw) : []; } catch { return []; }
+};
+
+export const writeDeletes = (uid: string, ids: string[]) =>
+  (ids.length ? AsyncStorage.setItem(`reps:deletes:${uid}`, JSON.stringify(ids)) : AsyncStorage.removeItem(`reps:deletes:${uid}`)).catch(() => {});

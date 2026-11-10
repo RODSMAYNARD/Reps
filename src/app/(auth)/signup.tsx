@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Linking, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, ScrollView } from 'react-native';
 import { Text } from '../../components/Text';
 import { Btn, Field, Header, Screen } from '../../components/ui';
-import { PRIVACY_URL, TERMS_URL } from '../../lib/constants';
+import { openPrivacy, openTerms } from '../../lib/legal';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
@@ -23,11 +23,11 @@ export default function Signup() {
           <Field label="Password" placeholder="At least 6 characters" secureTextEntry value={password} onChangeText={setPassword} />
           {!!msg && <Text style={{ color: msg.startsWith('Account created') ? colors.success : colors.danger }}>{msg}</Text>}
           <Btn title="Create account" disabled={!ok} loading={busy} onPress={async () => { setBusy(true); setMsg(await signUp(email.trim(), password)); setBusy(false); }} />
-          {/* links legais (a política de privacidade só aparece depois de publicada: PRIVACY_URL em lib/constants) */}
+          {/* links legais: termos = EULA da Apple; privacidade = página publicada ou a tela do app (lib/legal) */}
           <Text style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>
-            By creating an account you agree to the <Text onPress={() => Linking.openURL(TERMS_URL).catch(() => {})} style={{ color: colors.primary }}>Terms of Use</Text>
-            {PRIVACY_URL ? ' and the ' : ''}
-            {PRIVACY_URL ? <Text onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})} style={{ color: colors.primary }}>Privacy Policy</Text> : null}
+            By creating an account you agree to the <Text onPress={openTerms} style={{ color: colors.primary }}>Terms of Use</Text>
+            {' and the '}
+            <Text onPress={openPrivacy} style={{ color: colors.primary }}>Privacy Policy</Text>
             .
           </Text>
           <Btn title="I already have an account" variant="ghost" onPress={() => router.replace('/login')} />

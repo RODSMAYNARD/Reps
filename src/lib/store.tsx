@@ -9,7 +9,7 @@ import { track } from './analytics';
 import { reportError } from './monitoring';
 import { setHasValue } from './exerciseOptions';
 import { noteFields, notesOf, workoutText } from './notes';
-import { isNetworkError, OFFLINE_MSG, readOutbox, readSnapshot, saveSnapshot, writeOutbox, type PendingWorkout } from './offline';
+import { isNetworkError, OFFLINE_MSG, readDeletes, readOutbox, readSnapshot, saveSnapshot, writeDeletes, writeOutbox, type PendingWorkout } from './offline';
 import { playSound } from './sounds';
 import { cancelReminders } from './reminders';
 import { prFlags, records, setExerciseLookup } from './stats';
@@ -330,7 +330,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (outbox.some((x) => x.failed)) await writeOutbox(uid, outbox.map(({ failed: _f, ...x }) => x));
     const queued = outbox.map((p) => p.workout);
     setPendingCount(queued.length);
-    setWorkouts(mergePending(queued, wk.data!.map((w: any) => ({
+    // apagados no aparelho que o servidor ainda não apagou: ficam fora da lista e o app tenta apagar de novo
+    const deletes = await readDeletes(uid);
+    if (deletes.length) supabase.from('workouts').delete().in('id', deletes).then((r) => { if (!r.error) writeDeletes(uid, []); }, () => {});
+    setWorkouts(mergePending(queued, wk.data!.filter((w: any) => !deletes.includes(w.id)).map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
@@ -508,7 +511,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         // recusado pelo servidor: o cartão avisa (antes ficava "Waiting to upload" para sempre, sem explicação)
         if (outcome === 'failed') setWorkouts((l) => l.map((x) => (x.id === w.id ? { ...x, uploadError: err?.message ?? 'error' } : x)));
         // apagado enquanto subia: apaga também no servidor; editado: sobe a versão nova na próxima volta
-        if (outcome === 'deleted' && !err) await supabase.from('workouts').delete().eq('id', w.id).then(() => {}, () => {});
+        if (outcome === 'deleted' && !err) {
+          const d = await supabase.from('workouts').delete().eq('id', w.id).then((x) => x.error, (x) => x as { message: string });
+          // não deu para apagar agora (a internet caiu): guarda para apagar na próxima carga, senão o treino voltava
+          if (d) await writeDeletes(userId, [...new Set([...(await readDeletes(userId)), w.id])]);
+        }
         if (outcome === 'changed') tried.delete(w.id);
       }
     } finally { flushing.current = false; }

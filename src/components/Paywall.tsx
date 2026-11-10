@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, View } from 'react-native';
 import { Text } from './Text';
 import { track } from '../lib/analytics';
-import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '../lib/constants';
+import { SUPPORT_EMAIL } from '../lib/constants';
+import { openPrivacy, openTerms } from '../lib/legal';
 import { locale, tr } from '../lib/i18n';
 import { Offers, Plan, buy, loadOffers, mockPrices, money, rcEnabled, restore, usePro } from '../lib/purchases';
 import { colors, radius } from '../lib/theme';
@@ -133,10 +134,10 @@ export function Paywall({ onContinueFree, onPurchased, freeLabel = 'Continue for
           <Text style={{ color: colors.muted }}>Problems with your subscription?</Text>
           <TextLink title="Contact us" onPress={() => openUrl(`mailto:${SUPPORT_EMAIL}`)} />
           <TextLink title="Restore purchases" onPress={async () => { const r = await restore(); if (r === 'ok') after.current = onPurchased ?? null; setDlg(r === 'ok' ? 'Purchases restored. Welcome back!' : r === 'none' ? 'No purchases found to restore.' : r === 'preview' ? (__DEV__ ? 'Preview mode: nothing to restore yet.' : 'Nothing to restore right now.') : 'Could not restore purchases. Try again.'); }} />
-          {/* App Store 3.1.2: termos e privacidade no fluxo de compra (privacidade só depois de publicada) */}
+          {/* App Store 3.1.2: termos e privacidade no fluxo de compra (privacidade = página publicada ou a tela do app) */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 20, paddingTop: 4 }}>
-            <TextLink title="Terms of Use" onPress={() => openUrl(TERMS_URL)} />
-            {!!PRIVACY_URL && <TextLink title="Privacy Policy" onPress={() => openUrl(PRIVACY_URL)} />}
+            <TextLink title="Terms of Use" onPress={openTerms} />
+            <TextLink title="Privacy Policy" onPress={openPrivacy} />
           </View>
         </View>
       </ScrollView>
