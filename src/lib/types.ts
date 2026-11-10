@@ -45,6 +45,8 @@ export type Workout = {
   fromTrainer?: boolean;
   /** Salvo sem internet, ainda na fila para subir (só no aparelho). */
   pending?: boolean;
+  /** O servidor recusou o envio (não é falta de rede): tenta de novo na próxima abertura do app. */
+  uploadError?: string;
 };
 
 export type RoutineExercise = { unit?: Units['weight']; exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };

@@ -20,7 +20,7 @@ export function WorkoutCard({ w, onMenu }: { w: Workout; onMenu?: () => void }) 
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: '600', color: colors.text }}>{profile.displayName || profile.username}</Text>
           <Text style={{ color: colors.muted, fontSize: 13 }}>{timeAgo(w.date)}{w.visibility !== 'everyone' ? ' · only you' : ''}</Text>
-          {w.pending && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} testID="workout-pending"><Ionicons name="cloud-upload-outline" size={14} color={colors.muted} /><Text style={{ color: colors.muted, fontSize: 13 }}>Waiting to upload</Text></View>}
+          {w.pending && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }} testID="workout-pending"><Ionicons name={w.uploadError ? 'alert-circle-outline' : 'cloud-upload-outline'} size={14} color={w.uploadError ? colors.danger : colors.muted} /><Text style={{ color: w.uploadError ? colors.danger : colors.muted, fontSize: 13, flexShrink: 1 }}>{w.uploadError ? "Couldn't upload. It will try again next time you open the app." : 'Waiting to upload'}</Text></View>}
           {!!w.location && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Ionicons name="location-sharp" size={14} color={colors.muted} /><Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>{w.location}</Text></View>}
         </View>
         {onMenu && <Pressable onPress={onMenu} hitSlop={10}><Ionicons name="ellipsis-horizontal" size={22} color={colors.text} /></Pressable>}

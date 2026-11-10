@@ -1007,4 +1007,5 @@ export const PT: Record<string, string> = {
   'Notifications are off for Reps, so your reminders won\'t arrive.': 'As notificações do Reps estão desligadas, então seus lembretes não vão chegar.',
   'Allow notifications': 'Permitir notificações',
   'Open settings': 'Abrir ajustes',
+  'Couldn\'t upload. It will try again next time you open the app.': 'Não deu para enviar. Vai tentar de novo na próxima vez que você abrir o app.',
 };

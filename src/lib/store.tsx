@@ -254,6 +254,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return [];
   }, []);
 
+  /** Unidade escolhida da última vez para o exercício (Weight Input); sem escolha = undefined (vale a do perfil). */
+  const lastUnitOf = useCallback((exerciseId: string) => {
+    const real = exerciseId.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === exerciseId.slice(4))?.id ?? exerciseId : exerciseId;
+    for (const w of wkRef.current) { const en = w.entries.find((e) => e.exerciseId === real); if (en) return en.unit; }
+    return undefined;
+  }, []);
+
   const showToast = useCallback((t: string, ms = 2500) => {
     setToast(t);
     setTimeout(() => setToast((c) => (c === t ? null : c)), ms);
@@ -497,7 +504,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           setPendingCount(next.length);
           return err ? 'failed' : 'sent';
         });
-        if (outcome === 'sent') setWorkouts((l) => l.map((x) => (x.id === w.id ? { ...w, entries, pending: undefined } : x)));
+        if (outcome === 'sent') setWorkouts((l) => l.map((x) => (x.id === w.id ? { ...w, entries, pending: undefined, uploadError: undefined } : x)));
+        // recusado pelo servidor: o cartão avisa (antes ficava "Waiting to upload" para sempre, sem explicação)
+        if (outcome === 'failed') setWorkouts((l) => l.map((x) => (x.id === w.id ? { ...x, uploadError: err?.message ?? 'error' } : x)));
         // apagado enquanto subia: apaga também no servidor; editado: sobe a versão nova na próxima volta
         if (outcome === 'deleted' && !err) await supabase.from('workouts').delete().eq('id', w.id).then(() => {}, () => {});
         if (outcome === 'changed') tried.delete(w.id);
@@ -707,10 +716,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // semana leve (deload, depois das semanas do ciclo): metade das séries e o peso da última vez, sem aumentar
       const deload = !!p.settings.deload && p.completed >= p.settings.frequency * CYCLE_WEEKS;
       const entries: SavedEntry[] = w.exercises.map((e) => {
-        const last = lastSetsOf(e.exerciseId), work = last.filter((s) => s.type !== 'warmup');
-        const base = deload && work.length ? work.map((s) => ({ kg: s.kg, reps: s.reps })) : suggestSets(last, e, lookup.get(e.exerciseId)?.equipment ?? '', profile.units.weight) ?? Array.from({ length: e.sets }, () => ({ kg: null, reps: e.repMax }));
+        const last = lastSetsOf(e.exerciseId), work = last.filter((s) => s.type !== 'warmup'), unit = lastUnitOf(e.exerciseId);
+        const base = deload && work.length ? work.map((s) => ({ kg: s.kg, reps: s.reps })) : suggestSets(last, e, lookup.get(e.exerciseId)?.equipment ?? '', unit ?? profile.units.weight) ?? Array.from({ length: e.sets }, () => ({ kg: null, reps: e.repMax }));
         const sets = deload ? base.slice(0, Math.max(1, Math.ceil(e.sets / 2))) : base;
-        return { exerciseId: e.exerciseId, notes: '', restSec: e.restSec, superset: null, sets: sets.map((x) => ({ type: 'normal' as const, kg: x.kg, reps: x.reps })) };
+        // a progressão segue a unidade do exercício (lbs: degraus de 5 lb) e o treino abre nela
+        return { unit, exerciseId: e.exerciseId, notes: '', restSec: e.restSec, superset: null, sets: sets.map((x) => ({ type: 'normal' as const, kg: x.kg, reps: x.reps })) };
       });
       track('trainer_workout_started', { kind: w.kind, exercises: w.exercises.length });
       value_startWorkout({ entries, title: w.title, trainerUid: tuid });
@@ -936,7 +946,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (e) { fail(e.message); return false; }
       return true;
     },
-  }), [loadFailed, offline, pendingCount, ensureRaw, enqueue, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes, notesFor, withOutbox]);
+  }), [loadFailed, offline, pendingCount, ensureRaw, enqueue, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes, notesFor, withOutbox, lastUnitOf]);
 
   useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

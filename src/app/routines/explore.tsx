@@ -1,12 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { GymIcon } from '../../components/GymIcon';
+import { IconCircle } from '../../components/IconCircle';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { Btn, Card, Header, Screen } from '../../components/ui';
 import { CATEGORIES, PROGRAMS } from '../../lib/constants';
+import { equipImage, muscleImage } from '../../lib/iconImages';
 import { colors, radius } from '../../lib/theme';
+
+/** Ícone 3D de cada categoria de rotinas (mesmo estilo dos filtros de equipamento e músculo). */
+const categoryImage = (id: string) => (id === 'cardio' ? muscleImage('Cardio') : equipImage(({ home: 'kettlebell', travel: 'suspension', dumbbell: 'dumbbell', band: 'band', gym: 'machine', body: 'bodyweight' } as Record<string, string>)[id]));
 
 export default function Explore() {
   const [all, setAll] = useState(false);
@@ -29,7 +33,7 @@ export default function Explore() {
           {CATEGORIES.map((c) => (
             <Pressable key={c.id} onPress={() => router.push({ pathname: '/routines/category/[id]', params: { id: c.id } })} style={{ width: '47.5%', backgroundColor: colors.surface, borderRadius: radius.md, padding: 14, minHeight: 84, justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 16, color: colors.text }}>{c.label}</Text>
-              <View style={{ alignSelf: 'flex-end' }}><GymIcon name={c.icon} size={32} color={colors.primary} /></View>
+              <View style={{ alignSelf: 'flex-end' }}><IconCircle source={categoryImage(c.id)} size={44} /></View>
             </Pressable>
           ))}
         </View>
