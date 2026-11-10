@@ -13,16 +13,23 @@ import { equipImage } from '../lib/iconImages';
 
 type Tile = { id: string; label: string; icon: string };
 
+/** Grade de 2 colunas como no exemplo do Hevy: círculo à esquerda e o nome inteiro à direita (quebra só entre palavras).
+ * A largura do cartão vem da tela: em celular estreito o círculo diminui para sobrar espaço ao texto. */
 function Grid({ tiles, sel, onToggle, equip }: { tiles: Tile[]; sel: string[]; onToggle: (id: string) => void; equip?: boolean }) {
+  const { width } = useWindowDimensions();
+  const GAP = 10;
+  const tileW = Math.floor((width - 32 - GAP) / 2); // a folha tem 16 de margem de cada lado
+  const icon = tileW < 150 ? 42 : 48;
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GAP }}>
       {tiles.map((t) => {
         const on = sel.includes(t.id);
         return (
-          <Pressable key={t.id} onPress={() => onToggle(t.id)} testID={`filter-${t.id}`} style={{ width: '48%', flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bg, borderRadius: radius.md, padding: 12, borderWidth: 2, borderColor: on ? colors.primary : 'transparent' }}>
-            {equip ? <IconCircle source={equipImage(t.id)} /> : <MuscleTile label={t.label} />}
-            <Text style={{ flex: 1, fontSize: 16, color: colors.text }} numberOfLines={2}>{t.label}</Text>
-            {on && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+          <Pressable key={t.id} onPress={() => onToggle(t.id)} testID={`filter-${t.id}`} style={{ width: tileW, minHeight: icon + 22, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: 10, paddingLeft: 10, paddingRight: 8, borderWidth: 2, borderColor: on ? colors.primary : 'transparent' }}>
+            {equip ? <IconCircle source={equipImage(t.id)} size={icon} /> : <MuscleTile label={t.label} size={icon} />}
+            <Text style={{ flex: 1, fontSize: 15, lineHeight: 19, color: colors.text }} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8} textBreakStrategy="simple" android_hyphenationFrequency="none">{t.label}</Text>
+            {/* marcado: só a borda azul e um selinho no canto, sem roubar espaço do nome */}
+            {on && <View style={{ position: 'absolute', top: 6, right: 6 }}><Ionicons name="checkmark-circle" size={18} color={colors.primary} /></View>}
           </Pressable>
         );
       })}
@@ -55,10 +62,10 @@ export function ExerciseFilterBar({ list, q, muscles, equipment, onChange }: { l
         ))}
       </View>
       <Sheet visible={open !== null} onClose={() => setOpen(null)} title={open === 'muscle' ? 'Muscle Group' : 'Equipment'}>
-        <ScrollView style={{ maxHeight: height * 0.62, backgroundColor: colors.surface }} contentContainerStyle={{ padding: 14, gap: 14 }}>
+        <ScrollView style={{ maxHeight: height * 0.62 }} contentContainerStyle={{ paddingVertical: 4, gap: 14 }}>
           {open === 'muscle' && MUSCLE_FILTERS.map((g) => (
             <View key={g.title} style={{ gap: 10 }}>
-              <Text style={{ color: colors.muted, fontSize: 17 }}>{g.title}</Text>
+              <Text style={{ color: colors.muted, fontSize: 16 }}>{g.title}</Text>
               <Grid tiles={g.items} sel={dm} onToggle={toggle(dm, setDm)} />
             </View>
           ))}

@@ -1045,4 +1045,5 @@ export const PT: Record<string, string> = {
   'Get the yearly plan for even less.': 'Leve o plano anual por ainda menos.',
   'The yearly plan starts with a free trial. You can cancel before it ends and you will not be charged.': 'O plano anual começa com um teste grátis. Você pode cancelar antes do fim e não será cobrado.',
   'If you subscribed to Reps Pro, deleting your account doesn\'t cancel it. Cancel it in your App Store or Google Play subscriptions to stop billing.': 'Se você assinou o Reps Pro, apagar a conta não cancela a assinatura. Cancele nas assinaturas da App Store ou do Google Play para parar a cobrança.',
+  'exercises': 'exercícios',
 };
