@@ -6,6 +6,7 @@ import { fmtClock, toDisplayWeight } from '../lib/format';
 import { TIMER_SOUNDS, notificationSoundFile, playTimerSound } from '../lib/sounds';
 import { useStore } from '../lib/store';
 import { fmtSet } from '../lib/exerciseOptions';
+import { tr, useLang } from '../lib/i18n';
 import { ActiveWorkout, ExerciseKind, Units } from '../lib/types';
 
 const LIVE = 'workout-live';
@@ -33,16 +34,16 @@ async function setup() {
   if (Platform.OS === 'android') {
     if (!oldChannelsDropped) { oldChannelsDropped = true; await Promise.all(OLD_CHANNELS.map((id) => Notifications.deleteNotificationChannelAsync(id).catch(() => {}))); }
     // treino em andamento: LOW = aparece na barra, sem som nem pop-up
-    await Notifications.setNotificationChannelAsync(CH_WORKOUT, { name: 'Workout in progress', importance: AndroidImportance.LOW, vibrationPattern: [0], showBadge: false });
+    await Notifications.setNotificationChannelAsync(CH_WORKOUT, { name: tr('Workout in progress'), importance: AndroidImportance.LOW, vibrationPattern: [0], showBadge: false });
     // fim do descanso: HIGH = pop-up com som
-    await Notifications.setNotificationChannelAsync(CH_REST, { name: 'Rest timer', importance: AndroidImportance.HIGH, sound: 'default', vibrationPattern: [0, 250, 150, 250] });
+    await Notifications.setNotificationChannelAsync(CH_REST, { name: tr('Rest timer'), importance: AndroidImportance.HIGH, sound: 'default', vibrationPattern: [0, 250, 150, 250] });
     // um canal por som: no Android o som é do canal e não muda depois de criado
-    for (const s of TIMER_SOUNDS) await Notifications.setNotificationChannelAsync(`${CH_REST}-${s.id}`, { name: `Rest timer: ${s.label}`, importance: AndroidImportance.HIGH, sound: notificationSoundFile(s.id), vibrationPattern: [0, 250, 150, 250] });
-    await Notifications.setNotificationChannelAsync(`${CH_REST}-silent`, { name: 'Rest timer (silent)', importance: AndroidImportance.DEFAULT, sound: null, vibrationPattern: [0] });
+    for (const s of TIMER_SOUNDS) await Notifications.setNotificationChannelAsync(`${CH_REST}-${s.id}`, { name: `${tr('Rest timer:')} ${tr(s.label)}`, importance: AndroidImportance.HIGH, sound: notificationSoundFile(s.id), vibrationPattern: [0, 250, 150, 250] });
+    await Notifications.setNotificationChannelAsync(`${CH_REST}-silent`, { name: tr('Rest timer (silent)'), importance: AndroidImportance.DEFAULT, sound: null, vibrationPattern: [0] });
   }
-  await Notifications.setNotificationCategoryAsync('workout', [{ identifier: 'complete', buttonTitle: 'Complete Set', options: { opensAppToForeground: false } }]);
+  await Notifications.setNotificationCategoryAsync('workout', [{ identifier: 'complete', buttonTitle: tr('Complete Set'), options: { opensAppToForeground: false } }]);
   await Notifications.setNotificationCategoryAsync('rest', [
-    { identifier: 'skip', buttonTitle: 'Skip', options: { opensAppToForeground: false } },
+    { identifier: 'skip', buttonTitle: tr('Skip'), options: { opensAppToForeground: false } },
     { identifier: 'minus15', buttonTitle: '-15s', options: { opensAppToForeground: false } },
     { identifier: 'plus15', buttonTitle: '+15s', options: { opensAppToForeground: false } },
   ]);
@@ -59,8 +60,10 @@ function nextSet(a: ActiveWorkout, u: Units, name: (id: string) => string | unde
     const k = kindOf(e.exerciseId);
     // peso na unidade escolhida para o exercício (Weight Input), senão a do perfil
     const eu: Units = e.unit ? { ...u, weight: e.unit } : u;
-    const val = !k || k === 'weight_reps' ? (s.kg ? `${Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} ${eu.weight} x ${s.reps ?? 0} reps` : `${s.reps ?? 0} reps`) : fmtSet(s, k, eu);
-    return { i, j, title: name(e.exerciseId) ?? 'Workout', text: `Set ${j + 1}/${e.sets.length} - ${val}` };
+    // texto vai direto ao sistema (fora do <Text>): traduz aqui
+    const reps = ` ${tr('reps')}`;
+    const val = !k || k === 'weight_reps' ? (s.kg ? `${Math.round(toDisplayWeight(s.kg, eu) * 10) / 10} ${eu.weight} x ${s.reps ?? 0}${reps}` : `${s.reps ?? 0}${reps}`) : fmtSet(s, k, eu).replace(/ reps$/, reps);
+    return { i, j, title: name(e.exerciseId) ?? tr('Workout'), text: `${tr('Set')} ${j + 1}/${e.sets.length} - ${val}` };
   }
   return null;
 }
@@ -75,6 +78,8 @@ export function WorkoutNotifier() {
   useEffect(() => { ref.current = st; });
   const ready = useRef(false);
   const bgRef = useRef(AppState.currentState !== 'active');
+  // idioma: refaz canais/botões e textos quando muda (o componente fica fora do Stack que remonta)
+  const lang = useLang();
 
   // permissão + canais quando começa um treino
   const has = !!active;
@@ -88,7 +93,7 @@ export function WorkoutNotifier() {
         ready.current = true;
       } catch { /* sem notificações: o app segue normal */ }
     })();
-  }, [has]);
+  }, [has, lang]);
 
   // responde aos botões da notificação
   useEffect(() => {
@@ -123,7 +128,7 @@ export function WorkoutNotifier() {
           content: {
             title: n?.title ?? active.title,
             subtitle: undefined,
-            body: resting ? `Rest ${fmtClock(left)} · ${n ? `Next: ${n.text}` : 'Last set done'}` : n ? n.text : 'All sets done — tap to finish',
+            body: resting ? `${tr('Rest')} ${fmtClock(left)} · ${n ? `${tr('Next:')} ${n.text}` : tr('Last set done')}` : n ? n.text : tr('All sets done — tap to finish'),
             categoryIdentifier: resting ? 'rest' : n ? 'workout' : undefined,
             sticky: true,
             autoDismiss: false,
@@ -138,7 +143,7 @@ export function WorkoutNotifier() {
     const sub = AppState.addEventListener('change', (state) => { bgRef.current = state !== 'active'; sync(); });
     return () => { alive = false; sub.remove(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, rest, profile.units]);
+  }, [active, rest, profile.units, lang]);
 
   // alarme de fim do descanso (o sistema entrega mesmo com o app fechado)
   useEffect(() => {
@@ -156,12 +161,12 @@ export function WorkoutNotifier() {
     const n = active ? nextSet(active, profile.units, (x) => st.findExercise(x)?.name, (x) => st.findExercise(x)?.kind) : null;
     Notifications.scheduleNotificationAsync({
       identifier: REST_END,
-      content: { title: 'Rest is over', body: n ? `${n.title} — ${n.text}` : 'Time for your next set.', sound: audible ? notificationSoundFile(wprefs.timerSound) : undefined, data: { restEnd: true } },
+      content: { title: tr('Rest is over'), body: n ? `${n.title} — ${n.text}` : tr('Time for your next set.'), sound: audible ? notificationSoundFile(wprefs.timerSound) : undefined, data: { restEnd: true } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(rest.endsAt), channelId: restChannel(audible, wprefs.timerSound) },
     }).catch(() => {});
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rest?.endsAt, audible, wprefs.timerSound, wprefs.timerVolume]);
+  }, [rest?.endsAt, audible, wprefs.timerSound, wprefs.timerVolume, lang]);
 
   // ao terminar/descartar o treino, limpa tudo
   useEffect(() => {

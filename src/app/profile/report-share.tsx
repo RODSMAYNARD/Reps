@@ -107,7 +107,7 @@ export default function ReportShare() {
     )),
     F('Workout Days Log', (
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <Text key={`h${i}`} style={{ width: `${100 / 7}%`, textAlign: 'center', color: t.fg, fontWeight: '600', marginBottom: 4 }}>{d}</Text>)}
+        {(locale() === 'pt-BR' ? ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S']).map((d, i) => <Text key={`h${i}`} style={{ width: `${100 / 7}%`, textAlign: 'center', color: t.fg, fontWeight: '600', marginBottom: 4 }}>{d}</Text>)}
         {cells.map((c, i) => { const on = c ? worked.has(dayKey(new Date(y, m, c))) : false; return (
           <View key={i} style={{ width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 2 }}>
             {c ? <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? t.accent : t.dim }}><Text style={{ color: on ? (bg === 2 ? '#0A84FF' : '#fff') : t.sub, fontSize: 13, fontWeight: on ? '800' : '400' }}>{c}</Text></View> : null}

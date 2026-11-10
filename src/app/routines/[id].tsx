@@ -10,7 +10,7 @@ import { colors } from '../../lib/theme';
 
 export default function RoutineDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { routines, exercises, startWorkout, active, deleteRoutine, saveRoutine, showToast } = useStore();
+  const { routines, findExercise, startWorkout, active, deleteRoutine, saveRoutine, showToast } = useStore();
   const r = routines.find((x) => x.id === id);
   const [menu, setMenu] = useState(false);
   const [del, setDel] = useState(false);
@@ -19,7 +19,8 @@ export default function RoutineDetail() {
   const deleting = useRef(false);
   useEffect(() => { if (deleting.current && !r) router.back(); }, [r]);
   if (!r) return <Screen><Header title="Routine" /></Screen>;
-  const nameOf = (eid: string) => exercises.find((e) => e.id === eid)?.name ?? 'Removed exercise';
+  // findExercise usa allExercises (nome do catálogo no idioma do app), não as linhas cruas do banco (sempre em inglês)
+  const nameOf = (eid: string) => findExercise(eid)?.name ?? 'Removed exercise';
   return (
     <Screen>
       <Header title={r.title} right={<IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} testID="routine-menu" />} />
@@ -28,7 +29,7 @@ export default function RoutineDetail() {
         {r.exercises.length === 0 && <Text style={{ color: colors.muted }}>This routine has no exercises yet.</Text>}
         {r.exercises.map((e, i) => (
           <View key={i} style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-            <ExerciseThumb catalogId={exercises.find((x) => x.id === e.exerciseId)?.catalogId} />
+            <ExerciseThumb catalogId={findExercise(e.exerciseId)?.catalogId} />
             <View style={{ flex: 1 }}>
               <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: 16 }}>{nameOf(e.exerciseId)}</Text>
               <Text style={{ color: colors.muted }}>{e.sets.length} sets · rest {fmtRest(e.restSec).toLowerCase()}</Text>

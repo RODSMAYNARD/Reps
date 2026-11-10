@@ -6,6 +6,9 @@ import { fmtDate } from '../../lib/format';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
+// measured_on = 'AAAA-MM-DD': meio-dia local para não mostrar o dia anterior
+const dayIso = (d: string) => { const t = new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? d + 'T12:00:00' : d); return isNaN(t.getTime()) ? d : t.toISOString(); };
+
 export default function ProgressPhotos() {
   const { measurements } = useStore();
   const photos = measurements.filter((m) => m.photoUri);
@@ -18,7 +21,7 @@ export default function ProgressPhotos() {
         {photos.map((m) => (
           <Pressable key={m.id} onPress={() => setOpen(m.photoUri)} style={{ width: '48%' }}>
             <Image source={{ uri: m.photoUri! }} style={{ width: '100%', aspectRatio: 0.75, borderRadius: 12 }} />
-            <View style={{ position: 'absolute', bottom: 8, left: 8 }}><Text style={{ color: '#fff', fontWeight: '600' }}>{fmtDate(m.date, { day: '2-digit', month: 'short', year: 'numeric' })}</Text></View>
+            <View style={{ position: 'absolute', bottom: 8, left: 8 }}><Text style={{ color: '#fff', fontWeight: '600' }}>{fmtDate(dayIso(m.date), { day: '2-digit', month: 'short', year: 'numeric' })}</Text></View>
           </Pressable>
         ))}
       </ScrollView>

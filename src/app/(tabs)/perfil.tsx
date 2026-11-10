@@ -4,7 +4,8 @@ import { FlatList, Share, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { ActiveBar } from '../../components/ActiveBar';
 import { WorkoutCard } from '../../components/WorkoutCard';
-import { Avatar, BarChart, Dialog, Header, HeaderAction, IconButton, PillRow, Screen, Section, Tile } from '../../components/ui';
+import { WorkoutMenu } from '../../components/WorkoutMenu';
+import { Avatar, BarChart, Header, HeaderAction, IconButton, PillRow, Screen, Section, Tile } from '../../components/ui';
 import { fmtDuration, fmtVolume, toDisplayWeight } from '../../lib/format';
 import { startOfWeek, weeklySeries } from '../../lib/stats';
 import { useStore } from '../../lib/store';
@@ -12,9 +13,10 @@ import { FEATURES } from '../../lib/constants';
 import { colors } from '../../lib/theme';
 
 export default function Perfil() {
-  const { profile, workouts, deleteWorkout } = useStore();
+  const { profile, workouts } = useStore();
   const [metric, setMetric] = useState<'duration' | 'volume' | 'reps'>('duration');
-  const [del, setDel] = useState<string | null>(null);
+  // ⋯ do treino abre o mesmo menu do Início (Share, Save as Routine, Copy, Edit, Delete)
+  const [target, setTarget] = useState<string | null>(null);
   const series = weeklySeries(workouts, metric, 12);
   const thisWeek = workouts.filter((w) => new Date(w.date) >= startOfWeek());
   // volume vem em kg: converte para a unidade do perfil
@@ -62,9 +64,9 @@ export default function Perfil() {
           <IconButton name="share-outline" onPress={() => Share.share({ message: `Follow @${profile.username} on Reps` })} />
           <IconButton name="settings-outline" onPress={() => router.push('/settings')} testID="open-settings" />
         </>} />
-      <FlatList data={workouts} keyExtractor={(w) => w.id} ListHeaderComponent={header} renderItem={({ item }) => <WorkoutCard w={item} onMenu={() => setDel(item.id)} />} />
+      <FlatList data={workouts} keyExtractor={(w) => w.id} ListHeaderComponent={header} renderItem={({ item }) => <WorkoutCard w={item} onMenu={() => setTarget(item.id)} />} />
       <ActiveBar />
-      <Dialog visible={!!del} title="Delete workout?" message="This action can't be undone." onClose={() => setDel(null)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: () => { deleteWorkout(del!); setDel(null); } }]} />
+      <WorkoutMenu id={target} onClose={() => setTarget(null)} />
     </Screen>
   );
 }

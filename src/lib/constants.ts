@@ -73,7 +73,9 @@ export const FEATURES = { social: false, watch: false, integrations: false, coac
 /** E-mail de suporte (troque aqui quando houver um endereço próprio). */
 export const SUPPORT_EMAIL = 'rodrigo.maynard@gmail.com';
 
-/** Termos de uso (App Store 3.1.2): o EULA padrão da Apple até existir um texto próprio publicado. */
+/** Termos de uso no iOS (App Store 3.1.2): o EULA padrão da Apple até existir um texto próprio publicado. Só vale para compras pela App Store. */
 export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+/** Termos próprios (texto em `docs/legal/terms-of-use.md`) numa URL pública: usados fora do iOS (o EULA da Apple não vale no Google Play). Vazio = abre a tela do app (`/terms`, ver `lib/legal.ts`). */
+export const OWN_TERMS_URL: string = '';
 /** Política de privacidade publicada numa URL pública (texto em `docs/legal/privacy-policy.md`). Vazio = os links abrem a tela do app (`/privacy`, ver `lib/legal.ts`). */
 export const PRIVACY_URL: string = '';

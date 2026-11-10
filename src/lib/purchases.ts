@@ -1,6 +1,6 @@
 import { getLocales } from 'expo-localization';
 import { useSyncExternalStore } from 'react';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import { track } from './analytics';
 import { reportError } from './monitoring';
@@ -59,6 +59,33 @@ export async function loadOffers(): Promise<Offers | null> {
   } catch (e) { reportError(e, { where: 'rc-offerings' }); return null; }
 }
 
+/** Dias de teste grátis que a loja dá a ESTE usuário em cada plano (0 = sem teste). */
+export type Trials = Partial<Record<Plan, number>>;
+const toDays = (unit: string, n: number) => n * (unit === 'DAY' ? 1 : unit === 'WEEK' ? 7 : unit === 'MONTH' ? 30 : unit === 'YEAR' ? 365 : 0);
+/** Só oferta de entrada GRÁTIS conta (oferta paga não é teste grátis). iOS: `introPrice`; Android: `introPrice` ou a fase grátis da opção padrão (o RevenueCat já tira as ofertas que o usuário não pode usar). */
+const freeDays = (p: PurchasesPackage['product']) => {
+  const i = p.introPrice;
+  if (i && i.price === 0) return toDays(i.periodUnit, i.periodNumberOfUnits) * Math.max(1, i.cycles || 1);
+  const f = p.defaultOption?.freePhase;
+  return f ? toDays(f.billingPeriod.unit, f.billingPeriod.value) * Math.max(1, f.billingCycleCount ?? 1) : 0;
+};
+/** Prévia (sem RevenueCat): o teste de 7 dias do anual e da oferta, como cadastrado na App Store. */
+export const mockTrials: Trials = { month: 0, year: 7, offer: 7 };
+/** Teste grátis por plano a partir dos produtos da loja + elegibilidade no iOS (quem já usou o teste no grupo de assinaturas não ganha de novo). UNKNOWN (recibo ilegível) mantém o teste. */
+export async function loadTrials(offers: Offers): Promise<Trials> {
+  const out: Trials = {};
+  const plans: Plan[] = ['month', 'year', 'offer'];
+  plans.forEach((k) => { const p = offers[k]?.product; if (p) out[k] = freeDays(p); });
+  const ids = plans.filter((k) => out[k]).map((k) => offers[k]!.product.identifier);
+  if (Platform.OS !== 'ios' || !configured || !ids.length) return out;
+  try {
+    const e = await Purchases.checkTrialOrIntroductoryPriceEligibility(ids);
+    const S = Purchases.INTRO_ELIGIBILITY_STATUS;
+    plans.forEach((k) => { const st = out[k] ? e[offers[k]!.product.identifier]?.status : undefined; if (st === S.INTRO_ELIGIBILITY_STATUS_INELIGIBLE || st === S.INTRO_ELIGIBILITY_STATUS_NO_INTRO_OFFER_EXISTS) out[k] = 0; });
+  } catch (err) { reportError(err, { where: 'rc-trial-eligibility' }); }
+  return out;
+}
+
 export type BuyResult = 'ok' | 'cancelled' | 'preview' | 'error';
 export async function buy(plan: Plan, offers: Offers | null): Promise<BuyResult> {
   track('purchase_started', { plan, mode: configured ? 'live' : 'preview' });
@@ -76,6 +103,13 @@ export async function buy(plan: Plan, offers: Offers | null): Promise<BuyResult>
     reportError(e, { where: 'rc-purchase' });
     return 'error';
   }
+}
+/** Abre o gerenciamento da assinatura na loja (RevenueCat; sem ele, a página de assinaturas da App Store / Google Play). */
+export async function manageSubscription(): Promise<boolean> {
+  track('manage_subscription_clicked', { mode: configured ? 'live' : 'preview' });
+  if (configured) { try { await Purchases.showManageSubscriptions(); return true; } catch (e) { reportError(e, { where: 'rc-manage' }); } }
+  const url = Platform.OS === 'ios' ? 'https://apps.apple.com/account/subscriptions' : 'https://play.google.com/store/account/subscriptions';
+  try { await Linking.openURL(url); return true; } catch { return false; }
 }
 export async function restore(): Promise<'ok' | 'none' | 'preview' | 'error'> {
   track('restore_clicked', { mode: configured ? 'live' : 'preview' });

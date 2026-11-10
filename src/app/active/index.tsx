@@ -1,6 +1,7 @@
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
@@ -29,6 +30,24 @@ import { elapsedSec, useNow, useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { ActiveEntry, ActiveSet, Exercise, Units } from '../../lib/types';
 
+// Cronômetro do relógio fora do componente: sobrevive a minimizar o treino (router.back desmonta a tela) e à remontagem do Stack (tema/idioma).
+// Vale só para o treino em que foi iniciado (chave = active.id; outro treino começa zerado) e fica salvo no aparelho (startedAt é hora absoluta).
+const SW_KEY = 'reps:stopwatch';
+const SW_ZERO: Stopwatch = { acc: 0, startedAt: null };
+let swSaved: (Stopwatch & { key: string }) | null = null;
+let swLoaded = false;
+const swSubs = new Set<() => void>();
+function useStopwatch(key: string | undefined): [Stopwatch, (s: Stopwatch) => void] {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const f = () => force((n) => n + 1); swSubs.add(f);
+    if (!swLoaded) { swLoaded = true; AsyncStorage.getItem(SW_KEY).then((r) => { if (!r || swSaved) return; const v = JSON.parse(r); if (v && typeof v.key === 'string' && typeof v.acc === 'number') { swSaved = { key: v.key, acc: v.acc, startedAt: typeof v.startedAt === 'number' ? v.startedAt : null }; swSubs.forEach((g) => g()); } }).catch(() => {}); }
+    return () => { swSubs.delete(f); };
+  }, []);
+  const sw = swSaved && key && swSaved.key === key ? swSaved : SW_ZERO;
+  const setSw = (s: Stopwatch) => { if (!key) return; swSaved = { key, acc: s.acc, startedAt: s.startedAt }; AsyncStorage.setItem(SW_KEY, JSON.stringify(swSaved)).catch(() => {}); swSubs.forEach((g) => g()); };
+  return [sw, setSw];
+}
 
 export default function ActiveWorkoutScreen() {
   const st = useStore();
@@ -39,7 +58,7 @@ export default function ActiveWorkoutScreen() {
   const [menu, setMenu] = useState<number | null>(null);
   const [durSheet, setDurSheet] = useState(false);
   const [timerSheet, setTimerSheet] = useState(false);
-  const [sw, setSw] = useState<Stopwatch>({ acc: 0, startedAt: null });
+  const [sw, setSw] = useStopwatch(active?.id);
   const swNow = useNow(100, !!sw.startedAt);
   const [cancelAsk, setCancelAsk] = useState(false);
   const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);

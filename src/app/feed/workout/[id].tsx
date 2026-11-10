@@ -49,15 +49,15 @@ export default function WorkoutDetail() {
           {dist.length > 3 && <Text onPress={() => setMore(!more)} style={{ color: colors.primary }}>{more ? 'Show less' : 'Show more'}</Text>}
         </View>
         <Section title="Workout" />
-        {w.entries.map((e, i) => (
+        {w.entries.map((e, i) => { const eu = e.unit ? { ...u, weight: e.unit } : u; return (
           <View key={i} style={{ paddingBottom: 10 }}>
             {e.superset != null && <Text style={{ alignSelf: 'flex-start', marginLeft: 16, backgroundColor: colors.purple, color: '#fff', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' }}>Superset</Text>}
             <View style={{ padding: 16, paddingBottom: 6 }}><ExerciseLabel exerciseId={e.exerciseId} nameStyle={{ color: colors.primary, fontWeight: '600' }} /></View>
             {e.notes ? <Text style={{ paddingHorizontal: 16, color: colors.muted }}>{e.notes}</Text> : null}
             <View style={{ flexDirection: 'row', paddingHorizontal: 16 }}><Text style={{ width: 50, color: colors.muted, fontSize: 12 }}>SET</Text><Text style={{ color: colors.muted, fontSize: 12 }}>WEIGHT & REPS</Text></View>
-            {e.sets.map((s, j) => <View key={j} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: j % 2 ? colors.surface : colors.bg }}><Text style={{ width: 50, fontWeight: '600', color: s.type === 'warmup' ? colors.warn : colors.text }}>{s.type === 'warmup' ? 'W' : s.type === 'failure' ? 'F' : s.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((x) => x.type === 'normal').length}</Text><Text style={{ color: colors.text }}>{(k => !k || k === 'weight_reps' || k === 'weighted_bodyweight' || k === 'assisted_bodyweight' ? `${fmtSet(s, k, u)}${s.kg ? ' reps' : ''}` : fmtSet(s, k, u))(findExercise(e.exerciseId)?.kind)}</Text></View>)}
+            {e.sets.map((s, j) => <View key={j} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: j % 2 ? colors.surface : colors.bg }}><Text style={{ width: 50, fontWeight: '600', color: s.type === 'warmup' ? colors.warn : colors.text }}>{s.type === 'warmup' ? 'W' : s.type === 'failure' ? 'F' : s.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((x) => x.type === 'normal').length}</Text><Text style={{ color: colors.text }}>{(k => !k || k === 'weight_reps' || k === 'weighted_bodyweight' || k === 'assisted_bodyweight' ? `${fmtSet(s, k, eu)}${s.kg ? ' reps' : ''}` : fmtSet(s, k, eu))(findExercise(e.exerciseId)?.kind)}</Text></View>)}
           </View>
-        ))}
+        ); })}
       </ScrollView>
       <WorkoutMenu id={menu ? w.id : null} onClose={() => setMenu(false)} onDeleted={() => router.back()}
         extra={<ListRow icon="alert-circle-outline" label="Report workout" danger onPress={() => { setMenu(false); router.push({ pathname: '/feed/report', params: { id: w.id } }); }} />} />

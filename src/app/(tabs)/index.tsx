@@ -12,7 +12,7 @@ import { FEATURES } from '../../lib/constants';
 import { weekStreak } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
-import { locale } from '../../lib/i18n';
+import { locale, tr } from '../../lib/i18n';
 
 export default function Home() {
   const { workouts, startWorkout, session, offline, pendingCount } = useStore();
@@ -35,7 +35,7 @@ export default function Home() {
           <Text style={{ flex: 1, color: colors.text }}>
             {offline ? 'You are offline. Showing data saved on this device.' : ''}
             {offline && pendingCount > 0 ? ' ' : ''}
-            {pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'workout is' : 'workouts are'} waiting to upload.` : ''}
+            {pendingCount > 0 ? `${pendingCount} ${tr(pendingCount === 1 ? 'workout is waiting to upload.' : 'workouts are waiting to upload.')}` : ''}
           </Text>
         </View>
       )}

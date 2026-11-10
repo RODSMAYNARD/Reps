@@ -33,19 +33,23 @@ export default function TrainerOption() {
   const st = useStore();
   const apply = useTrainerApply();
   const orig = st.trainer?.settings ?? DEFAULT_TRAINER;
-  const [draft, setDraft] = useState<TrainerSettings>(() => ({ ...orig, equipment: orig.equipment.length ? orig.equipment : presetIds(orig.preset) }));
+  // Rascunho guarda SÓ os campos que esta tela mexeu, por cima das configurações atuais do programa:
+  // se outra tela mudar o programa (ex.: "Update days" na tela de Split), esta tela vê o valor novo e o Update não desfaz nada.
+  const [edits, setEdits] = useState<Partial<TrainerSettings>>({});
   const [ask, setAsk] = useState(false);
   const [presetSheet, setPresetSheet] = useState(false);
   const [injSheet, setInjSheet] = useState(false);
   const [q, setQ] = useState('');
   const k = String(key);
-  const baseline = { ...orig, equipment: orig.equipment.length ? orig.equipment : presetIds(orig.preset) };
-  const changed = JSON.stringify(draft) !== JSON.stringify(baseline);
-  const set = (p: Partial<TrainerSettings>) => setDraft((d) => ({ ...d, ...p }));
-  const commit = (s: TrainerSettings) => { setDraft(s); apply(s, false); };
+  const baseline: TrainerSettings = { ...orig, equipment: orig.equipment.length ? orig.equipment : presetIds(orig.preset) };
+  const draft: TrainerSettings = { ...baseline, ...edits };
+  const changed = (Object.keys(edits) as (keyof TrainerSettings)[]).some((f) => JSON.stringify(edits[f]) !== JSON.stringify(baseline[f]));
+  const set = (p: Partial<TrainerSettings>) => setEdits((e) => ({ ...e, ...p }));
+  const commit = (s: TrainerSettings) => setEdits(apply(s, false) ? {} : s);
   const update = () => {
     const next = { ...draft };
-    if (k === 'frequency' && !SPLITS.find((x) => x.id === next.split)!.days.includes(next.frequency)) next.split = bestSplit(next.frequency);
+    // Split escolhido antes de mudar os dias pode ter ficado bloqueado: cai no melhor para a frequência atual
+    if (!SPLITS.find((x) => x.id === next.split)?.days.includes(next.frequency)) next.split = bestSplit(next.frequency);
     apply(next, RESTART.has(k));
     track('trainer_updated', { option: k });
     st.showToast('Program updated');

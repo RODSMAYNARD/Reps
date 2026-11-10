@@ -14,6 +14,7 @@ import { Btn, Screen, Sheet } from '../../components/ui';
 import { track } from '../../lib/analytics';
 import { fmtSet } from '../../lib/exerciseOptions';
 import { fmtVolume } from '../../lib/format';
+import { tr } from '../../lib/i18n';
 import { workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
@@ -94,7 +95,7 @@ export default function WorkoutDone() {
       {exs.slice(0, max).map((e, i) => (
         <Text key={i} numberOfLines={1} style={T(18)}><Text style={{ color: t.accent, fontSize: 20 * k }}>{e.n}x </Text> {e.ex?.name ?? 'Exercise'}</Text>
       ))}
-      {exs.length > max && <Text style={T(18)}>...and {exs.length - max} more {exs.length - max === 1 ? 'exercise' : 'exercises'}</Text>}
+      {exs.length > max && <Text style={T(18)}>{tr(exs.length - max === 1 ? '...and {n} more exercise' : '...and {n} more exercises').replace('{n}', String(exs.length - max))}</Text>}
     </View>
   );
   const frame = (pad = 26) => ({ flex: 1, padding: pad * k, justifyContent: 'space-between' as const });
@@ -138,7 +139,7 @@ export default function WorkoutDone() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 * k }}>
           <Text style={T(22, { fontWeight: '600' })}>You lifted a total of</Text>
           <Text style={T(54, { fontWeight: '800' })} numberOfLines={1} adjustsFontSizeToFit>{fmtVolume(vol, u)}</Text>
-          <Text style={T(19, { fontWeight: '600' })}>{lift ? `That's like lifting ${lift[1]}!` : 'Every rep counts!'}</Text>
+          <Text style={T(19, { fontWeight: '600' })}>{lift ? tr("That's like lifting {x}!").replace('{x}', tr(lift[1])) : 'Every rep counts!'}</Text>
           <Text style={{ fontSize: 96 * k, marginTop: 8 * k }}>{lift ? lift[2] : '💪'}</Text>
         </View>
         {brand()}

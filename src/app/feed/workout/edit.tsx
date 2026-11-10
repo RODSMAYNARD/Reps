@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, View } from 'react-native';
 import { Text, TextInput } from '../../../components/Text';
 import { NumInput } from '../../../components/NumInput';
 import { Btn, Dialog, Header, HeaderAction, Screen, Sheet, ListRow } from '../../../components/ui';
@@ -55,6 +55,7 @@ export default function EditWorkout() {
 
   return (
     <Screen>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       <Header title="Edit Workout" onLeft={() => (dirty ? setAsk(true) : router.back())} right={<HeaderAction label="Save" primary onPress={save} disabled={busy} />} />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" testID="edit-workout">
         <TextInput value={title} onChangeText={touch(setTitle)} placeholder="Workout title" placeholderTextColor={colors.faint} style={{ fontSize: 26, fontWeight: '700', color: colors.text, paddingVertical: 8 }} testID="edit-title" />
@@ -73,11 +74,11 @@ export default function EditWorkout() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ flex: 1 }}><ExerciseLabel exerciseId={e.exerciseId} nameStyle={{ color: colors.primary, fontSize: 17, fontWeight: '600' }} right={<Ionicons name="trash-outline" size={22} color={colors.danger} onPress={() => delEx(i)} />} /></View>
             </View>
-            {e.sets.map((x, j) => { const kind = st.findExercise(e.exerciseId)?.kind; return (
+            {e.sets.map((x, j) => { const kind = st.findExercise(e.exerciseId)?.kind; const eu = e.unit ? { ...u, weight: e.unit } : u; return (
               <View key={j} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
                 <Text style={{ width: 34, textAlign: 'center', fontWeight: '700', color: x.type === 'warmup' ? colors.warn : colors.text }}>{x.type === 'warmup' ? 'W' : x.type === 'failure' ? 'F' : x.type === 'drop' ? 'D' : e.sets.slice(0, j + 1).filter((y) => y.type === 'normal').length}</Text>
-                {hasWeight(kind) && <><View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10 }}><NumInput decimal value={x.kg == null ? null : Math.round(toDisplayWeight(x.kg, u) * 10) / 10} onChange={(v) => patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, u) })} testID="edit-kg" /></View>
-                <Text style={{ color: colors.muted }}>{u.weight}</Text></>}
+                {hasWeight(kind) && <><View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10 }}><NumInput decimal value={x.kg == null ? null : Math.round(toDisplayWeight(x.kg, eu) * 10) / 10} onChange={(v) => patchSet(i, j, { kg: v == null ? null : fromDisplayWeight(v, eu) })} testID="edit-kg" /></View>
+                <Text style={{ color: colors.muted }}>{eu.weight}</Text></>}
                 {setCols(kind).map((c) => <View key={c} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10 }}><NumInput decimal={colDecimal(c)} value={colValue(x, c, u)} onChange={(v) => patchSet(i, j, colPatch(c, v, u))} testID={c === 'reps' ? 'edit-reps' : `edit-${c}`} /></View>
                 <Text style={{ color: colors.muted }}>{colHeader(c, kind, u).toLowerCase()}</Text></View>)}
                 <Ionicons name="close-circle-outline" size={24} color={colors.faint} onPress={() => delSet(i, j)} />
@@ -87,6 +88,7 @@ export default function EditWorkout() {
           </View>
         ))}
       </ScrollView>
+      </KeyboardAvoidingView>
       <Sheet visible={visSheet} onClose={() => setVisSheet(false)} title="Who can see this">
         {VIS.map((v, i) => <ListRow key={v.id} label={v.label} last={i === VIS.length - 1} right={vis === v.id ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDirty(true); setVis(v.id); setVisSheet(false); }} />)}
       </Sheet>

@@ -23,7 +23,7 @@ export default function Signup() {
           <Field label="Password" placeholder="At least 6 characters" secureTextEntry value={password} onChangeText={setPassword} />
           {!!msg && <Text style={{ color: msg.startsWith('Account created') ? colors.success : colors.danger }}>{msg}</Text>}
           <Btn title="Create account" disabled={!ok} loading={busy} onPress={async () => { setBusy(true); setMsg(await signUp(email.trim(), password)); setBusy(false); }} />
-          {/* links legais: termos = EULA da Apple; privacidade = página publicada ou a tela do app (lib/legal) */}
+          {/* links legais: termos = EULA da Apple no iOS, termos próprios no Android (lib/legal); privacidade = página publicada ou a tela do app (lib/legal) */}
           <Text style={{ color: colors.muted, fontSize: 12, textAlign: 'center' }}>
             By creating an account you agree to the <Text onPress={openTerms} style={{ color: colors.primary }}>Terms of Use</Text>
             {' and the '}

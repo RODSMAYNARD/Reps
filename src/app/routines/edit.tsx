@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { Text, TextInput } from '../../components/Text';
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { NumInput } from '../../components/NumInput';
@@ -53,9 +53,11 @@ export default function EditRoutine() {
 
   return (
     <Screen>
+      {/* teclado: como no treino ativo — no iOS a lista abre espaço e rola até o campo (automaticallyAdjustKeyboardInsets); no Android (edge-to-edge) o KeyboardAvoidingView encolhe a lista */}
+      <KeyboardAvoidingView behavior="padding" enabled={Platform.OS === 'android'} style={{ flex: 1 }}>
       <Header left="cancel" onLeft={() => (dirty ? setCancelAsk(true) : router.back())} title={existing ? 'Edit routine' : 'Create routine'} right={<HeaderAction label="Save" primary disabled={!valid || saving} onPress={save} />} />
       {hint && <Banner text="You're creating a routine. Tap for help..." onPress={() => router.push('/routines/help')} onClose={() => setHint(false)} />}
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
         <TextInput value={title} onChangeText={setTitle} placeholder="Routine title" placeholderTextColor={colors.faint} style={{ fontSize: 22, fontWeight: '600', padding: 16, color: colors.text }} testID="routine-title" />
         {items.length === 0 && (
           <View style={{ alignItems: 'center', padding: 24, gap: 14 }}>
@@ -92,6 +94,7 @@ export default function EditRoutine() {
         ))}
         <View style={{ padding: 16 }}><Btn title="Add exercise" icon="add" onPress={add} testID="routine-add-exercise" /></View>
       </ScrollView>
+      </KeyboardAvoidingView>
       <Sheet visible={!!typeSheet} onClose={() => setTypeSheet(null)} title="Set type">
         {SET_TYPES.map((t) => <ListRow key={t.type} label={t.label} last onPress={() => { patchSet(typeSheet!.i, typeSheet!.j, { type: t.type }); setTypeSheet(null); }} />)}
         <ListRow icon="close" label="Remove set" danger last onPress={() => { const { i, j } = typeSheet!; setItems((l) => l.map((x, k) => (k === i ? { ...x, sets: x.sets.filter((_, n) => n !== j) } : x))); setTypeSheet(null); }} />

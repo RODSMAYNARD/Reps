@@ -35,7 +35,8 @@ export default function LogMeasures() {
     if (values.weight) await syncWeight(values.weight);
     showToast('Measurements saved'); router.back();
   };
-  const syncWeight = async (kg: number) => { if (!existing) await saveProfileWeight(kg); };
+  // só atualiza o peso do perfil se a entrada nova for a mais recente com peso (data retroativa não sobrescreve o atual)
+  const syncWeight = async (kg: number) => { if (!existing && iso >= (measurements.find((m) => m.values.weight != null)?.date ?? '')) await saveProfileWeight(kg); };
   const { saveProfile } = useStore();
   const saveProfileWeight = (kg: number) => saveProfile({ weightKg: kg });
   const pick = async () => { const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 }); if (!r.canceled) setPhoto(r.assets[0].uri); };

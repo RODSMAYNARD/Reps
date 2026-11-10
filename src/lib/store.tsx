@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Session } from '@supabase/supabase-js';
+import { isAuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import { randomUUID } from './uuid';
 import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -66,6 +66,21 @@ let dirtyChain: Promise<unknown> = Promise.resolve();
 // uma gravação por vez: duas marcações juntas (trainer + preferências) liam o mesmo valor e uma apagava a outra
 const markDirty = (uid: string, field: 'trainer' | 'wprefs', dirty: boolean) => {
   dirtyChain = dirtyChain.then(() => AsyncStorage.getItem(`reps:dirty:${uid}`).then((raw) => AsyncStorage.setItem(`reps:dirty:${uid}`, JSON.stringify({ ...(raw ? JSON.parse(raw) : {}), [field]: dirty })))).catch(() => {});
+};
+
+/** Notas fixadas que ainda não chegaram ao banco (`escopo|chave`), guardadas por usuário. */
+const savePinDirty = (uid: string, set: Set<string>) => AsyncStorage.setItem(`reps:pinned-dirty:${uid}`, JSON.stringify([...set])).catch(() => {});
+
+const asList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x) : typeof v === 'string' && v ? [v] : []);
+
+/** Sessão guardada no aparelho (chave padrão do supabase-js). Usada quando abre sem internet com o token vencido: o supabase devolve
+ * "sem sessão", mas ela continua guardada e renova sozinha quando a conexão voltar. */
+const readStoredSession = async (): Promise<Session | null> => {
+  try {
+    const key = `sb-${new URL(process.env.EXPO_PUBLIC_SUPABASE_URL!).hostname.split('.')[0]}-auth-token`;
+    const s = JSON.parse((await AsyncStorage.getItem(key)) ?? 'null');
+    return s?.user?.id && s.access_token && s.refresh_token ? (s as Session) : null;
+  } catch { return null; }
 };
 
 const newSet = (prev?: ActiveSet): ActiveSet => ({ type: 'normal', kg: null, reps: null, done: false, ...(prev ? {} : {}) });
@@ -182,6 +197,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const lang = useLang();
   const userId = session?.user.id ?? null;
   const activeRef = useRef<ActiveWorkout | null>(null);
+  /** Usuário cujos dados estão (ou vão estar) na tela; muda junto com a sessão. */
+  const uidRef = useRef<string | null>(null);
+  /** Sessão lida do aparelho sem conseguir renovar (offline com token vencido): abre com a cópia local até a renovação dar certo. */
+  const offlineAuthRef = useRef(false);
+  /** Treinos salvos/apagados e exercícios criados enquanto a carga roda: a lista que ela leu do servidor (antes) não os conhece. */
+  const duringLoad = useRef({ saved: new Set<string>(), deleted: new Set<string>(), exercises: new Set<string>() });
   const exRef = useRef<Exercise[]>([]);
   useEffect(() => { exRef.current = exercises; }, [exercises]);
   /** Notas fixadas (só no aparelho): listas por exercício e por rotina+exercício. Chave = id canônico (catálogo = cat:<id>). */
@@ -191,7 +212,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return ex?.catalogId ? `cat:${ex.catalogId}` : exerciseId;
   }, []);
   const pinTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const asList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!x) : typeof v === 'string' && v ? [v] : []);
+  const pinRuns = useRef<Record<string, () => void>>({});
+  const pinChain = useRef<Promise<unknown>>(Promise.resolve());
+  /** Chaves (`escopo|chave`) mudadas no aparelho que o banco ainda não confirmou: na próxima carga a versão do aparelho vence (inclusive apagar). */
+  const pinDirtyRef = useRef<Set<string>>(new Set());
   const readPins = useCallback((kind: 'exercise' | 'routine', exerciseId: string, routineId?: string | null): string[] =>
     asList(kind === 'exercise' ? pinnedRef.current.exercise[pinKey(exerciseId)] : routineId ? pinnedRef.current.routine[`${routineId}:${pinKey(exerciseId)}`] : undefined), [pinKey]);
   const writePins = useCallback((kind: 'exercise' | 'routine', exerciseId: string, routineId: string | null | undefined, texts: string[]) => {
@@ -200,17 +224,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!key) return;
     if (texts.length) map[key] = texts; else delete map[key];
     if (userId) {
-      AsyncStorage.setItem(`reps:pinned:${userId}`, JSON.stringify(pinnedRef.current)).catch(() => {});
-      // no banco: espera a digitação parar e grava a versão mais nova (um pedido por tecla chegava fora de ordem)
+      const uid = userId;
+      AsyncStorage.setItem(`reps:pinned:${uid}`, JSON.stringify(pinnedRef.current)).catch(() => {});
+      // marca como pendente já (o app pode fechar antes de enviar, ou estar sem internet); só sai da lista quando o banco confirmar
       const scope = kind, tid = `${scope}|${key}`;
+      pinDirtyRef.current.add(tid);
+      savePinDirty(uid, pinDirtyRef.current);
+      const curOf = () => (scope === 'exercise' ? pinnedRef.current.exercise : pinnedRef.current.routine)[key];
+      // no banco: espera a digitação parar e grava a versão mais nova, um pedido por vez (um pedido por tecla chegava fora de ordem)
       clearTimeout(pinTimers.current[tid]);
-      pinTimers.current[tid] = setTimeout(() => {
-        delete pinTimers.current[tid];
-        const cur = (scope === 'exercise' ? pinnedRef.current.exercise : pinnedRef.current.routine)[key];
-        (cur?.length
-          ? supabase.from('pinned_notes').upsert({ user_id: userId, scope, key, texts: cur }, { onConflict: 'user_id,scope,key' })
-          : supabase.from('pinned_notes').delete().eq('user_id', userId).eq('scope', scope).eq('key', key)).then(() => {}, () => {});
-      }, 800);
+      const run = () => {
+        delete pinTimers.current[tid]; delete pinRuns.current[tid];
+        const send = async () => {
+          if (uidRef.current !== uid) return; // trocou de conta: continua marcada e sobe na próxima carga dela
+          const cur = curOf(), sent = JSON.stringify(cur ?? null);
+          const err = await (cur?.length
+            ? supabase.from('pinned_notes').upsert({ user_id: uid, scope, key, texts: cur }, { onConflict: 'user_id,scope,key' })
+            : supabase.from('pinned_notes').delete().eq('user_id', uid).eq('scope', scope).eq('key', key)).then((r) => r.error, (x) => x);
+          if (err || pinTimers.current[tid] || uidRef.current !== uid || JSON.stringify(curOf() ?? null) !== sent) return;
+          pinDirtyRef.current.delete(tid);
+          savePinDirty(uid, pinDirtyRef.current);
+        };
+        pinChain.current = pinChain.current.then(send, send);
+      };
+      pinRuns.current[tid] = run;
+      pinTimers.current[tid] = setTimeout(run, 800);
     }
   }, [userId, pinKey]);
   /** Regrava as notas fixadas do exercício a partir da lista atual das notas dele. */
@@ -240,6 +278,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const trainerRef = useRef<TrainerProgram | null>(null);
   const [wprefs, setWprefsState] = useState<WorkoutPrefs>(DEFAULT_WPREFS);
   const prefsRef = useRef<WorkoutPrefs>(DEFAULT_WPREFS);
+  /** Trainer/preferências no servidor: marca como pendente na hora, espera as mudanças pararem e envia a versão mais nova, um pedido por vez
+   * (pedidos soltos podiam chegar fora de ordem: o servidor ficava com a versão velha e ela vencia na próxima carga). */
+  const stateSeq = useRef({ trainer: 0, wprefs: 0 });
+  const stateTimers = useRef<Partial<Record<'trainer' | 'wprefs', ReturnType<typeof setTimeout>>>>({});
+  const stateChain = useRef<Promise<unknown>>(Promise.resolve());
+  const pushState = useCallback((field: 'trainer' | 'wprefs') => {
+    const uid = uidRef.current;
+    if (!uid) return;
+    const seq = ++stateSeq.current[field];
+    markDirty(uid, field, true);
+    clearTimeout(stateTimers.current[field]);
+    stateTimers.current[field] = setTimeout(() => {
+      delete stateTimers.current[field];
+      const send = async () => {
+        if (uidRef.current !== uid) return; // trocou de conta: continua marcado e sobe na próxima carga dela
+        const row: { user_id: string; trainer?: TrainerProgram | null; wprefs?: WorkoutPrefs } = field === 'trainer' ? { user_id: uid, trainer: trainerRef.current } : { user_id: uid, wprefs: prefsRef.current };
+        const err = await supabase.from('user_state').upsert(row, { onConflict: 'user_id' }).then((r) => r.error, (x) => x);
+        // só desmarca se nada mudou depois (a mudança seguinte manda a versão nova e desmarca ela)
+        if (!err && stateSeq.current[field] === seq && uidRef.current === uid) markDirty(uid, field, false);
+      };
+      stateChain.current = stateChain.current.then(send, send);
+    }, 600);
+  }, []);
   const wkRef = useRef<Workout[]>([]);
   useEffect(() => { wkRef.current = workouts; }, [workouts]);
   // Sets da última vez que o exercício foi feito (aceita id real ou cat:<id>)
@@ -285,13 +346,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return { id: m.id, date: m.measured_on, values: m.values, photoUri: raw, photoPath: null };
   };
   const load = useCallback(async (uid: string, email: string) => {
+    const dl = duringLoad.current = { saved: new Set<string>(), deleted: new Set<string>(), exercises: new Set<string>() };
     // o treino em andamento vive no aparelho: restaura ANTES de falar com o servidor, para não se perder offline
     try { const raw = await AsyncStorage.getItem(`reps:active:${uid}`); activeRef.current = raw ? JSON.parse(raw) : null; } catch { activeRef.current = null; }
     setActiveState(activeRef.current);
     const ex = await supabase.from('exercises').select('id,name,muscle,equipment,kind,catalog_id,target,secondary_muscles').order('created_at');
     if (ex.error) throw ex.error;
     const assets = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}') as Record<string, string>;
-    setExercises(ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id, target: r.target ?? null, secondary: r.secondary_muscles ?? [], assetUri: assets[r.id] ?? null }; }));
+    const serverEx: Exercise[] = ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id, target: r.target ?? null, secondary: r.secondary_muscles ?? [], assetUri: assets[r.id] ?? null }; });
+    // exercício criado enquanto esta busca estava no ar (salvar treino/rotina) fica na lista
+    setExercises((prev) => { const ids = new Set(serverEx.map((x) => x.id)); return [...serverEx, ...prev.filter((x) => dl.exercises.has(x.id) && !ids.has(x.id))]; });
 
     const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'athlete';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
@@ -333,14 +397,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // apagados no aparelho que o servidor ainda não apagou: ficam fora da lista e o app tenta apagar de novo
     const deletes = await readDeletes(uid);
     if (deletes.length) supabase.from('workouts').delete().in('id', deletes).then((r) => { if (!r.error) writeDeletes(uid, []); }, () => {});
-    setWorkouts(mergePending(queued, wk.data!.filter((w: any) => !deletes.includes(w.id)).map((w: any) => ({
+    const serverWk = wk.data!.filter((w: any) => !deletes.includes(w.id) && !dl.deleted.has(w.id)).map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
         exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
         sets: byPosition(e.workout_sets).map((s: any): SetRow => withExtra({ type: s.set_type, kg: Number(s.weight), reps: s.reps }, s)),
       })),
-    } as Workout))));
+    } as Workout));
+    // treino salvo enquanto a carga rodava (ex.: logo ao voltar a internet) não está nas páginas lidas: fica; apagado nesse meio tempo não volta
+    setWorkouts((prev) => {
+      const ids = new Set(serverWk.map((w) => w.id));
+      return mergePending(queued.filter((w) => !dl.deleted.has(w.id)), [...prev.filter((w) => dl.saved.has(w.id) && !ids.has(w.id)), ...serverWk]);
+    });
 
     const rt = await supabase.from('routines')
       .select('id,title,notes,routine_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,routine_sets(position,set_type,weight,reps,duration_sec,distance_m))')
@@ -365,12 +434,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const us = await supabase.from('user_state').select('trainer,wprefs').maybeSingle();
     const up: { user_id: string; trainer?: TrainerProgram | null; wprefs?: Partial<WorkoutPrefs> } = { user_id: uid };
     if (!us.error) {
-      trainerRef.current = dirty.trainer ? localTrainer : us.data?.trainer ?? localTrainer;
-      if (dirty.trainer || (!us.data?.trainer && localTrainer)) up.trainer = localTrainer;
+      // linha existente com trainer nulo e sem marca de pendente = programa apagado (talvez em outro aparelho): o cache não o traz de volta
+      const row = us.data;
+      trainerRef.current = dirty.trainer ? localTrainer : row ? row.trainer ?? null : localTrainer;
+      if (dirty.trainer || (!row && localTrainer)) up.trainer = localTrainer;
+      if (row && !row.trainer && !dirty.trainer && localTrainer) AsyncStorage.removeItem(`reps:trainer:${uid}`).catch(() => {});
       const prefs = (dirty.wprefs ? localPrefs : us.data?.wprefs) ?? us.data?.wprefs ?? localPrefs;
       if ((dirty.wprefs || !us.data?.wprefs) && localPrefs) up.wprefs = localPrefs;
       prefsRef.current = { ...DEFAULT_WPREFS, ...(prefs ?? {}) };
-      if (up.trainer !== undefined || up.wprefs) supabase.from('user_state').upsert(up, { onConflict: 'user_id' }).then((r) => { if (!r.error) AsyncStorage.removeItem(`reps:dirty:${uid}`).catch(() => {}); }, () => {});
+      const seq0 = { ...stateSeq.current };
+      // desmarca só o que subiu e não mudou de novo enquanto isso
+      if (up.trainer !== undefined || up.wprefs) supabase.from('user_state').upsert(up, { onConflict: 'user_id' }).then((r) => { if (!r.error) (['trainer', 'wprefs'] as const).forEach((f) => { if (f in up && stateSeq.current[f] === seq0[f]) markDirty(uid, f, false); }); }, () => {});
       if (us.data?.trainer && !dirty.trainer) AsyncStorage.setItem(`reps:trainer:${uid}`, JSON.stringify(us.data.trainer)).catch(() => {});
       if (us.data?.wprefs && !dirty.wprefs) AsyncStorage.setItem(`reps:wprefs:${uid}`, JSON.stringify(us.data.wprefs)).catch(() => {});
     } else {
@@ -382,14 +456,48 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setWprefsState(prefsRef.current);
     const pn = await AsyncStorage.getItem(`reps:pinned:${uid}`);
     pinnedRef.current = { exercise: {}, routine: {}, ...(safe(pn) ?? {}) };
-    // o banco é a fonte: o que existe lá vence o cache; o que só existe no aparelho (de antes) sobe
+    pinDirtyRef.current = new Set(asList(safe(await AsyncStorage.getItem(`reps:pinned-dirty:${uid}`).catch(() => null))));
+    // o banco é a fonte: o que existe lá vence o cache, MENOS o que mudou no aparelho e não chegou lá (pendente: o aparelho vence, inclusive apagar)
     const pnr = await supabase.from('pinned_notes').select('scope,key,texts');
     if (!pnr.error) {
-      const remote: { exercise: Record<string, string[]>; routine: Record<string, string[]> } = { exercise: {}, routine: {} };
+      type Pins = { exercise: Record<string, string[]>; routine: Record<string, string[]> };
+      const remote: Pins = { exercise: {}, routine: {} };
       pnr.data.forEach((r: any) => { remote[r.scope as 'exercise' | 'routine'][r.key] = r.texts; });
-      const rows = (['exercise', 'routine'] as const).flatMap((scope) => Object.entries(pinnedRef.current[scope]).filter(([k]) => !remote[scope][k]).map(([key, texts]) => ({ user_id: uid, scope, key, texts })));
-      if (rows.length) supabase.from('pinned_notes').upsert(rows, { onConflict: 'user_id,scope,key' }).then(() => {}, () => {});
-      pinnedRef.current = { exercise: { ...pinnedRef.current.exercise, ...remote.exercise }, routine: { ...pinnedRef.current.routine, ...remote.routine } };
+      const local = pinnedRef.current, dirtySet = new Set(pinDirtyRef.current);
+      const merged: Pins = { exercise: { ...remote.exercise }, routine: { ...remote.routine } };
+      // notas de antes da tabela (só no aparelho) sobem uma vez; depois disso, o que só existe aqui sem marca foi apagado em outro aparelho
+      const migrated = !!(await AsyncStorage.getItem(`reps:pinned-migrated:${uid}`).catch(() => null));
+      const ups: { user_id: string; scope: 'exercise' | 'routine'; key: string; texts: string[] }[] = [];
+      const dels: { scope: 'exercise' | 'routine'; key: string }[] = [];
+      if (!migrated) (['exercise', 'routine'] as const).forEach((scope) => Object.entries(local[scope]).forEach(([key, texts]) => {
+        if (!remote[scope][key] && !dirtySet.has(`${scope}|${key}`)) { merged[scope][key] = texts; ups.push({ user_id: uid, scope, key, texts }); }
+      }));
+      dirtySet.forEach((tid) => {
+        const cut = tid.indexOf('|'), scope = tid.slice(0, cut) as 'exercise' | 'routine', key = tid.slice(cut + 1);
+        if (scope !== 'exercise' && scope !== 'routine') return;
+        const texts = asList(local[scope][key]);
+        if (texts.length) { merged[scope][key] = texts; ups.push({ user_id: uid, scope, key, texts }); } else { delete merged[scope][key]; dels.push({ scope, key }); }
+      });
+      pinnedRef.current = merged;
+      AsyncStorage.setItem(`reps:pinned:${uid}`, JSON.stringify(merged)).catch(() => {});
+      // tira a marca só do que o banco confirmou e não foi mexido de novo enquanto isso
+      // o que foi enviado por chave: se a nota mudou depois (nova edição ainda não confirmada), a marca fica
+      const sentOf: Record<string, string> = {};
+      ups.forEach((u) => { sentOf[`${u.scope}|${u.key}`] = JSON.stringify(u.texts); });
+      dels.forEach((d) => { sentOf[`${d.scope}|${d.key}`] = 'null'; });
+      const curPin = (t: string) => { const cut = t.indexOf('|'), sc = t.slice(0, cut) as 'exercise' | 'routine'; return JSON.stringify(pinnedRef.current[sc]?.[t.slice(cut + 1)] ?? null); };
+      const confirm = (tids: string[]) => {
+        if (uidRef.current !== uid) return;
+        tids.forEach((t) => { if (!pinTimers.current[t] && !pinRuns.current[t] && curPin(t) === sentOf[t]) pinDirtyRef.current.delete(t); });
+        savePinDirty(uid, pinDirtyRef.current);
+      };
+      if (ups.length) supabase.from('pinned_notes').upsert(ups, { onConflict: 'user_id,scope,key' }).then((r) => {
+        if (r.error) return;
+        if (!migrated) AsyncStorage.setItem(`reps:pinned-migrated:${uid}`, '1').catch(() => {});
+        confirm(ups.map((u) => `${u.scope}|${u.key}`).filter((t) => dirtySet.has(t)));
+      }, () => {});
+      else if (!migrated) AsyncStorage.setItem(`reps:pinned-migrated:${uid}`, '1').catch(() => {});
+      dels.forEach(({ scope, key }) => supabase.from('pinned_notes').delete().eq('user_id', uid).eq('scope', scope).eq('key', key).then((r) => { if (!r.error) confirm([`${scope}|${key}`]); }, () => {}));
     }
     setError(null);
     setLoadFailed(false);
@@ -397,10 +505,39 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); if (!data.session) setReady(true); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    // Troca de usuário (entrar, sair, outra conta): some com os dados do anterior e mostra o carregamento até a carga do novo terminar.
+    // Antes `ready` ficava true: quem já tinha conta caía no onboarding por alguns segundos (e um toque em Continue gravava o perfil vazio por cima do real)
+    // e a cópia local era salva vazia. Renovação do token (mesmo usuário) não muda nada.
+    const apply = (s: Session | null) => {
+      const uid = s?.user.id ?? null;
+      if (uid !== uidRef.current) {
+        uidRef.current = uid;
+        setExercises([]); setWorkouts([]); setRoutines([]); setMeasurements([]); setProfile(EMPTY_PROFILE); trainerRef.current = null; setTrainerState(null); activeRef.current = null; setActiveState(null);
+        prefsRef.current = DEFAULT_WPREFS; setWprefsState(DEFAULT_WPREFS); pinnedRef.current = { exercise: {}, routine: {} }; pinDirtyRef.current = new Set(); setRest(null);
+        setOffline(false); setLoadFailed(false); setPendingCount(0);
+        // saindo: nada para carregar, a tela de entrada aparece já; entrando: o carregamento fica até a carga liberar
+        setReady(!uid);
+      }
       setSession(s);
-      if (!s) { setExercises([]); setWorkouts([]); setRoutines([]); setMeasurements([]); setProfile(EMPTY_PROFILE); trainerRef.current = null; setTrainerState(null); activeRef.current = null; setActiveState(null); }
+    };
+    supabase.auth.getSession().then(async ({ data, error: e }) => {
+      if (data.session) return apply(data.session);
+      // sem internet e com o token vencido o supabase responde "sem sessão" (mas ela continua guardada): abre com a cópia do aparelho
+      if (e && isAuthRetryableFetchError(e)) {
+        const stored = await readStoredSession();
+        if (stored) { offlineAuthRef.current = true; return apply(stored); }
+      }
+      apply(null); setReady(true);
+    }, () => { apply(null); setReady(true); });
+    const { data: sub } = supabase.auth.onAuthStateChange((ev, s) => {
+      if (ev === 'INITIAL_SESSION') return; // a sessão inicial vem do getSession acima
+      if (offlineAuthRef.current) {
+        if (!s && ev !== 'SIGNED_OUT') return; // sessão do aparelho (offline): só sair de verdade derruba
+        offlineAuthRef.current = false;
+        // a renovação deu certo quando a internet voltou: troca pela sessão real e carrega do servidor (a cópia local continua na tela)
+        if (s && s.user.id === uidRef.current) { setSession(s); setReloadTick((n) => n + 1); return; }
+      }
+      apply(s);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -408,29 +545,45 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Carrega os dados do servidor quando o usuário entra (busca assíncrona).
     if (!userId) return;
-    load(userId, session?.user.email ?? 'user')
+    const uid = userId, stale = () => uidRef.current !== uid;
+    // sessão do aparelho com token vencido (sem internet): vai direto para a cópia local, sem pedir nada ao servidor
+    (offlineAuthRef.current ? Promise.reject(new Error('Network request failed (offline session)')) : load(uid, session?.user.email ?? 'user'))
       .catch(async (e) => {
+        if (stale()) return;
         // sem internet: abre com a cópia da última carga (e os treinos que estão na fila); sem cópia, mostra "tentar de novo"
         const net = isNetworkError(e);
         if (!net) reportError(e, { where: 'load' });
-        const snap = net ? await readSnapshot(userId) : null;
+        const snap = net ? await readSnapshot(uid) : null;
+        if (stale()) return;
         if (!snap) { setError(String(e?.message ?? e)); setLoadFailed(true); return; }
-        const queued = (await readOutbox(userId)).map((p) => p.workout);
+        const queued = (await readOutbox(uid)).map((p) => p.workout);
+        const safe = (s: string | null) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
+        const lt = safe(await AsyncStorage.getItem(`reps:trainer:${uid}`).catch(() => null));
+        const lp = safe(await AsyncStorage.getItem(`reps:wprefs:${uid}`).catch(() => null));
+        const pn = safe(await AsyncStorage.getItem(`reps:pinned:${uid}`).catch(() => null));
+        const pd = safe(await AsyncStorage.getItem(`reps:pinned-dirty:${uid}`).catch(() => null));
+        if (stale()) return;
         exRef.current = snap.exercises;
         setExercises(snap.exercises); setProfile(snap.profile); setRoutines(snap.routines); setMeasurements(snap.measurements);
         setWorkouts(mergePending(queued, snap.workouts));
         setPendingCount(queued.length);
-        const safe = (s: string | null) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
-        trainerRef.current = safe(await AsyncStorage.getItem(`reps:trainer:${userId}`).catch(() => null));
-        prefsRef.current = { ...DEFAULT_WPREFS, ...(safe(await AsyncStorage.getItem(`reps:wprefs:${userId}`).catch(() => null)) ?? {}) };
-        const pn = safe(await AsyncStorage.getItem(`reps:pinned:${userId}`).catch(() => null));
+        trainerRef.current = withTrainerDefaults(lt);
+        prefsRef.current = { ...DEFAULT_WPREFS, ...(lp ?? {}) };
         pinnedRef.current = { exercise: {}, routine: {}, ...(pn ?? {}) };
-        trainerRef.current = withTrainerDefaults(trainerRef.current);
+        pinDirtyRef.current = new Set(asList(pd));
         setTrainerState(trainerRef.current); setWprefsState(prefsRef.current);
         setError(null); setLoadFailed(false); setOffline(true);
       })
-      .finally(() => setReady(true));
+      .finally(() => { if (!stale()) setReady(true); });
   }, [userId, session?.user.email, load, reloadTick]);
+
+  // App indo para o fundo: envia já as notas fixadas que esperavam a digitação parar (a marca de pendente cobre se o app for fechado)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st !== 'active') Object.entries(pinRuns.current).forEach(([tid, run]) => { clearTimeout(pinTimers.current[tid]); run(); });
+    });
+    return () => sub.remove();
+  }, []);
 
   /** Cria no banco os exercícios do catálogo usados (`cat:<id>`) e devolve os ids reais. Com erro, devolve os ids como vieram + o erro. */
   const ensureChain = useRef<Promise<unknown>>(Promise.resolve());
@@ -453,6 +606,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           data.map(toEx).forEach((a) => { added.push(a); have.set(a.catalogId!, a.id); });
         }
         exRef.current = [...exRef.current.filter((x) => !added.some((a) => a.id === x.id)), ...added];
+        added.forEach((a) => duringLoad.current.exercises.add(a.id));
         setExercises(exRef.current);
       }
       return { ids: ids.map((id) => (id.startsWith('cat:') ? have.get(id.slice(4)) ?? id : id)), error: null };
@@ -480,7 +634,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
    * e segue com os outros (ele tenta de novo na próxima carga do app). */
   const flushing = useRef(false);
   const flushOutbox = useCallback(async () => {
-    if (!userId || flushing.current) return;
+    // sessão do aparelho (token vencido, sem internet): espera a renovação; enviar agora daria erro de permissão
+    if (!userId || flushing.current || offlineAuthRef.current) return;
     flushing.current = true;
     try {
       const tried = new Set<string>();
@@ -507,6 +662,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           setPendingCount(next.length);
           return err ? 'failed' : 'sent';
         });
+        if (outcome === 'sent') duringLoad.current.saved.add(w.id);
         if (outcome === 'sent') setWorkouts((l) => l.map((x) => (x.id === w.id ? { ...w, entries, pending: undefined, uploadError: undefined } : x)));
         // recusado pelo servidor: o cartão avisa (antes ficava "Waiting to upload" para sempre, sem explicação)
         if (outcome === 'failed') setWorkouts((l) => l.map((x) => (x.id === w.id ? { ...x, uploadError: err?.message ?? 'error' } : x)));
@@ -576,10 +732,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setTrainerState(p);
     if (userId) {
       (p ? AsyncStorage.setItem(`reps:trainer:${userId}`, JSON.stringify(p)) : AsyncStorage.removeItem(`reps:trainer:${userId}`)).catch(() => {});
-      const uid = userId;
-      supabase.from('user_state').upsert({ user_id: uid, trainer: p }, { onConflict: 'user_id' }).then((r) => markDirty(uid, 'trainer', !!r.error), () => markDirty(uid, 'trainer', true));
+      pushState('trainer');
     }
-  }, [userId]);
+  }, [userId, pushState]);
 
   /** Ao terminar um treino do Trainer: avança para o próximo; fecha a semana/ciclo e renova os exercícios conforme a variedade. */
   const advanceTrainer = useCallback((doneUid: string) => {
@@ -602,11 +757,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value_startWorkout = (opts?: { routine?: Routine | null; entries?: SavedEntry[]; title?: string; trainerUid?: string }) => startRef.current(opts);
 
   const value = useMemo<Store>(() => ({
-    loadFailed, offline, pendingCount, reload: () => setReloadTick((n) => n + 1), ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
+    loadFailed, offline, pendingCount, reload: () => {
+      // sessão do aparelho (token vencido, abriu sem internet): tenta renovar antes, senão a carga nem chega ao servidor
+      if (!offlineAuthRef.current) return setReloadTick((n) => n + 1);
+      supabase.auth.refreshSession().then(({ data }) => {
+        if (data.session && data.session.user.id === uidRef.current) { offlineAuthRef.current = false; setSession(data.session); }
+      }, () => {}).finally(() => setReloadTick((n) => n + 1));
+    }, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
     ensureExercises: ensure,
     findExercise: (id) => lookup.get(id),
     wprefs,
-    setWprefs: (patch) => { prefsRef.current = { ...prefsRef.current, ...patch }; setWprefsState(prefsRef.current); if (userId) { AsyncStorage.setItem(`reps:wprefs:${userId}`, JSON.stringify(prefsRef.current)).catch(() => {}); const uid = userId; supabase.from('user_state').upsert({ user_id: uid, wprefs: prefsRef.current }, { onConflict: 'user_id' }).then((r) => markDirty(uid, 'wprefs', !!r.error), () => markDirty(uid, 'wprefs', true)); } },
+    setWprefs: (patch) => { prefsRef.current = { ...prefsRef.current, ...patch }; setWprefsState(prefsRef.current); if (userId) { AsyncStorage.setItem(`reps:wprefs:${userId}`, JSON.stringify(prefsRef.current)).catch(() => {}); pushState('wprefs'); } },
     previousSets: (id) => lastSetsOf(id, activeRef.current?.fromRoutineId),
     realExerciseId: (id) => (id.startsWith('cat:') ? exRef.current.find((e) => e.catalogId === id.slice(4))?.id ?? id : id),
     signIn: async (email, password) => {
@@ -630,14 +791,24 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       showToast('Password updated. You are signed in.', 3500);
       return null;
     },
-    signOut: async () => { track('logout'); await cancelReminders(); await supabase.auth.signOut(); },
+    signOut: async () => {
+      track('logout');
+      // sem internet o "sair" padrão (revoga no servidor) falhava calado e a pessoa continuava dentro: sai pelo menos deste aparelho
+      const g = await supabase.auth.signOut().catch((x) => ({ error: x as { message: string } }));
+      if (g.error) {
+        const l = await supabase.auth.signOut({ scope: 'local' }).catch((x) => ({ error: x as { message: string } }));
+        if (l.error) { fail(l.error.message); return; }
+      }
+      // lembretes só saem depois de sair de fato (antes sumiam mesmo quando o sair falhava)
+      await cancelReminders();
+    },
     deleteAccount: async () => {
       const uid = userId;
       const r = await supabase.functions.invoke('delete-account', { method: 'POST' });
       if (r.error || r.data?.error) return r.data?.error ?? r.error?.message ?? 'Could not delete the account.';
       track('account_deleted');
       await cancelReminders();
-      if (uid) await AsyncStorage.multiRemove(['reps:active:', 'reps:trainer:', 'reps:wprefs:', 'reps:pinned:', 'reps:report-dismissed:', 'reps:cache:', 'reps:outbox:'].map((k) => k + uid)).catch(() => {});
+      if (uid) await AsyncStorage.multiRemove(['reps:active:', 'reps:trainer:', 'reps:wprefs:', 'reps:pinned:', 'reps:pinned-dirty:', 'reps:pinned-migrated:', 'reps:dirty:', 'reps:deletes:', 'reps:report-dismissed:', 'reps:cache:', 'reps:outbox:'].map((k) => k + uid)).catch(() => {});
       await AsyncStorage.removeItem('reps:exassets').catch(() => {});
       await supabase.auth.signOut().catch(() => {});
       return null;
@@ -677,6 +848,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         map[row.id] = x.assetUri;
         AsyncStorage.setItem('reps:exassets', JSON.stringify(map)).catch(() => {});
       }
+      duringLoad.current.exercises.add(row.id);
       setExercises((l) => [...l, row]);
       return row;
     },
@@ -782,19 +954,35 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (gone && gone.kind !== 'workout') syncPins(e, list, a.fromRoutineId);
     },
     moveEntry: (from, to) => setActive((a) => { const list = [...a.entries]; const [it] = list.splice(from, 1); list.splice(to, 0, it); return { ...a, entries: list }; }),
-    swapEntry: (i, id) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => {
-      if (k !== i || e.exerciseId === id) return e;
+    swapEntry: (i, id) => setActive((a) => {
+      const e = a.entries[i];
+      if (!e || e.exerciseId === id) return a;
       const original = e.swappedFrom ?? e.exerciseId;
       const last = lastSetsOf(id, a.fromRoutineId);
       // séries ainda não feitas passam a usar o histórico do novo exercício (ou ficam sem peso, para não herdar o do outro)
-      const sets = e.sets.map((s, j): ActiveSet => {
-        if (s.done) return s;
+      const fresh = (s: ActiveSet, j: number): ActiveSet => {
         const p = last.length ? last[Math.min(j, last.length - 1)] : null;
         return p ? { ...s, kg: p.kg, reps: p.reps ?? s.reps, seconds: p.seconds, distM: p.distM, typed: false } : { ...s, kg: null, seconds: null, distM: null, typed: false };
-      });
-      return { ...e, ...noteFields(notesFor(id, e, a.fromRoutineId)), exerciseId: id, swappedFrom: id === original ? undefined : original, madeMain: undefined, sets };
-    }) })),
-    replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...noteFields(notesFor(exerciseId, e, a.fromRoutineId)), exerciseId } : e)) })),
+      };
+      const swapped = (from: ActiveEntry, sets: ActiveSet[]): ActiveEntry => ({ ...e, ...noteFields(notesFor(id, from, a.fromRoutineId)), exerciseId: id, swappedFrom: id === original ? undefined : original, madeMain: undefined, sets });
+      // já tem série feita: ela é do exercício atual e fica com ele (senão ia para o histórico e os recordes do outro);
+      // o novo entra logo abaixo com as séries que faltam (as notas do treino ficam só no atual, para não gravar duas vezes)
+      // desfazer (voltar ao original) uma troca que dividiu o exercício e ainda sem série feita no novo: junta de volta na parte que ficou
+      const k = e.uid ? a.entries.findIndex((x) => x.splitTo === e.uid) : -1;
+      if (id === original && k >= 0 && a.entries[k].exerciseId === id && !e.sets.some((s) => s.done)) {
+        const kept = a.entries[k];
+        const merged: ActiveEntry = { ...kept, splitTo: undefined, sets: [...kept.sets, ...e.sets.map((s, j) => fresh(s, kept.sets.length + j))] };
+        return { ...a, entries: a.entries.flatMap((x, n) => (n === i ? [] : n === k ? [merged] : [x])) };
+      }
+      if (e.sets.some((s) => s.done)) {
+        const todo = e.sets.filter((s) => !s.done);
+        const next: ActiveEntry = { ...swapped({ ...e, ...noteFields([]) }, (todo.length ? todo : [newSet()]).map(fresh)), uid: randomUUID() };
+        return { ...a, entries: [...a.entries.slice(0, i), { ...e, splitTo: next.uid, sets: e.sets.filter((s) => s.done) }, next, ...a.entries.slice(i + 1)] };
+      }
+      return { ...a, entries: a.entries.map((x, k) => (k === i ? swapped(e, e.sets.map(fresh)) : x)) };
+    }),
+    // Replace é troca de verdade: o estado do Swap (original, "virou principal") não passa para o exercício novo
+    replaceEntry: (i, exerciseId) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...noteFields(notesFor(exerciseId, e, a.fromRoutineId)), exerciseId, swappedFrom: undefined, splitTo: undefined, madeMain: undefined } : e)) })),
     patchEntry: (i, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, ...patch } : e)) })),
     addSet: (i) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: [...e.sets, { ...newSet(), kg: e.sets.at(-1)?.kg ?? null, reps: e.sets.at(-1)?.reps ?? null, seconds: e.sets.at(-1)?.seconds ?? null, distM: e.sets.at(-1)?.distM ?? null }] } : e)) })),
     patchSet: (i, j, patch) => setActive((a) => ({ ...a, entries: a.entries.map((e, k) => (k === i ? { ...e, sets: e.sets.map((s, n) => (n === j ? { ...s, ...patch } : s)) } : e)) })),
@@ -828,7 +1016,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         .filter((e) => e.sets.length > 0);
       if (!entries.length) { fail('Complete at least one set to save the workout.'); return null; }
       const uniq = [...new Set(entries.map((e) => e.exerciseId))];
-      const r = await ensureRaw(uniq);
+      // sessão do aparelho (token vencido, sem internet): vai direto para a fila; o servidor recusaria por permissão
+      const r = offlineAuthRef.current ? { ids: uniq, error: { message: 'Network request failed (offline session)' } } : await ensureRaw(uniq);
       if (r.error && !isNetworkError(r.error)) { reportError(r.error, { where: 'save-workout' }); fail(r.error.message); return null; }
       const idMap = new Map(uniq.map((id, k) => [id, r.ids[k]]));
       entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
@@ -845,6 +1034,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         exercises: entries.length, sets: entries.reduce((t, e) => t + e.sets.length, 0), visibility: meta.visibility, has_location: !!meta.location,
         workouts_total: wkRef.current.length + 1,
       });
+      duringLoad.current.saved.add(saved.id);
       setWorkouts((l) => [saved, ...l]);
       setActive(() => null);
       setRest(null);
@@ -879,11 +1069,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     deleteWorkout: async (id) => {
       if (wkRef.current.find((w) => w.id === id)?.pending && userId) {
         await withOutbox(async (list) => { const next = list.filter((x) => x.workout.id !== id); await writeOutbox(userId, next); setPendingCount(next.length); });
+        duringLoad.current.deleted.add(id);
         setWorkouts((l) => l.filter((w) => w.id !== id));
         return;
       }
       const { error: e } = await supabase.from('workouts').delete().eq('id', id);
       if (e) return fail(e.message);
+      duringLoad.current.deleted.add(id);
       setWorkouts((l) => l.filter((w) => w.id !== id));
     },
 
@@ -953,7 +1145,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (e) { fail(e.message); return false; }
       return true;
     },
-  }), [loadFailed, offline, pendingCount, ensureRaw, enqueue, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes, notesFor, withOutbox, lastUnitOf]);
+  }), [loadFailed, offline, pendingCount, ensureRaw, enqueue, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes, notesFor, withOutbox, lastUnitOf, pushState]);
 
   useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

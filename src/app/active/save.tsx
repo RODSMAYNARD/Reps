@@ -40,17 +40,28 @@ export default function SaveWorkout() {
   const keyOf = (id: string) => { const c = st.findExercise(id)?.catalogId; return c ? `cat:${c}` : id; };
   const routine = active.fromRoutineId ? st.routines.find((r) => r.id === active.fromRoutineId) ?? null : null;
   // a troca (Swap) vale só para este treino: o exercício trocado fica fora da comparação e da atualização (a rotina segue com o original, sem ganhar o substituto)
-  const performed = shown.filter((e) => !e.swappedFrom).map((e) => ({ id: e.exerciseId, key: keyOf(e.exerciseId), restSec: e.restSec, unit: e.unit, sets: e.sets.filter((x) => x.done).map(({ done: _d, typed: _t, ...x }): SetRow => x) })).filter((e) => e.sets.length > 0);
+  // o mesmo exercício pode aparecer 2x: o n-ésimo da rotina com a chave K pareia com o n-ésimo do treino com a chave K.
+  // A contagem roda em TODAS as entradas (antes de tirar escondidos/trocados/sem série feita) e o trocado conta pela chave do original, para não desalinhar.
+  // Swap com série já feita divide o exercício (parte que ficou com `splitTo` + continuação): as duas metades são UMA vaga da rotina,
+  // contada pela continuação; a parte que ficou não conta nem atualiza a rotina (a troca nunca mexe nas séries dela)
+  const occOf = (keys: (string | null)[]) => { const seen: Record<string, number> = {}; return keys.map((k) => (k === null ? -1 : (seen[k] = (seen[k] ?? -1) + 1))); };
+  const uids = new Set(active.entries.map((e) => e.uid).filter(Boolean));
+  const isKept = (e: (typeof active.entries)[number]) => !!e.splitTo && uids.has(e.splitTo);
+  const actOcc = occOf(active.entries.map((e) => (isKept(e) ? null : keyOf(e.swappedFrom ?? e.exerciseId))));
+  const performed = active.entries.map((e, i) => ({ e, occ: actOcc[i] })).filter(({ e }) => !e.hidden && !e.swappedFrom && !isKept(e)).map(({ e, occ }) => ({ id: e.exerciseId, key: keyOf(e.exerciseId), occ, restSec: e.restSec, unit: e.unit, sets: e.sets.filter((x) => x.done).map(({ done: _d, typed: _t, ...x }): SetRow => x) })).filter((e) => e.sets.length > 0);
+  const rtOcc = routine ? occOf(routine.exercises.map((r) => keyOf(r.exerciseId))) : [];
+  const rtIndexOf = (p: { key: string; occ: number }) => (routine ? routine.exercises.findIndex((r, j) => rtOcc[j] === p.occ && keyOf(r.exerciseId) === p.key) : -1);
   const sameSets = (a: SetRow[], b: SetRow[]) => a.length === b.length && a.every((x, k) => (x.kg ?? 0) === (b[k].kg ?? 0) && (x.reps ?? 0) === (b[k].reps ?? 0) && (x.seconds ?? 0) === (b[k].seconds ?? 0) && (x.distM ?? 0) === (b[k].distM ?? 0));
-  const changed = !!routine && performed.some((p) => { const r = routine.exercises.find((x) => keyOf(x.exerciseId) === p.key); return !r || !sameSets(r.sets, p.sets); });
+  const changed = !!routine && performed.some((p) => { const j = rtIndexOf(p); return j < 0 || !sameSets(routine.exercises[j].sets, p.sets); });
 
   const save = async (updateRoutine = false) => {
     setBusy(true);
     const w = await st.finishActive({ title: title.trim() || 'Workout', description: desc, visibility: vis, date: when.toISOString(), durationSec: dur, location: place.trim() || null });
     if (w && updateRoutine && routine) {
       // chaves calculadas ANTES de salvar; exercício novo entra com o id do próprio treino (um `cat:<id>` serve: o saveRoutine acha o exercício criado ao salvar)
-      const exercises = routine.exercises.map((r) => { const p = performed.find((x) => x.key === keyOf(r.exerciseId)); return p ? { ...r, sets: p.sets } : r; });
-      performed.filter((p) => !routine.exercises.some((r) => keyOf(r.exerciseId) === p.key)).forEach((p) => exercises.push({ exerciseId: p.id, notes: '', restSec: p.restSec, unit: p.unit, sets: p.sets }));
+      const paired = performed.map((p) => ({ p, j: rtIndexOf(p) }));
+      const exercises = routine.exercises.map((r, j) => { const m = paired.find((x) => x.j === j); return m ? { ...r, sets: m.p.sets } : r; });
+      paired.filter((x) => x.j < 0).map((x) => x.p).forEach((p) => exercises.push({ exerciseId: p.id, notes: '', restSec: p.restSec, unit: p.unit, sets: p.sets }));
       await st.saveRoutine({ ...routine, exercises });
     }
     setBusy(false);

@@ -11,7 +11,7 @@ import { colors } from '../../lib/theme';
 const csv = (rows: (string | number)[][]) => rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
 
 export default function ExportData() {
-  const { workouts, exercises, routines, measurements, profile, showToast } = useStore();
+  const { workouts, exercises, routines, measurements, profile, showToast, findExercise } = useStore();
   const [busy, setBusy] = useState(false);
   /** Grava o arquivo no aparelho e abre a folha de compartilhar (salvar em Arquivos, e-mail, etc.). Pesos sempre em kg. */
   const share = async (name: string, text: string, mime: string) => {
@@ -25,8 +25,9 @@ export default function ExportData() {
     setBusy(false);
   };
   const exportCsv = () => {
-    const rows: (string | number)[][] = [['date', 'workout', 'exercise', 'set', 'type', 'weight_kg', 'reps']];
-    workouts.forEach((w) => w.entries.forEach((e) => e.sets.forEach((s, i) => rows.push([fmtDate(w.date), w.title, exercises.find((x) => x.id === e.exerciseId)?.name ?? '', i + 1, s.type, s.kg ?? 0, s.reps ?? 0]))));
+    // findExercise aceita id real e `cat:<id>` (treinos da fila offline ainda guardam o id do catálogo)
+    const rows: (string | number)[][] = [['date', 'workout', 'exercise', 'set', 'type', 'weight_kg', 'reps', 'duration_sec', 'distance_m']];
+    workouts.forEach((w) => w.entries.forEach((e) => e.sets.forEach((s, i) => rows.push([fmtDate(w.date), w.title, findExercise(e.exerciseId)?.name ?? '', i + 1, s.type, s.kg ?? 0, s.reps ?? 0, s.seconds ?? '', s.distM ?? '']))));
     return share('reps-workouts.csv', csv(rows), 'text/csv');
   };
   const exportAll = () => share('reps-data.json', JSON.stringify({ exportedAt: new Date().toISOString(), profile, workouts, routines, measurements, exercises: exercises.map((e) => ({ id: e.id, name: e.name, muscle: e.muscle, equipment: e.equipment, kind: e.kind })) }, null, 2), 'application/json');

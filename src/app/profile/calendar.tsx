@@ -32,7 +32,7 @@ export default function CalendarScreen() {
           <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{monthLabel}</Text>
           <Ionicons name="chevron-forward" size={24} color={colors.text} onPress={() => shift(1)} />
         </View>
-        <View style={{ flexDirection: 'row', paddingHorizontal: 8 }}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.muted }}>{d}</Text>)}</View>
+        <View style={{ flexDirection: 'row', paddingHorizontal: 8 }}>{(locale() === 'pt-BR' ? ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S']).map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.muted }}>{d}</Text>)}</View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 }}>
           {cells.map((c, i) => {
             const k = c ? dayKey(new Date(cursor.getFullYear(), cursor.getMonth(), c)) : '';

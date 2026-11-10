@@ -5,17 +5,19 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { ActiveBar } from '../../components/ActiveBar';
 import { Btn, Card, Dialog, Header, IconButton, ListRow, Screen, Section, Sheet, Tile } from '../../components/ui';
+import { tr } from '../../lib/i18n';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { Routine } from '../../lib/types';
 
 export default function Treino() {
-  const { trainer, routines, exercises, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast } = useStore();
+  const { trainer, routines, findExercise, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast } = useStore();
   const [menu, setMenu] = useState<Routine | null>(null);
   const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [ask, setAsk] = useState<'replace' | null>(null);
   const [pending, setPending] = useState<Routine | null | undefined>(undefined);
-  const nameOf = (id: string) => exercises.find((e) => e.id === id)?.name ?? '—';
+  // findExercise usa o nome no idioma atual (catName) e aceita id real ou cat:<id>
+  const nameOf = (id: string) => findExercise(id)?.name ?? '—';
 
   const start = (r?: Routine | null) => {
     if (active) { setPending(r ?? null); setAsk('replace'); return; }
@@ -31,7 +33,7 @@ export default function Treino() {
           <Ionicons name="sparkles" size={26} color="#fff" />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: '#fff' }}>Trainer</Text>
-            <Text style={{ color: '#C9CFD8' }}>{trainer ? `Next: ${trainer.workouts.find((w) => w.uid === trainer.nextUid)?.title ?? trainer.workouts[0]?.title}` : 'Your personalized program'}</Text>
+            <Text style={{ color: '#C9CFD8' }}>{trainer ? `${tr('Next:')} ${trainer.workouts.find((w) => w.uid === trainer.nextUid)?.title ?? trainer.workouts[0]?.title}` : 'Your personalized program'}</Text>
           </View>
           <Ionicons name="chevron-forward" size={22} color="#fff" />
         </Pressable>
@@ -47,7 +49,7 @@ export default function Treino() {
         <Pressable onPress={() => router.push('/routines/generate')} testID="open-generate" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primarySoft, padding: 16, borderRadius: radius.md }}>
           <Text style={{ fontSize: 20 }}>✨</Text><View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Generate workout plan</Text><Text style={{ color: colors.muted }}>Pick a goal, days and equipment</Text></View>
         </Pressable>
-        {routines.length > 0 && <Section title={`My routines (${routines.length})`} />}
+        {routines.length > 0 && <Section title={`${tr('My routines')} (${routines.length})`} />}
         {routines.map((r) => (
           <Card key={r.id} onPress={() => router.push({ pathname: '/routines/[id]', params: { id: r.id } })} style={{ gap: 6, marginBottom: 8 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

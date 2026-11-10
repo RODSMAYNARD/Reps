@@ -12,7 +12,7 @@ import { dayKey, workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { Workout } from '../../lib/types';
-import { locale } from '../../lib/i18n';
+import { getLang, locale, tr } from '../../lib/i18n';
 
 type Metric = 'workouts' | 'duration' | 'volume' | 'sets';
 const inMonth = (ws: Workout[], y: number, m: number) => ws.filter((w) => { const d = new Date(w.date); return d.getFullYear() === y && d.getMonth() === m; });
@@ -71,12 +71,15 @@ export default function MonthlyReport() {
   const mMax = Math.max(1, ...topMuscles.map((x) => x[1]));
   const topEx = [...tc.ex.values()].sort((a, b) => b.n - a.n).slice(0, 5);
 
-  const text = [`${title} on Reps`, `${cur.length} workouts · ${fmtDuration(value(cur, 'duration'))} · ${fmtVolume(value(cur, 'volume'), u)} · ${value(cur, 'sets')} sets`, ...topEx.slice(0, 3).map((e) => `${e.name} — ${e.n}×`)].join('\n');
+  const pt = getLang() === 'pt';
+  const monthName = cursor.toLocaleDateString(locale(), { month: 'long' });
+  // texto copiado não passa pelo Text: traduz aqui
+  const text = [pt ? `${title} no Reps` : `${title} on Reps`, `${cur.length} ${tr(cur.length === 1 ? 'workout' : 'workouts')} · ${fmtDuration(value(cur, 'duration'))} · ${fmtVolume(value(cur, 'volume'), u)} · ${value(cur, 'sets')} ${tr('sets')}`, ...topEx.slice(0, 3).map((e) => `${e.name} — ${e.n}×`)].join('\n');
 
   const sum: { k: Metric; label: string }[] = [{ k: 'workouts', label: 'Workouts' }, { k: 'duration', label: 'Duration' }, { k: 'volume', label: 'Volume' }, { k: 'sets', label: 'Sets' }];
   return (
     <Screen>
-      <Header title={`${cursor.toLocaleDateString(locale(), { month: 'long' })} Report`} />
+      <Header title={pt ? `Relatório de ${monthName}` : `${monthName} Report`} />
       <ScrollView testID="monthly-report">
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
           <Ionicons name="chevron-back" size={24} color={colors.text} onPress={() => shift(-1)} testID="report-prev" />
@@ -106,7 +109,7 @@ export default function MonthlyReport() {
 
         <Section title="Workout days" />
         <View style={{ paddingHorizontal: 8 }}>
-          <View style={{ flexDirection: 'row' }}>{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.muted }}>{d}</Text>)}</View>
+          <View style={{ flexDirection: 'row' }}>{(pt ? ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S']).map((d, i) => <Text key={i} style={{ flex: 1, textAlign: 'center', color: colors.muted }}>{d}</Text>)}</View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
             {cells.map((c, i) => { const on = c ? worked.has(dayKey(new Date(y, m, c))) : false; return (
               <View key={i} style={{ width: `${100 / 7}%`, alignItems: 'center', paddingVertical: 5 }}>

@@ -1,5 +1,5 @@
 import { Units } from './types';
-import { locale } from './i18n';
+import { getLang, locale } from './i18n';
 
 export const LB = 2.2046226;
 export const IN = 0.3937008;
@@ -42,13 +42,16 @@ export const fmtDurationLive = (sec: number) => {
   return `${s}s`;
 };
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-/** "6 Nov 2026, 12:06 AM" */
+const MON_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const mon = (d: Date) => (getLang() === 'pt' ? MON_PT : MON)[d.getMonth()];
+/** "6 Nov 2026, 12:06 AM" (pt: "6 nov 2026, 00:06", relógio de 24 h) */
 export const fmtStartTime = (d: Date) => {
-  const h = d.getHours();
-  return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}, ${h % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  const h = d.getHours(), mm = String(d.getMinutes()).padStart(2, '0');
+  const time = getLang() === 'pt' ? `${String(h).padStart(2, '0')}:${mm}` : `${h % 12 || 12}:${mm} ${h < 12 ? 'AM' : 'PM'}`;
+  return `${d.getDate()} ${mon(d)} ${d.getFullYear()}, ${time}`;
 };
-/** "06 Nov 2026" (roda de dias) */
-export const fmtDayWheel = (d: Date) => `${String(d.getDate()).padStart(2, '0')} ${MON[d.getMonth()]} ${d.getFullYear()}`;
+/** "06 Nov 2026" (roda de dias; pt: "06 nov 2026") */
+export const fmtDayWheel = (d: Date) => `${String(d.getDate()).padStart(2, '0')} ${mon(d)} ${d.getFullYear()}`;
 export const fmtRest = (sec: number) => {
   if (!sec) return 'OFF';
   const m = Math.floor(sec / 60);

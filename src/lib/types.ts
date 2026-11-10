@@ -28,7 +28,7 @@ export type ActiveSet = SetRow & { done: boolean; typed?: boolean };
 export type NoteKind = 'workout' | 'exercise' | 'routine';
 /** Uma nota do exercício (pode haver várias): texto e tipo. */
 export type EntryNote = { id: string; text: string; kind: NoteKind };
-export type ActiveEntry = { uid?: string; hidden?: boolean; unit?: Units['weight']; noteKind?: NoteKind; noteList?: EntryNote[]; swappedFrom?: string; madeMain?: boolean; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
+export type ActiveEntry = { uid?: string; hidden?: boolean; unit?: Units['weight']; noteKind?: NoteKind; noteList?: EntryNote[]; swappedFrom?: string; /** Swap com série já feita: esta é a parte que ficou com o exercício anterior; `splitTo` = uid da continuação (a nova). Fora da comparação/atualização da rotina. */ splitTo?: string; madeMain?: boolean; exerciseId: string; notes: string; restSec: number; sets: ActiveSet[]; superset?: number | null };
 export type ActiveWorkout = { id: string; title: string; startedAt: string; pausedAt: string | null; pausedMs: number; entries: ActiveEntry[]; fromRoutineId?: string | null; fromTrainer?: string | null; dateAt?: string | null };
 
 export type SavedEntry = { unit?: Units['weight']; exerciseId: string; notes: string; restSec: number; sets: SetRow[]; superset?: number | null };

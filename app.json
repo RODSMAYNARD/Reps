@@ -21,7 +21,15 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.rodrigomaynard.reps"
+      "package": "com.rodrigomaynard.reps",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -48,10 +56,20 @@
       "expo-font",
       "expo-sharing",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Reps uses your photo library so you can attach progress and workout photos.",
+          "cameraPermission": "Reps does not use the camera; photos are picked from your library. This permission is never requested.",
+          "microphonePermission": "Reps does not record audio. This permission is never requested."
+        }
+      ],
+      [
         "expo-media-library",
         {
           "savePhotosPermission": "Reps needs permission to save your share images to Photos.",
-          "isAccessMediaLocationEnabled": false
+          "isAccessMediaLocationEnabled": false,
+          "photosPermission": "Reps uses your photo library so you can attach progress and workout photos.",
+          "granularPermissions": []
         }
       ],
       [
@@ -73,7 +91,15 @@
       ],
       "expo-localization",
       "@sentry/react-native",
-      "expo-audio"
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Reps does not record audio. This permission is never requested.",
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
+        }
+      ]
     ],
     "scheme": "reps",
     "owner": "rodsappz4u",

@@ -39,10 +39,15 @@ Deno.serve(async (req) => {
   if (error || !data.user?.email) return json({ error: 'not authenticated' }, 401);
   const body = await req.json().catch(() => ({}));
   if (body.type !== 'welcome') return json({ error: 'unknown type' }, 400);
+  // Só para e-mail confirmado (com auto-confirm ligado isso já vem preenchido; a proteção real é ligar a confirmação no Supabase Auth).
+  if (!data.user.email_confirmed_at) return json({ skipped: 'email not confirmed' });
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-  const st = await admin.from('user_state').select('welcome_sent_at').eq('user_id', data.user.id).maybeSingle();
-  if (st.data?.welcome_sent_at) return json({ skipped: 'already sent' });
+  // Trava atômica numa tabela que só o service role toca (welcome_emails, sem policy para o cliente):
+  // o INSERT pela chave primária é o "pedido"; duas chamadas juntas = só uma passa, e o usuário não consegue zerar a trava.
+  const claim = await admin.from('welcome_emails').insert({ user_id: data.user.id }).select('user_id').maybeSingle();
+  if (claim.error) return claim.error.code === '23505' ? json({ skipped: 'already sent' }) : json({ error: 'could not claim' }, 500);
   const res = await sendMail(data.user.email, 'welcome');
-  if ('ok' in res) await admin.from('user_state').upsert({ user_id: data.user.id, welcome_sent_at: new Date().toISOString() }, { onConflict: 'user_id' });
+  // Falhou o envio (ou sem chave): devolve a trava para uma próxima tentativa.
+  if (!('ok' in res)) await admin.from('welcome_emails').delete().eq('user_id', data.user.id);
   return json(res);
 });

@@ -3,12 +3,15 @@ import { useState } from 'react';
 import { ScrollView } from 'react-native';
 import { Dialog, Header, ListRow, Screen, Section } from '../../components/ui';
 import { FEATURES } from '../../lib/constants';
+import { tr } from '../../lib/i18n';
+import { manageSubscription, usePro } from '../../lib/purchases';
 import { useStore } from '../../lib/store';
 
 export default function Settings() {
   const { signOut, deleteAccount, showToast, session } = useStore();
   const [ask, setAsk] = useState(false);
   const [delAsk, setDelAsk] = useState(false);
+  const pro = usePro();
   const go = (p: string) => () => router.push(p as never);
   return (
     <Screen>
@@ -35,7 +38,7 @@ export default function Settings() {
         <ListRow label="Log out" danger onPress={() => setAsk(true)} testID="logout" />
         <ListRow label="Delete Account" danger onPress={() => setDelAsk(true)} testID="delete-account" last />
       </ScrollView>
-      <Dialog visible={delAsk} title="Delete your account?" message="This permanently deletes your account and all your workouts, routines, measurements and notes. This can't be undone." onClose={() => setDelAsk(false)} actions={[{ label: 'Cancel' }, { label: 'Delete forever', danger: true, onPress: async () => { setDelAsk(false); const e = await deleteAccount(); if (e) showToast(e); } }]} />
+      <Dialog visible={delAsk} title="Delete your account?" message={`${tr("This permanently deletes your account and all your workouts, routines, measurements and notes. This can't be undone.")}\n\n${tr("If you subscribed to Reps Pro, deleting your account doesn't cancel it. Cancel it in your App Store or Google Play subscriptions to stop billing.")}`} onClose={() => setDelAsk(false)} actions={[{ label: 'Cancel' }, ...(pro ? [{ label: 'Manage subscription', onPress: () => { setDelAsk(false); manageSubscription(); } }] : []), { label: 'Delete forever', danger: true, onPress: async () => { setDelAsk(false); const e = await deleteAccount(); if (e) showToast(e); } }]} />
       <Dialog visible={ask} title="Log out?" message="You can sign back in whenever you like." onClose={() => setAsk(false)} actions={[{ label: 'Cancel' }, { label: 'Log out', danger: true, onPress: () => { setAsk(false); signOut(); } }]} />
     </Screen>
   );
