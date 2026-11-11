@@ -1067,4 +1067,8 @@ export const PT: Record<string, string> = {
   'Chest, Shoulders, Triceps': 'Peito, ombros, tríceps',
   'Back, Biceps': 'Costas, bíceps',
   'Quads, Hamstrings': 'Quadríceps, posteriores',
+  'My Progress': 'Meu progresso',
+  'Weekly volume': 'Volume semanal',
+  'latest': 'último registro',
+  'Last workout': 'Último treino',
 };
