@@ -12,6 +12,8 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border }, sceneStyle: { backgroundColor: colors.bg } }}>
       <Tabs.Screen name="index" options={tab('Home', 'home', 'home-outline')} />
+      {/* H2: Home alternativa em teste (casa de cabeça para baixo) */}
+      <Tabs.Screen name="h2" options={{ title: 'H2', tabBarIcon: ({ focused, color }: { focused: boolean; color: any }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={26} color={color} style={{ transform: [{ rotate: '180deg' }] }} /> }} />
       <Tabs.Screen name="treino" options={tab('Workout', 'barbell', 'barbell-outline')} />
       <Tabs.Screen name="plano" options={tab('Trainer', 'sparkles', 'sparkles-outline')} />
       <Tabs.Screen name="exercicios" options={tab('Exercises', 'list', 'list-outline')} />
