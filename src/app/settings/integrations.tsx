@@ -4,7 +4,8 @@ import { Platform, ScrollView, View } from 'react-native';
 import { RecoveryCard } from '../../components/HealthCards';
 import { Text } from '../../components/Text';
 import { BarChart, Btn, Dialog, Header, Screen, Section, Toggle } from '../../components/ui';
-import { connect, DEVICES, disconnect, getStatus, installHealthConnect, openSystemSettings, PROVIDER, PROVIDER_NAME, setWriteWorkouts, sync, useHealth, type Status } from '../../lib/health';
+import { router } from 'expo-router';
+import { connect, DEVICES, setSample, disconnect, getStatus, installHealthConnect, openSystemSettings, PROVIDER, PROVIDER_NAME, setWriteWorkouts, sync, useHealth, type Status } from '../../lib/health';
 import { tr } from '../../lib/i18n';
 import { colors, radius } from '../../lib/theme';
 
@@ -33,10 +34,14 @@ export default function Integrations() {
 
   return (
     <Screen>
-      <Header title="Integrations" />
+      <Header title="Watches & Health" />
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
         {!PROVIDER ? (
-          <Text style={{ padding: 16, color: colors.muted }}>Watches and bands connect on the iPhone and Android app.</Text>
+          <>
+            <Text style={{ padding: 16, color: colors.muted }}>Watches and bands connect on the iPhone and Android app.</Text>
+            <Toggle label="Show sample data" subtitle="See the Health section with example numbers before connecting a device." value={h.sample} onChange={setSample} />
+            <View style={{ padding: 16 }}><Btn title="Open Health dashboard" variant="secondary" onPress={() => router.push('/health')} /></View>
+          </>
         ) : (
           <>
             <View style={{ padding: 16, gap: 12 }}>
@@ -73,6 +78,14 @@ export default function Integrations() {
               </>
             )}
 
+            {h.connected && <View style={{ paddingHorizontal: 16 }}><Btn title="Open Health dashboard" onPress={() => router.push('/health')} /></View>}
+            {!h.connected && (
+              <>
+                <Section title="Preview" />
+                <Toggle label="Show sample data" subtitle="See the Health section with example numbers before connecting a device." value={h.sample} onChange={setSample} />
+                {h.sample && <View style={{ paddingHorizontal: 16 }}><Btn title="Open Health dashboard" variant="secondary" onPress={() => router.push('/health')} /></View>}
+              </>
+            )}
             <Section title="Works with" />
             <View style={{ paddingHorizontal: 16, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {DEVICES[PROVIDER].map((d) => (

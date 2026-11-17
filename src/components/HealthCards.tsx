@@ -22,12 +22,12 @@ function Metric({ icon, label, value, color }: { icon: React.ComponentProps<type
 /** Cartão "Recovery" (Início/H2): só aparece com relógio/pulseira conectado e dados de hoje. */
 export function RecoveryCard({ style }: { style?: object }) {
   const h = useHealth();
-  if (!h.connected) return null;
-  const r = readiness(h.days);
+  if (!h.hasData) return null;
+  const r = readiness(h.days, undefined, h.goals.sleepMin);
   const today = r?.today ?? h.days[h.days.length - 1];
   if (!today) return null;
   return (
-    <Pressable onPress={() => router.push('/settings/integrations')} testID="recovery-card" style={[{ borderRadius: radius.lg, backgroundColor: colors.surface, padding: 16, gap: 14 }, style]}>
+    <Pressable onPress={() => router.push('/health')} testID="recovery-card" style={[{ borderRadius: radius.lg, backgroundColor: colors.surface, padding: 16, gap: 14 }, style]}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         {r ? (
           <View style={{ width: 54, height: 54, borderRadius: 27, borderWidth: 4, borderColor: scoreColor(r.score), alignItems: 'center', justifyContent: 'center' }}>
@@ -35,7 +35,7 @@ export function RecoveryCard({ style }: { style?: object }) {
           </View>
         ) : <Ionicons name="pulse" size={36} color={colors.primary} />}
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 12, color: colors.muted }}>Recovery</Text>
+          <Text style={{ fontSize: 12, color: colors.muted }}>{h.isSample ? 'Recovery · sample' : 'Recovery'}</Text>
           <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>{r ? r.label : 'From your watch'}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.muted} />

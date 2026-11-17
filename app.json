@@ -37,7 +37,16 @@
         "android.permission.health.READ_HEART_RATE_VARIABILITY",
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_EXERCISE",
-        "android.permission.health.WRITE_EXERCISE"
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_FLOORS_CLIMBED",
+        "android.permission.health.READ_OXYGEN_SATURATION",
+        "android.permission.health.READ_RESPIRATORY_RATE",
+        "android.permission.health.READ_VO2_MAX",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_BODY_FAT"
       ]
     },
     "web": {
@@ -113,7 +122,7 @@
       [
         "@kingstinct/react-native-healthkit",
         {
-          "NSHealthShareUsageDescription": "Reps reads sleep, heart rate, HRV and steps from Apple Health (including data from your watch or band) to show recovery and heart rate during workouts.",
+          "NSHealthShareUsageDescription": "Reps reads sleep, heart rate, HRV, activity, calories, vitals and body measurements from Apple Health (including data from your watch or band) to show your health dashboard and heart rate during workouts.",
           "NSHealthUpdateUsageDescription": "Reps saves your finished workouts to Apple Health.",
           "background": false
         }

@@ -52,6 +52,10 @@ export default function Perfil() {
           <Tile icon="body-outline" label="Measures" onPress={() => router.push('/profile/measures')} />
           <Tile icon="calendar-outline" label="Calendar" onPress={() => router.push('/profile/calendar')} />
         </View>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <Tile icon="heart-outline" label="Health" onPress={() => router.push('/health')} />
+          <Tile icon="watch-outline" label="Watches & Health" onPress={() => router.push('/settings/integrations')} />
+        </View>
       </View>
       <Section title="Workouts" />
       {workouts.length === 0 && <Text style={{ color: colors.muted, textAlign: 'center', padding: 24 }}>No workouts logged yet.</Text>}

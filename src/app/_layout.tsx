@@ -67,6 +67,7 @@ function Routes() {
           <Stack.Screen name="exercises" />
           <Stack.Screen name="feed" />
           <Stack.Screen name="profile" />
+          <Stack.Screen name="health" />
           <Stack.Screen name="settings" />
         </Stack.Protected>
       </Stack>
