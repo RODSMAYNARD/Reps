@@ -286,12 +286,11 @@ function plans(c: Ctx, m: Memory): Out {
     ? { text: L(`You are on day ${(c.g.done[cur.id] ?? 0) + 1} of 30 in ${B(tp(cur.title))}. Keep going.`, `Você está no dia ${(c.g.done[cur.id] ?? 0) + 1} de 30 do plano ${B(tp(cur.title))}. Continue.`), card: { icon: 'calendar', title: L('30-day plans', 'Planos de 30 dias'), sub: L('Open my plan', 'Abrir meu plano'), act: { t: 'nav', to: '/g' } } }
     : { text: L(`There are ${GPLANS.length} plans of 30 days, each with a workout ready for every day: muscle, strength, stamina, legs, core and one for beginners.`, `São ${GPLANS.length} planos de 30 dias, cada um com o treino de cada dia já pronto: massa, força, resistência, pernas, abdômen e um para iniciantes.`), card: { icon: 'calendar', title: L('30-day plans', 'Planos de 30 dias'), sub: L('Choose a plan', 'Escolher um plano'), act: { t: 'nav', to: '/g' } } };
   const views = challengeViews(c.ch, c.workouts, c.units);
-  const act = views.find((v) => v.status === 'active');
-  const sug = views.find((v) => v.status === 'available');
+  const act = views.find((v) => v.status === 'active'); // desafios são automáticos: sempre valendo na semana/mês
   const card: Card = { icon: 'trophy', title: L('Challenges', 'Desafios'), sub: L('See all challenges', 'Ver todos os desafios'), act: { t: 'nav', to: '/challenges' } };
   const two: Draft = act?.p
     ? { text: L(`Challenge in progress: ${fmtProgress(act.c, act.p, c.units)}, ${act.p.daysLeft} day${act.p.daysLeft === 1 ? '' : 's'} left.`, `Desafio em andamento: ${fmtProgress(act.c, act.p, c.units)}, faltam ${act.p.daysLeft} dia${act.p.daysLeft === 1 ? '' : 's'}.`), card }
-    : { text: sug ? L('Want a short goal? There are challenges like 5 workouts in 7 days or 7 days in a row. Your saved workouts count on their own.', 'Quer uma meta curta? Tem desafios como 5 treinos em 7 dias ou 7 dias seguidos. Os treinos salvos contam sozinhos.') : L('You have completed every challenge. You can do any of them again.', 'Você concluiu todos os desafios. Dá para refazer qualquer um.'), card };
+    : { text: L('You have completed every challenge this period. They start over automatically next week or month.', 'Você concluiu todos os desafios deste período. Eles recomeçam sozinhos na próxima semana ou mês.'), card };
   return { intent: 'plans', mem: m, msgs: [one, two] };
 }
 

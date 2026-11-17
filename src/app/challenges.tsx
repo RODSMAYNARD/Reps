@@ -1,23 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Text } from '../components/Text';
-import { Btn, Dialog, Header, Screen } from '../components/ui';
-import { challengeDesc, challengeViews, fmtProgress, joinChallenge, leaveChallenge, restartChallenge, useChallenges, type ChallengeView } from '../lib/challenges';
+import { Header, Screen } from '../components/ui';
+import { challengeDesc, challengeViews, fmtProgress, useChallenges, type ChallengeView } from '../lib/challenges';
 import { tr } from '../lib/i18n';
 import { useStore } from '../lib/store';
 import { colors, radius } from '../lib/theme';
 
-/** Desafios: entrar, acompanhar (a conta é feita a partir dos treinos salvos), sair e refazer. */
+/** Desafios automáticos: todos sempre valendo na semana/mês atual, contados dos treinos salvos. */
 export default function Challenges() {
   const st = useStore();
   const s = useChallenges(st.session?.user.id ?? null);
-  const [leave, setLeave] = useState<string | null>(null);
   const units = st.profile.units;
   const views = challengeViews(s, st.workouts, units);
+  const trophies = views.reduce((a, v) => a + v.wins + (v.status === 'done' ? 1 : 0), 0);
   const groups: [string, ChallengeView[]][] = [
-    ['In progress', views.filter((v) => v.status === 'active' || v.status === 'expired')],
-    ['Available', views.filter((v) => v.status === 'available')],
+    ['In progress', views.filter((v) => v.status === 'active')],
     ['Completed', views.filter((v) => v.status === 'done')],
   ];
 
@@ -25,7 +23,13 @@ export default function Challenges() {
     <Screen>
       <Header title="Challenges" />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }} testID="challenges">
-        <Text style={{ color: colors.muted, fontSize: 15 }}>Join a challenge and your saved workouts count toward it automatically.</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14 }}>
+          <Ionicons name="trophy" size={30} color={colors.warn} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '800' }}>{trophies} {tr(trophies === 1 ? 'trophy' : 'trophies')}</Text>
+            <Text style={{ color: colors.muted, fontSize: 14 }}>Every challenge is always on. Your saved workouts count automatically, and they start over each week or month.</Text>
+          </View>
+        </View>
         {groups.filter(([, list]) => list.length).map(([title, list]) => (
           <View key={title} style={{ gap: 10 }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginTop: 8 }}>{title}</Text>
@@ -46,37 +50,22 @@ export default function Challenges() {
                     </View>
                   )}
                 </View>
-
-                {!!p && (
-                  <View style={{ gap: 6 }}>
-                    <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
-                      <View style={{ height: 8, borderRadius: 4, width: `${Math.max(3, p.pct * 100)}%`, backgroundColor: status === 'expired' ? colors.faint : c.tint }} />
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ color: colors.text, fontWeight: '700' }}>{fmtProgress(c, p, units)}</Text>
-                      <Text style={{ color: status === 'done' ? colors.success : colors.muted, fontWeight: status === 'done' ? '700' : '400' }}>
-                        {status === 'done' ? tr('Completed') : status === 'expired' ? tr('Time is up') : `${p.daysLeft} ${tr(p.daysLeft === 1 ? 'day left' : 'days left')}`}
-                      </Text>
-                    </View>
+                <View style={{ gap: 6 }}>
+                  <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
+                    <View style={{ height: 8, borderRadius: 4, width: `${Math.max(3, p.pct * 100)}%`, backgroundColor: c.tint }} />
                   </View>
-                )}
-
-                {status === 'available' && <Btn title="Join challenge" onPress={() => joinChallenge(c.id)} testID={`challenge-join-${c.id}`} />}
-                {status === 'active' && <Btn title="Leave challenge" variant="outline" onPress={() => setLeave(c.id)} testID={`challenge-leave-${c.id}`} />}
-                {status === 'expired' && (
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <Btn title="Try again" onPress={() => restartChallenge(c.id, false)} style={{ flex: 1 }} />
-                    <Btn title="Leave" variant="outline" onPress={() => leaveChallenge(c.id)} style={{ flex: 1 }} />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>{fmtProgress(c, p, units)}</Text>
+                    <Text style={{ color: status === 'done' ? colors.success : colors.muted, fontWeight: status === 'done' ? '700' : '400' }}>
+                      {status === 'done' ? tr('Completed') : `${p.daysLeft} ${tr(p.daysLeft === 1 ? 'day left' : 'days left')}`}
+                    </Text>
                   </View>
-                )}
-                {status === 'done' && <Btn title="Do it again" variant="outline" onPress={() => restartChallenge(c.id, true)} />}
+                </View>
               </View>
             ))}
           </View>
         ))}
       </ScrollView>
-      <Dialog visible={!!leave} title="Leave this challenge?" message="Your progress in it starts over if you join again." onClose={() => setLeave(null)}
-        actions={[{ label: 'Cancel' }, { label: 'Leave', danger: true, onPress: () => { if (leave) leaveChallenge(leave); setLeave(null); } }]} />
     </Screen>
   );
 }

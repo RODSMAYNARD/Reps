@@ -173,16 +173,10 @@ export default function H2() {
                 <Ionicons name={status === 'done' ? 'checkmark' : c.icon} size={21} color="#fff" />
               </View>
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, lineHeight: 19, height: 38 }} numberOfLines={2}>{c.title}</Text>
-              {p ? (
-                <>
-                  <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
-                    <View style={{ height: 6, borderRadius: 3, width: `${Math.max(4, p.pct * 100)}%`, backgroundColor: status === 'expired' ? colors.faint : c.tint }} />
-                  </View>
-                  <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>{status === 'done' ? tr('Completed') : status === 'expired' ? tr('Time is up') : fmtProgress(c, p, units)}</Text>
-                </>
-              ) : (
-                <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>{c.days} {tr('days')} · <Text style={{ color: colors.primary, fontWeight: '700' }}>Join</Text></Text>
-              )}
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
+                <View style={{ height: 6, borderRadius: 3, width: `${Math.max(4, p.pct * 100)}%`, backgroundColor: c.tint }} />
+              </View>
+              <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>{status === 'done' ? tr('Completed') : `${fmtProgress(c, p, units)} · ${p.daysLeft}d`}</Text>
             </Pressable>
           ))}
           <View style={{ width: PAD - GAP }} />

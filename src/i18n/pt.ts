@@ -1368,5 +1368,17 @@ export const PT: Record<string, string> = {
   'Today\'s insight': 'Resumo de hoje',
   'Day summary': 'Resumo do dia',
   // Seção Saúde (relógios e pulseiras)
-
+  // Desafios automáticos
+  'Complete 5 workouts this week.': 'Faça 5 treinos nesta semana.',
+  'Train on Saturday and Sunday this week.': 'Treine no sábado e no domingo desta semana.',
+  '12 Workouts': '12 treinos',
+  'Complete 12 workouts this month.': 'Faça 12 treinos neste mês.',
+  'Train 7 days in a row this month.': 'Treine 7 dias seguidos neste mês.',
+  'this month.': 'neste mês.',
+  'Log 300 sets this month.': 'Registre 300 séries neste mês.',
+  'Do 5 workouts that start before 8 a.m. this month.': 'Faça 5 treinos que comecem antes das 8h neste mês.',
+  'trophy': 'troféu',
+  'trophies': 'troféus',
+  'Every challenge is always on. Your saved workouts count automatically, and they start over each week or month.': 'Todos os desafios valem sempre. Seus treinos salvos contam sozinhos, e eles recomeçam a cada semana ou mês.',
+  'Challenge completed': 'Desafio concluído',
 };

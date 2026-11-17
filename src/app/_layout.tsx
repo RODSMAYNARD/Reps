@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, useColorScheme, View } from 'react-native
 import { Text } from '../components/Text';
 import { refreshStyles } from '../components/ui';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ChallengeWatcher } from '../components/ChallengeWatcher';
 import { ReminderSync } from '../components/ReminderSync';
 import { Telemetry } from '../components/Telemetry';
 import { WorkoutNotifier } from '../components/WorkoutNotifier';
@@ -90,6 +91,7 @@ function RootLayout() {
         <Routes />
         <WorkoutNotifier />
         <ReminderSync />
+        <ChallengeWatcher />
         <Telemetry />
       </StoreProvider>
     </SafeAreaProvider>
