@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useSyncExternalStore } from 'react';
 import type { Region } from '../components/BodyMap';
+import type { GymIcon } from './gymIcons';
 import { CAT_BY_ID } from './catalog';
 import { getLang } from './i18n';
 import { STAPLES, isRepKind } from './planner';
@@ -24,18 +25,24 @@ export const FOCUS: Record<FocusId, FocusDef> = {
 /** Nome do foco no idioma do app ("Back" não pode passar pelo dicionário: lá ele é o botão Voltar). */
 export const focusLabel = (f: FocusId) => (getLang() === 'pt' ? FOCUS[f].pt : FOCUS[f].label);
 
-export type GPlan = { id: string; title: string; icon: string; sets: number; reps: number; restSec: number; days: (FocusId | null)[] };
+export type GPlan = { id: string; title: string; icon: GymIcon; sub?: string; subPt?: string; tint?: string; sets: number; reps: number; restSec: number; days: (FocusId | null)[] };
 const cycle = (pattern: (FocusId | null)[]) => {
   const d = Array.from({ length: 30 }, (_, i) => pattern[i % pattern.length]);
   if (d[29] == null) d[29] = pattern.find((x) => x != null) ?? 'full'; // o plano não termina em descanso
   return d;
 };
 export const GPLANS: GPlan[] = [
-  { id: 'muscle', title: 'Muscle Building', icon: 'barbell', sets: 4, reps: 8, restSec: 90, days: cycle(['chest', 'back', 'lower', null, 'shoulders', 'abs', 'arm', null]) },
-  { id: 'stamina', title: 'Build Muscle Stamina', icon: 'kettlebell', sets: 3, reps: 15, restSec: 45, days: cycle(['full', 'upper', null, 'full', 'lower', 'full', null]) },
-  { id: 'strength', title: 'Strength Training', icon: 'rack', sets: 5, reps: 5, restSec: 150, days: cycle(['chest', 'back', 'lower', 'shoulders', 'arm', null, null]) },
-  { id: 'sculpt', title: 'Body Sculpting', icon: 'medball', sets: 3, reps: 12, restSec: 60, days: cycle(['chest', 'lower', 'arm', null, 'abs', 'back', 'shoulders', null, 'upper', 'full']) },
+  { id: 'muscle', title: 'Muscle Building', icon: 'barbell', sub: 'Classic split, moderate reps', subPt: 'Divisão clássica, reps moderadas', tint: '#2F6BFF', sets: 4, reps: 8, restSec: 90, days: cycle(['chest', 'back', 'lower', null, 'shoulders', 'abs', 'arm', null]) },
+  { id: 'stamina', title: 'Build Muscle Stamina', icon: 'kettlebell', sub: 'Lighter loads, more reps', subPt: 'Cargas leves, mais repetições', tint: '#F28A1E', sets: 3, reps: 15, restSec: 45, days: cycle(['full', 'upper', null, 'full', 'lower', 'full', null]) },
+  { id: 'strength', title: 'Strength Training', icon: 'rack', sub: 'Heavy sets of five', subPt: 'Séries pesadas de cinco', tint: '#F2405D', sets: 5, reps: 5, restSec: 150, days: cycle(['chest', 'back', 'lower', 'shoulders', 'arm', null, null]) },
+  { id: 'sculpt', title: 'Body Sculpting', icon: 'ball', sub: 'Full variety, short rests', subPt: 'Muita variedade, descansos curtos', tint: '#8E5CF6', sets: 3, reps: 12, restSec: 60, days: cycle(['chest', 'lower', 'arm', null, 'abs', 'back', 'shoulders', null, 'upper', 'full']) },
+  { id: 'beginner', title: 'Beginner Full Body', icon: 'dumbbell', sub: 'Three easy days a week', subPt: 'Três dias leves por semana', tint: '#22B573', sets: 3, reps: 10, restSec: 75, days: cycle(['full', null, 'full', null, 'full', null, null]) },
+  { id: 'legs', title: 'Legs & Glutes', icon: 'legpress', sub: 'Lower body focus', subPt: 'Foco em pernas e glúteos', tint: '#1E9BD7', sets: 4, reps: 12, restSec: 75, days: cycle(['lower', null, 'abs', 'lower', null, 'full', null]) },
+  { id: 'core', title: 'Core & Abs', icon: 'bodyweight', sub: 'Abs on most days', subPt: 'Abdômen na maioria dos dias', tint: '#E0A100', sets: 3, reps: 15, restSec: 45, days: cycle(['abs', 'full', null, 'abs', 'upper', 'abs', null]) },
 ];
+/** Cor do plano (cartão, dia atual, boneco) e a frase curta no idioma do app. */
+export const planTint = (p: GPlan) => p.tint ?? '#2F6BFF';
+export const planSub = (p: GPlan) => (getLang() === 'pt' ? p.subPt ?? p.sub : p.sub) ?? '';
 export const planOf = (id: string) => GPLANS.find((p) => p.id === id) ?? GPLANS[0];
 /** Número mostrado no dia (os descansos ocupam o lugar, como "Day 1, 2, 3, Rest Day, Day 5"). */
 export const dayNumber = (i: number) => i + 1;

@@ -1,26 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, type ScrollViewInstance, View, useWindowDimensions } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Modal, Pressable, ScrollView, type ScrollViewInstance, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { ActiveBar } from '../../components/ActiveBar';
 import { BodyMap } from '../../components/BodyMap';
 import { ExerciseThumb } from '../../components/ExerciseThumb';
+import { GymIcon } from '../../components/GymIcon';
 import { Text, TextInput } from '../../components/Text';
 import { Btn, Dialog, Screen } from '../../components/ui';
 import { fmtWeight, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
-import { FOCUS, GPLANS, GState, dayEntries, dayExercises, dayKeyOf, dayNumber, focusLabel, planOf, setG, useG, workoutTitle } from '../../lib/gplan';
+import { FOCUS, GPLANS, GState, dayEntries, dayExercises, dayKeyOf, dayNumber, focusLabel, planOf, planSub, planTint, setG, useG, workoutTitle } from '../../lib/gplan';
 import { tr } from '../../lib/i18n';
-import { equipImage } from '../../lib/iconImages';
 import { setPickHandler } from '../../lib/picker';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 
 /** Aba G (em teste, para o Rodrigo comparar): PLAN = planos de 30 dias; TRAINING = treino do dia gerado (equipamento, 1RM, regenerar, editar). */
 
-const PAD = 16;
+const PAD = 20;
 const GAP = 10;
-const HERO_BG = '#141922'; // cartão escuro nos dois temas, como na referência
+const GREEN = '#22B573';
 type Tab = 'plan' | 'training';
 
 export default function GTab() {
@@ -38,11 +38,11 @@ export default function GTab() {
 
   return (
     <Screen edges={['top']}>
-      <View style={{ flexDirection: 'row', paddingHorizontal: PAD, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      {/* Plan | Training: seletor em pílula, no estilo dos cartões da H2 */}
+      <View style={{ flexDirection: 'row', marginHorizontal: PAD, marginTop: 10, marginBottom: 4, padding: 4, gap: 4, backgroundColor: colors.surface, borderRadius: radius.md }}>
         {(['plan', 'training'] as Tab[]).map((t) => (
-          <Pressable key={t} onPress={() => setTab(t)} style={{ flex: 1, alignItems: 'center', paddingTop: 14 }} testID={`g-tab-${t}`}>
-            <Text style={{ fontSize: 16, fontWeight: '700', letterSpacing: 0.5, color: tab === t ? colors.text : colors.muted }}>{tr(t === 'plan' ? 'Plan' : 'Training').toUpperCase()}</Text>
-            <View style={{ height: 3, width: 56, borderRadius: 2, marginTop: 10, backgroundColor: tab === t ? colors.primary : 'transparent' }} />
+          <Pressable key={t} onPress={() => setTab(t)} style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: radius.sm, backgroundColor: tab === t ? colors.primary : 'transparent' }} testID={`g-tab-${t}`}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: tab === t ? '#fff' : colors.muted }}>{t === 'plan' ? 'Plan' : 'Training'}</Text>
           </Pressable>
         ))}
       </View>
@@ -59,54 +59,69 @@ function PlanView({ g, onStart }: { g: GState; onStart: () => void }) {
   const step = cardW + GAP;
   const ref = useRef<ScrollViewInstance>(null);
   const idx = Math.max(0, GPLANS.findIndex((p) => p.id === g.planId));
-  const first = useRef(true);
-  useEffect(() => { if (first.current && idx > 0) ref.current?.scrollTo({ x: idx * step, animated: false }); first.current = false; }, [idx, step]);
+  // plano escolhido fora do carrossel (ao abrir, ou vindo da H2): leva o carrossel até ele
+  const shown = useRef(0);
+  useEffect(() => { if (shown.current !== idx) { shown.current = idx; ref.current?.scrollTo({ x: idx * step, animated: false }); } }, [idx, step]);
+  // a aba escondida não rola: ao ganhar foco, confere de novo
+  useFocusEffect(useCallback(() => { shown.current = idx; ref.current?.scrollTo({ x: idx * step, animated: false }); }, [idx, step]));
   const plan = GPLANS[idx];
+  const tint = planTint(plan);
   const done = g.done[plan.id] ?? 0;
 
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
         ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={step} decelerationRate="fast" scrollEventThrottle={32}
-        style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 14, gap: GAP, paddingRight: PAD + 16 }}
-        onScroll={(e) => { const i = Math.max(0, Math.min(GPLANS.length - 1, Math.round(e.nativeEvent.contentOffset.x / step))); if (GPLANS[i].id !== g.planId) setG({ planId: GPLANS[i].id }); }}>
+        style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 12, gap: GAP, paddingRight: PAD + 16 }}
+        onScroll={(e) => { const i = Math.max(0, Math.min(GPLANS.length - 1, Math.round(e.nativeEvent.contentOffset.x / step))); shown.current = i; if (GPLANS[i].id !== g.planId) setG({ planId: GPLANS[i].id }); }}>
         {GPLANS.map((p) => {
-          const d = g.done[p.id] ?? 0;
+          const d = Math.min(30, g.done[p.id] ?? 0);
+          const c = planTint(p);
           return (
-            <View key={p.id} style={{ width: cardW, height: 132, borderRadius: radius.lg, backgroundColor: HERO_BG, padding: 16, flexDirection: 'row', alignItems: 'flex-end' }} testID={`g-plan-${p.id}`}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }} numberOfLines={2}>{tr(p.title).toUpperCase()}</Text>
-                <Text style={{ color: '#C9D0DB', fontSize: 14, marginTop: 4 }}>{d >= 30 ? tr('Completed') : d === 0 ? `30 ${tr('Days')}` : `${30 - d} ${tr('days left')}`}</Text>
+            <View key={p.id} style={{ width: cardW, borderRadius: radius.lg, backgroundColor: `${c}1A`, padding: 16, gap: 12 }} testID={`g-plan-${p.id}`}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: c, alignItems: 'center', justifyContent: 'center' }}><GymIcon name={p.icon} size={28} color="#fff" /></View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{p.title}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>{planSub(p)}</Text>
+                </View>
               </View>
-              <Image source={equipImage(p.icon)} style={{ width: 84, height: 84, alignSelf: 'center' }} />
+              <View style={{ gap: 6 }}>
+                <View style={{ height: 6, borderRadius: 3, backgroundColor: `${c}33` }}><View style={{ height: 6, borderRadius: 3, width: `${(d / 30) * 100}%`, backgroundColor: c }} /></View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: colors.muted, fontSize: 13 }}>{d >= 30 ? tr('Completed') : d === 0 ? `30 ${tr('Days')}` : `${30 - d} ${tr('days left')}`}</Text>
+                  <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{d}/30</Text>
+                </View>
+              </View>
             </View>
           );
         })}
       </ScrollView>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 5, paddingVertical: 10 }}>
-        {GPLANS.map((p, i) => <View key={p.id} style={{ height: 5, width: i === idx ? 14 : 5, borderRadius: 3, backgroundColor: i === idx ? colors.primary : colors.dot }} />)}
+        {GPLANS.map((p, i) => <View key={p.id} style={{ height: 5, width: i === idx ? 14 : 5, borderRadius: 3, backgroundColor: i === idx ? tint : colors.dot }} />)}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 24, gap: GAP }} testID="g-days">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 28, gap: GAP }} testID="g-days">
         {plan.days.map((f, i) => {
           const cur = i === done, past = i < done;
-          const title = f ? `${tr('Day')} ${dayNumber(i)}` : tr('Rest Day');
           return (
             <Pressable
               key={i} testID={`g-day-${i}`}
               onPress={() => (cur ? onStart() : past ? undefined : st.showToast(tr('Finish the previous day to unlock this one.')))}
-              style={{ flexDirection: 'row', alignItems: 'center', minHeight: 64, paddingHorizontal: 16, paddingVertical: 10, borderRadius: radius.md, backgroundColor: cur ? colors.primary : colors.surface }}>
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.md, backgroundColor: cur ? `${tint}1A` : colors.surface }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: past ? GREEN : cur ? tint : colors.surfaceAlt }}>
+                {past ? <Ionicons name="checkmark-done" size={22} color="#fff" /> : f ? <Text style={{ fontSize: 16, fontWeight: '800', color: cur ? '#fff' : colors.muted }}>{dayNumber(i)}</Text> : <Ionicons name="bed" size={19} color={cur ? '#fff' : colors.muted} />}
+              </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: cur ? colors.onPrimary : colors.text }}>{title}</Text>
-                {!!f && <Text style={{ fontSize: 13, marginTop: 2, color: cur ? colors.onPrimary : colors.muted }}>{focusLabel(f)}</Text>}
+                <Text style={{ fontSize: 16, fontWeight: '700', color: !cur && !past ? colors.muted : colors.text }} numberOfLines={1}>{f ? focusLabel(f) : tr('Rest Day')}</Text>
+                <Text style={{ fontSize: 13, marginTop: 1, color: colors.muted }} numberOfLines={1}>{f ? `${tr('Day')} ${dayNumber(i)} · ${plan.sets} x ${plan.reps}` : `${tr('Day')} ${dayNumber(i)}`}</Text>
               </View>
               {cur ? (
-                <View style={{ backgroundColor: colors.bg, borderRadius: radius.sm, paddingHorizontal: 20, paddingVertical: 9 }}>
-                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15 }}>{f ? 'Start' : 'Open'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: tint, paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.md }}>
+                  {!!f && <Ionicons name="play" size={13} color="#fff" />}
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>{f ? 'Start' : 'Open'}</Text>
                 </View>
-              ) : past ? (
-                <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="checkmark" size={18} color={colors.primary} /></View>
-              ) : <Ionicons name="lock-closed-outline" size={20} color={colors.text} />}
+              ) : past ? null : <Ionicons name="lock-closed" size={17} color={colors.faint} />}
             </Pressable>
           );
         })}
@@ -118,6 +133,7 @@ function PlanView({ g, onStart }: { g: GState; onStart: () => void }) {
 function TrainingView({ g }: { g: GState }) {
   const st = useStore();
   const plan = planOf(g.planId);
+  const tint = planTint(plan);
   const day = g.done[plan.id] ?? 0;
   const focus = day < 30 ? plan.days[day] : null;
   const key = dayKeyOf(plan.id, day);
@@ -153,15 +169,16 @@ function TrainingView({ g }: { g: GState }) {
     );
 
   const head = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, paddingTop: 18, paddingBottom: 14 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, paddingTop: 14, paddingBottom: 16 }}>
       <View style={{ flex: 1, gap: 8 }}>
-        <Text style={{ fontSize: 30, fontWeight: '800', color: colors.text }}>{focus ? `${tr('Day').toUpperCase()} ${dayNumber(day)}` : tr('Rest Day').toUpperCase()}</Text>
+        <Text style={{ fontSize: 16, color: colors.muted }} numberOfLines={1}>{tr(plan.title)}</Text>
+        <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text, marginTop: -6 }}>{focus ? `${tr('Day')} ${dayNumber(day)}` : tr('Rest Day')}</Text>
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          {!!focus && <View style={{ backgroundColor: colors.primarySoft, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 }}><Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15 }}>{focusLabel(focus)}</Text></View>}
-          <Text style={{ color: colors.muted, fontSize: 13 }}>{tr(plan.title)}</Text>
+          {!!focus && <View style={{ backgroundColor: `${tint}1A`, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 5 }}><Text style={{ color: tint, fontWeight: '700', fontSize: 14 }}>{focusLabel(focus)}</Text></View>}
+          {!!focus && <Text style={{ color: colors.muted, fontSize: 13 }}>{plan.sets} x {plan.reps} · ~{Math.max(10, Math.round((list.length * plan.sets * 2.5) / 5) * 5)} min</Text>}
         </View>
       </View>
-      {!!focus && <BodyMap side={FOCUS[focus].side} primary={FOCUS[focus].regions} width={64} colors={{ body: colors.bodyBase, muscle: colors.bodyMuscle, on: colors.primary }} />}
+      {!!focus && <BodyMap side={FOCUS[focus].side} primary={FOCUS[focus].regions} width={64} colors={{ body: colors.bodyBase, muscle: colors.bodyMuscle, on: tint }} />}
     </View>
   );
 
@@ -181,43 +198,56 @@ function TrainingView({ g }: { g: GState }) {
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 16 }} testID="g-training">
         {head}
-        <View style={{ flexDirection: 'row', borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border, paddingHorizontal: PAD, paddingVertical: 12 }}>
-          <Pressable style={{ flex: 1 }} onPress={() => router.push('/g/equipment')} testID="g-equipment">
-            <Text style={{ color: colors.muted, fontSize: 13 }}>Equipment</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>{g.equipment ? `${g.equipment.length} ${tr('Selected')}` : tr('Default')}</Text>
-              <Ionicons name="pencil" size={14} color={colors.muted} />
+        <View style={{ flexDirection: 'row', gap: GAP, paddingHorizontal: PAD }}>
+          <Pressable style={{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: 12, gap: 6 }} onPress={() => router.push('/g/equipment')} testID="g-equipment">
+            <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>Equipment</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="barbell" size={20} color="#1E9BD7" />
+              <Text style={{ flex: 1, color: colors.text, fontSize: 18, fontWeight: '800' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{g.equipment ? `${g.equipment.length} ${tr('Selected')}` : tr('Default')}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </View>
           </Pressable>
-          <Pressable style={{ flex: 1 }} onPress={() => setOrm(String(Math.round(toDisplayWeight(g.orm, units) * 10) / 10))} testID="g-orm">
-            <Text style={{ color: colors.muted, fontSize: 13 }}>1RM (Bench Press)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }}>{fmtWeight(g.orm, units)}</Text>
-              <Ionicons name="pencil" size={14} color={colors.muted} />
+          <Pressable style={{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: 12, gap: 6 }} onPress={() => setOrm(String(Math.round(toDisplayWeight(g.orm, units) * 10) / 10))} testID="g-orm">
+            <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>1RM (Bench Press)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="trophy" size={19} color="#F28A1E" />
+              <Text style={{ flex: 1, color: colors.text, fontSize: 18, fontWeight: '800' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmtWeight(g.orm, units)}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
             </View>
           </Pressable>
         </View>
 
-        <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, paddingHorizontal: PAD, paddingTop: 16, paddingBottom: 6 }}>{list.length} {tr('exercises')}</Text>
-        {list.map((e, i) => (
-          <Pressable key={`${e.id}-${i}`} onPress={() => !editing && router.push(`/exercises/${e.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: PAD, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.surface }} testID={`g-ex-${i}`}>
-            <ExerciseThumb catalogId={e.catalogId} size={52} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }} numberOfLines={2}>{e.name}</Text>
-              <Text style={{ color: colors.muted, fontSize: 14, marginTop: 2 }}>{plan.sets} {tr('Sets')} x {plan.reps} {tr('reps')}</Text>
-            </View>
-            {editing && <Pressable hitSlop={10} onPress={() => setList(list.filter((_, j) => j !== i).map((x) => x.id))} testID={`g-ex-del-${i}`}><Ionicons name="trash-outline" size={20} color={colors.danger} /></Pressable>}
-          </Pressable>
-        ))}
+        <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text, paddingHorizontal: PAD, paddingTop: 20, paddingBottom: 10 }}>{list.length} {tr('exercises')}</Text>
+        <View style={{ paddingHorizontal: PAD, gap: GAP }}>
+          {list.map((e, i) => (
+            <Pressable key={`${e.id}-${i}`} onPress={() => !editing && router.push(`/exercises/${e.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: radius.md, backgroundColor: colors.surface }} testID={`g-ex-${i}`}>
+              <ExerciseThumb catalogId={e.catalogId} size={48} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700' }} numberOfLines={2}>{e.name}</Text>
+                <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{plan.sets} {tr('Sets')} x {plan.reps} {tr('reps')}</Text>
+              </View>
+              {editing ? <Pressable hitSlop={10} onPress={() => setList(list.filter((_, j) => j !== i).map((x) => x.id))} testID={`g-ex-del-${i}`}><Ionicons name="trash-outline" size={20} color={colors.danger} /></Pressable> : <Ionicons name="chevron-forward" size={18} color={colors.muted} />}
+            </Pressable>
+          ))}
+          {editing && (
+            <Pressable onPress={add} testID="g-add" style={{ borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Ionicons name="add-circle" size={24} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Add exercise</Text>
+            </Pressable>
+          )}
+        </View>
         {!list.length && <Text style={{ color: colors.muted, fontSize: 15, padding: PAD }}>No exercises match your equipment. Change the equipment or add exercises with Edit.</Text>}
-        {editing && <Btn title="Add exercise" icon="add" variant="secondary" onPress={add} style={{ margin: PAD }} testID="g-add" />}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: PAD, paddingTop: 10, paddingBottom: 10, borderTopWidth: 1, borderTopColor: colors.border, gap: 4 }}>
-        <Btn title={tr('Start').toUpperCase()} onPress={() => (st.active ? setReplace(true) : go())} disabled={!list.length} style={{ minHeight: 46 }} textStyle={{ fontWeight: '800', letterSpacing: 0.5 }} testID="g-start" />
-        <View style={{ flexDirection: 'row' }}>
-          <Btn title="Regenerate" icon="refresh" variant="ghost" onPress={() => setBusy(true)} style={{ flex: 1 }} textStyle={{ color: colors.text, fontSize: 15 }} testID="g-regen" />
-          <Btn title={editing ? 'Done' : 'Edit'} icon={editing ? 'checkmark' : 'pencil'} variant="ghost" onPress={() => setEditing(!editing)} style={{ flex: 1 }} textStyle={{ color: colors.text, fontSize: 15 }} testID="g-edit" />
+      <View style={{ paddingHorizontal: PAD, paddingTop: 10, paddingBottom: 10, gap: GAP }}>
+        <Pressable onPress={() => (st.active ? setReplace(true) : go())} disabled={!list.length} testID="g-start"
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: colors.primary, paddingVertical: 14, borderRadius: radius.md, opacity: list.length ? 1 : 0.45 }}>
+          <Ionicons name="play" size={15} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Start Workout</Text>
+        </Pressable>
+        <View style={{ flexDirection: 'row', gap: GAP }}>
+          <Btn title="Regenerate" icon="refresh" variant="secondary" onPress={() => setBusy(true)} style={{ flex: 1 }} textStyle={{ fontSize: 15 }} testID="g-regen" />
+          <Btn title={editing ? 'Done' : 'Edit'} icon={editing ? 'checkmark' : 'pencil'} variant="secondary" onPress={() => setEditing(!editing)} style={{ flex: 1 }} textStyle={{ fontSize: 15 }} testID="g-edit" />
         </View>
       </View>
 
