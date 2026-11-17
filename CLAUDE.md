@@ -124,6 +124,12 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - O programa fica no Supabase (`user_state.trainer`, jsonb) com cache no AsyncStorage `reps:trainer:<uid>`; o servidor vence ao entrar e o que só existia no aparelho sobe. Treino iniciado pelo Trainer leva `fromTrainer` e, ao salvar, avança o próximo treino.
 - Só interface: os ícones de equipamento são genéricos (sem as imagens do Hevy); "Edit" dos pesos dos equipamentos não existe.
 
+## Aba G (em teste, 2026-11-16) — `(tabs)/g.tsx`, `g/equipment.tsx`, `lib/gplan.ts`
+- Pedido do Rodrigo para comparar depois com o Trainer: fluxo dos vídeos `Rods-Benchmark/GYM-OLD-Videos` ("Training plan" e "training generation"), no nosso design system (sem as fotos do app antigo: cartão escuro + ícone 3D nosso).
+- Topo **PLAN | TRAINING**. PLAN: carrossel de 4 planos de 30 dias (Muscle Building, Build Muscle Stamina, Strength Training, Body Sculpting; progresso separado por plano), lista de dias (feito ✓, atual azul com Start, próximos com cadeado, Rest Day). TRAINING: dia atual do plano à vista (DAY N, foco, boneco, Equipment, 1RM do supino, exercícios, START, Regenerate com a tela "Your coach is designing…", Edit = remover/adicionar).
+- Treino do dia = `dayExercises` (clássicos `STAPLES` do grupo filtrados pelo equipamento; Regenerate soma a semente e embaralha). START usa `store.startWorkout`; o dia fecha quando o treino salvo aparece em `workouts` (`pending.workoutId`). Dia de descanso fecha no botão Done.
+- Estado SÓ no aparelho: AsyncStorage `reps:gplan:<uid>` (não vai ao Supabase, sem Pro). 1RM só define a carga do supino com barra (Epley).
+
 ## Menu ⋯ do treino salvo (`src/components/WorkoutMenu.tsx`)
 - Início e detalhe usam o mesmo menu: Share Workout, Save as Routine, Copy Workout, Edit Workout (`feed/workout/edit`, grava via `store.updateWorkout`: título, descrição, data, local, visibilidade, duração, séries/peso/reps) e Delete Workout (com confirmação). No detalhe entra também "Report workout".
 
