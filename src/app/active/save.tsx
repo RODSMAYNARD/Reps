@@ -1,3 +1,4 @@
+import { saveWorkout as saveHealthWorkout } from '../../lib/health';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -57,6 +58,7 @@ export default function SaveWorkout() {
   const save = async (updateRoutine = false) => {
     setBusy(true);
     const w = await st.finishActive({ title: title.trim() || 'Workout', description: desc, visibility: vis, date: when.toISOString(), durationSec: dur, location: place.trim() || null });
+    if (w) saveHealthWorkout(when.getTime(), when.getTime() + dur * 1000, w.title).catch(() => {}); // Apple Saúde / Health Connect (se conectado)
     if (w && updateRoutine && routine) {
       // chaves calculadas ANTES de salvar; exercício novo entra com o id do próprio treino (um `cat:<id>` serve: o saveRoutine acha o exercício criado ao salvar)
       const paired = performed.map((p) => ({ p, j: rtIndexOf(p) }));

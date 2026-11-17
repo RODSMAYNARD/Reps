@@ -22,7 +22,7 @@ export default function Settings() {
         <ListRow icon="speedometer-outline" label="Units" onPress={go('/settings/units')} testID="open-units" />
         <ListRow icon="barbell-outline" label="Workout Settings" onPress={go('/settings/workout')} testID="open-workout-settings" />
         <ListRow icon="notifications-outline" label="Reminders" onPress={go('/settings/reminders')} testID="open-reminders" />
-        {FEATURES.integrations && <ListRow icon="link-outline" label="Integrations" onPress={go('/settings/integrations')} />}
+        <ListRow icon="watch-outline" label="Watches & Health" onPress={go('/settings/integrations')} testID="open-health" />
         <ListRow icon="moon-outline" label="Theme" onPress={go('/settings/theme')} />
         <ListRow icon="language-outline" label="Language" onPress={go('/settings/language')} />
         <ListRow icon="share-outline" label="Export Data" onPress={go('/settings/export')} />

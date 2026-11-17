@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { ActiveBar } from '../../components/ActiveBar';
 import { GymIcon } from '../../components/GymIcon';
+import { RecoveryCard } from '../../components/HealthCards';
 import { Text } from '../../components/Text';
 import { Dialog, Screen } from '../../components/ui';
 import { CAT_BY_EN, catKey } from '../../lib/catalog';
@@ -129,6 +130,9 @@ export default function H2() {
           </View>
           <Image source={HERO} resizeMode="cover" style={{ width: '44%', height: '100%' }} />
         </View>
+
+        {/* Recuperação do relógio/pulseira (só aparece conectado) */}
+        <RecoveryCard />
 
         {/* Números */}
         <View style={{ flexDirection: 'row', gap: GAP }}>

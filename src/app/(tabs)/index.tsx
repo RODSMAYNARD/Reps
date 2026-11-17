@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { ActiveBar } from '../../components/ActiveBar';
+import { RecoveryCard } from '../../components/HealthCards';
 import { WorkoutCard } from '../../components/WorkoutCard';
 import { WorkoutMenu } from '../../components/WorkoutMenu';
 import { Btn, IconButton, Screen } from '../../components/ui';
@@ -47,6 +48,7 @@ export default function Home() {
 
         </View>
       )}
+      <RecoveryCard style={{ marginHorizontal: 16, marginBottom: 12 }} />
       {pmCount > 0 && !reportGone && (
         <View style={{ padding: 16, gap: 8, borderBottomWidth: 8, borderBottomColor: colors.surface }} testID="report-card">
           <Text style={{ fontWeight: '800', fontSize: 20, color: colors.text }}>Your {pm.toLocaleDateString(locale(), { month: 'long' })} Monthly Report is ready!</Text>

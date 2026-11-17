@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Share, View } from 'react-native';
 import { Text } from '../../../components/Text';
+import { WorkoutHeartRateCard } from '../../../components/HealthCards';
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
 import { WorkoutMenu } from '../../../components/WorkoutMenu';
 import { Avatar, Header, IconButton, ListRow, Screen, Section, Stat } from '../../../components/ui';
@@ -38,6 +39,7 @@ export default function WorkoutDetail() {
           <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>
           </View>
         </View>
+        <WorkoutHeartRateCard startMs={new Date(w.date).getTime()} durationSec={w.durationSec} />
         <Section title="Muscle distribution" />
         <View style={{ paddingHorizontal: 16, gap: 10 }}>
           {(more ? dist : dist.slice(0, 3)).map((d) => (
