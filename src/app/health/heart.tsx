@@ -2,19 +2,28 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Delta, DayLine, HCard, HealthNotice, HTitle, LegendRow, MC, RangeTabs, TrendChart, type TrendPoint } from '../../components/HealthKit';
+import { Delta, DayLine, fmtNum, HCard, HealthNotice, HTitle, LegendRow, MC, RangeTabs, TrendChart, type TrendPoint } from '../../components/HealthKit';
 import { Text } from '../../components/Text';
 import { Btn, Header, Screen } from '../../components/ui';
-import { dayKey, fmtClock, hrZones, HR_ZONES, setSample, todayKey, useHealth, vsBaseline, type DayHealth } from '../../lib/health';
+import { dayKey, fmtClock, hrZones, HR_ZONES, setSample, todayKey, useHealth, type DayHealth } from '../../lib/health';
 import { locale, tr } from '../../lib/i18n';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 
-/** Coração (como Apple Saúde / Whoop / Garmin): batimentos de hoje, zonas, FC de repouso, VFC, FC média e VO2 máx. */
+/**
+ * Coração (como Apple Saúde / Whoop / Garmin / Eight Sleep): batimentos de hoje, zonas (tempo e % do tempo nas zonas),
+ * FC de repouso e VFC (hoje ao lado da média de 30 dias, com a faixa típica sombreada no gráfico), FC média e VO2 máx.
+ */
 
 const ZONE_COLORS = ['#5AC8FA', '#30D158', '#FFD60A', '#FF9F0A', '#FF375F'];
 /** FC máxima usada quando não há ano de nascimento no perfil. */
 const DEFAULT_MAX_HR = 190;
+/** Faixa típica = média de 30 dias ± esta fração (a FC de repouso muda pouco de um dia para o outro; a VFC muda bem mais). */
+const RHR_BAND = 0.05;
+const HRV_BAND = 0.15;
+/** Dias com valor necessários para mostrar a média de 30 dias e para desenhar a faixa típica. */
+const MIN_AVG_DAYS = 2;
+const MIN_BAND_DAYS = 5;
 /** Faixas aproximadas de VO2 máx. (ml/kg/min); variam com idade e sexo, por isso só "guia". */
 const VO2_BANDS = [
   { label: 'Low', color: '#FF453A' },
@@ -27,10 +36,14 @@ const VO2_BANDS = [
 const ZONE_NAMES: Record<number, string> = { 1: 'Very light', 2: 'Easy', 3: 'Moderate', 4: 'Hard', 5: 'Maximum' };
 type Range = '7' | '30';
 type Zone = (typeof HR_ZONES)[number];
+/** Média de 30 dias (`avg` some com poucos dias) e quantos dias tinham valor. */
+type Avg = { avg?: number; n: number };
 
 const parseKey = (k: string) => new Date(`${k}T12:00:00`);
+const shiftKey = (k: string, days: number) => { const d = parseKey(k); d.setDate(d.getDate() + days); return dayKey(d); };
 const shortDate = (k: string) => parseKey(k).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
-const fmt1 = (v: number) => v.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const fmt0 = (v: number) => fmtNum(v);
+const fmt1 = (v: number) => fmtNum(v, 1);
 const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m` : `${m} min`);
 const isNum = (v: unknown): v is number => typeof v === 'number' && isFinite(v);
 
@@ -51,34 +64,88 @@ function latest(days: DayHealth[], f: (d: DayHealth) => number | undefined) {
   return null;
 }
 
+/** Média dos 30 dias até `end` (o dia da leitura mais recente, inclusive), ignorando os dias sem valor. */
+function avg30(days: DayHealth[], end: string, f: (d: DayHealth) => number | undefined): Avg {
+  const from = shiftKey(end, -29);
+  const xs = days.filter((d) => d.date >= from && d.date <= end).map(f).filter(isNum);
+  return { avg: xs.length >= MIN_AVG_DAYS ? xs.reduce((s, x) => s + x, 0) / xs.length : undefined, n: xs.length };
+}
+
+/** Faixa típica sombreada no gráfico (média ± fração, arredondada); some com menos de MIN_BAND_DAYS dias. */
+function typicalBand(a: Avg | null, frac: number): [number, number] | undefined {
+  if (!a || a.avg == null || a.n < MIN_BAND_DAYS) return undefined;
+  return [Math.round(a.avg * (1 - frac)), Math.round(a.avg * (1 + frac))];
+}
+
+/** Porcentagens inteiras que somam 100 (maior resto), para a lista de zonas não dar 99% ou 101%. Total 0 = null. */
+function sharePct(xs: number[]): (number | null)[] {
+  const total = xs.reduce((s, x) => s + x, 0);
+  if (total <= 0) return xs.map(() => null);
+  const raw = xs.map((x) => (x / total) * 100);
+  const out = raw.map((r) => Math.floor(r));
+  let left = 100 - out.reduce((s, x) => s + x, 0);
+  raw.map((r, i) => ({ i, rest: r - Math.floor(r) })).sort((a, b) => b.rest - a.rest).forEach(({ i }) => {
+    if (left > 0) { out[i] += 1; left -= 1; }
+  });
+  return out;
+}
+
+/** "30 min · 18%" (parte do tempo nas zonas hoje); sem tempo nas zonas, só os minutos. */
+const zoneValue = (min: number, pct: number | null) => (pct == null ? fmtMin(min) : `${fmtMin(min)} · ${min > 0 && pct === 0 ? '<1' : pct}%`);
+
 /** Faixa de batimentos da zona, igual ao corte de `hrZones` (>= início, < fim). */
 function zoneRange(z: Zone, maxHr: number) {
   const lo = Math.ceil(z.from * maxHr);
-  if (z.to >= 2) return `${lo}+ bpm`;
-  return `${lo}–${Math.ceil(z.to * maxHr) - 1} bpm`;
+  if (z.to >= 2) return `${fmtNum(lo)}+ bpm`;
+  return `${fmtNum(lo)}–${fmtNum(Math.ceil(z.to * maxHr) - 1)} bpm`;
 }
 
 function vo2Band(v: number) {
   return v < 35 ? 0 : v < 42 ? 1 : v < 50 ? 2 : v <= 55 ? 3 : 4;
 }
 
-/** Valor principal do cartão (data, número grande e variação contra a média de 14 dias). */
-function MetricHead({ date, value, unit, delta }: { date: string; value: string; unit: string; delta?: React.ReactNode }) {
+/** Número grande + unidade pequena em Texts separados (na web o adjustsFontSizeToFit não encolhe nada). */
+function BigNum({ value, unit, size = 28 }: { value: string; unit?: string; size?: number }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
-      <View style={{ flexShrink: 1, minWidth: 0 }}>
-        <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{date}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 30, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{value}</Text>
-          <Text numberOfLines={1} style={{ fontSize: 14, color: colors.muted }}>{unit}</Text>
-        </View>
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: size, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{value}</Text>
+      {!!unit && <Text numberOfLines={1} style={{ fontSize: 14, color: colors.muted }}>{unit}</Text>}
+    </View>
+  );
+}
+
+/** Hoje (ou a leitura mais recente) ao lado da média de 30 dias, como no Eight Sleep; a seta compara os dois. */
+function TodayVsAvg({ date, value, avg, unit, higherIsBetter, testID }: {
+  date: string; value: number; avg?: number; unit: string; higherIsBetter: boolean; testID?: string;
+}) {
+  const diff = avg != null ? Math.round(value) - Math.round(avg) : null;
+  return (
+    <View testID={testID} style={{ flexDirection: 'row', gap: 12 }}>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{dayLabel(date)}</Text>
+        <BigNum value={fmtNum(value)} unit={unit} />
+        {diff != null && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Delta diff={diff} unit={` ${unit}`} higherIsBetter={higherIsBetter} />
+            {diff !== 0 && <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, color: colors.muted }}>vs avg</Text>}
+          </View>
+        )}
       </View>
-      {delta ? (
-        <View style={{ alignItems: 'flex-end', gap: 2, paddingBottom: 4 }}>
-          {delta}
-          <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>vs 14-day avg</Text>
-        </View>
-      ) : null}
+      <View style={{ width: 1, backgroundColor: colors.border }} />
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>30-day average</Text>
+        <BigNum value={fmtNum(avg)} unit={avg != null ? unit : undefined} />
+      </View>
+    </View>
+  );
+}
+
+/** Valor principal do cartão (data e número grande). */
+function MetricHead({ date, value, unit }: { date: string; value: string; unit: string }) {
+  return (
+    <View style={{ gap: 2 }}>
+      <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{date}</Text>
+      <BigNum value={value} unit={unit} size={30} />
     </View>
   );
 }
@@ -88,7 +155,7 @@ function StatCol({ label, value, color }: { label: string; value: number | undef
   return (
     <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-        <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 20, fontWeight: '800', color: color ?? colors.text, fontVariant: ['tabular-nums'] }}>{isNum(value) ? String(Math.round(value)) : '–'}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 20, fontWeight: '800', color: color ?? colors.text, fontVariant: ['tabular-nums'] }}>{fmtNum(value)}</Text>
         {isNum(value) && <Text style={{ fontSize: 12, color: colors.muted }}>bpm</Text>}
       </View>
       <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{label}</Text>
@@ -136,12 +203,13 @@ export default function Heart() {
   const avgHrToday = dayRec?.avgHr ?? (bpms.length ? Math.round(bpms.reduce((s, x) => s + x, 0) / bpms.length) : undefined);
   const last = pts.length ? pts[pts.length - 1] : null;
 
-  // Zonas: FC máxima = 220 - idade (sem ano de nascimento, 190)
+  // Zonas: FC máxima = 220 - idade (sem ano de nascimento, 190); % = parte do tempo de hoje nas zonas (as 5 somam 100%)
   const age = profile.birthYear ? new Date().getFullYear() - profile.birthYear : null;
   const hasAge = age != null && age >= 10 && age <= 100;
   const maxHr = hasAge ? 220 - age : DEFAULT_MAX_HR;
   const zones = hrZones(pts, maxHr);
-  const topZone = Math.max(0, ...zones.map((z) => z.min));
+  const zoneTotal = zones.reduce((s, z) => s + z.min, 0);
+  const zonePct = sharePct(zones.map((z) => z.min));
 
   // Tendências: um ponto por dia do período (dia sem dado fica vazio, sem zero falso)
   const n = range === '7' ? 7 : 30;
@@ -149,10 +217,13 @@ export default function Heart() {
   const byDate = new Map(h.days.map((d) => [d.date, d] as const));
   const series = (f: (d: DayHealth) => number | undefined): TrendPoint[] => keys.map((k) => ({ label: shortDate(k), value: f(byDate.get(k) ?? { date: k }) }));
 
+  // FC de repouso e VFC: leitura mais recente vs média de 30 dias + faixa típica sombreada (como no Eight Sleep)
   const rhr = latest(h.days, (d) => d.restingHr);
-  const rhrVs = rhr ? vsBaseline(h.days, rhr.date, (d) => d.restingHr) : null;
+  const rhrAvg = rhr ? avg30(h.days, rhr.date, (d) => d.restingHr) : null;
+  const rhrBand = typicalBand(rhrAvg, RHR_BAND);
   const hrv = latest(h.days, (d) => d.hrv);
-  const hrvVs = hrv ? vsBaseline(h.days, hrv.date, (d) => d.hrv) : null;
+  const hrvAvg = hrv ? avg30(h.days, hrv.date, (d) => d.hrv) : null;
+  const hrvBand = typicalBand(hrvAvg, HRV_BAND);
   const avgAny = h.days.some((d) => isNum(d.avgHr));
   const vo2 = latest(h.days, (d) => d.vo2max);
   const vo2Series = series((d) => d.vo2max);
@@ -177,7 +248,7 @@ export default function Heart() {
                 </View>
                 {last && (
                   <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] }}>
-                    {tr('Latest')} {last.bpm} bpm · {fmtClock(last.t)}
+                    {tr('Latest')} {fmtNum(last.bpm)} bpm · {fmtClock(last.t)}
                   </Text>
                 )}
               </View>
@@ -191,12 +262,23 @@ export default function Heart() {
 
             <HTitle title="Heart rate zones" />
             <HCard>
-              <Muted>Time in each zone today</Muted>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12, color: colors.muted }}>Time in each zone today</Text>
+                <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] }}>
+                  {fmtMin(zoneTotal)} {tr('total')}
+                </Text>
+              </View>
               {zones.map((z, i) => (
-                <LegendRow key={z.id} color={ZONE_COLORS[i]} label={`${tr(ZONE_NAMES[z.id] ?? z.name)} · ${zoneRange(z, maxHr)}`} value={fmtMin(z.min)} frac={topZone > 0 ? z.min / topZone : 0} />
+                <LegendRow
+                  key={z.id}
+                  color={ZONE_COLORS[i]}
+                  label={`${tr(ZONE_NAMES[z.id] ?? z.name)} · ${zoneRange(z, maxHr)}`}
+                  value={zoneValue(z.min, zonePct[i])}
+                  frac={zoneTotal > 0 ? z.min / zoneTotal : 0}
+                />
               ))}
               <Muted>
-                {tr('Based on a max heart rate of')} {maxHr} bpm{hasAge ? ` (${tr('220 minus your age')})` : ''}.
+                {tr('Based on a max heart rate of')} {fmtNum(maxHr)} bpm{hasAge ? ` (${tr('220 minus your age')})` : ''}.
               </Muted>
               {!hasAge && (
                 <Pressable onPress={() => router.push('/profile/edit')} hitSlop={6} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} testID="health-heart-birthyear">
@@ -217,14 +299,10 @@ export default function Heart() {
           <>
             <HTitle title="Resting HR" />
             <HCard>
-              <MetricHead
-                date={dayLabel(rhr.date)}
-                value={String(Math.round(rhr.value))}
-                unit="bpm"
-                delta={rhrVs ? <Delta diff={rhrVs.diff} unit=" bpm" higherIsBetter={false} /> : undefined}
-              />
-              <TrendChart key={range} data={series((d) => d.restingHr)} kind="line" color={MC.heart} unit=" bpm" />
+              <TodayVsAvg date={rhr.date} value={rhr.value} avg={rhrAvg?.avg} unit="bpm" higherIsBetter={false} testID="health-heart-rhr-vs-avg" />
+              <TrendChart key={range} data={series((d) => d.restingHr)} kind="line" color={MC.heart} band={rhrBand} format={fmt0} unit=" bpm" />
               <Muted>Your heart rate while fully at rest. A lower trend usually comes with better fitness.</Muted>
+              {rhrBand && <Muted>{tr('Typical range: your 30-day average')} ±{Math.round(RHR_BAND * 100)}%.</Muted>}
             </HCard>
           </>
         )}
@@ -233,14 +311,10 @@ export default function Heart() {
           <>
             <HTitle title="HRV" />
             <HCard>
-              <MetricHead
-                date={dayLabel(hrv.date)}
-                value={String(Math.round(hrv.value))}
-                unit="ms"
-                delta={hrvVs ? <Delta diff={hrvVs.diff} unit=" ms" higherIsBetter /> : undefined}
-              />
-              <TrendChart key={range} data={series((d) => d.hrv)} kind="line" color={MC.hrv} unit=" ms" />
-              <Muted>Higher than your usual usually means you recovered well.</Muted>
+              <TodayVsAvg date={hrv.date} value={hrv.value} avg={hrvAvg?.avg} unit="ms" higherIsBetter testID="health-heart-hrv-vs-avg" />
+              <TrendChart key={range} data={series((d) => d.hrv)} kind="line" color={MC.hrv} band={hrvBand} format={fmt0} unit=" ms" />
+              <Muted>Higher than your usual often means you recovered well.</Muted>
+              {hrvBand && <Muted>{tr('Typical range: your 30-day average')} ±{Math.round(HRV_BAND * 100)}%.</Muted>}
               <Muted>iPhone measures HRV as SDNN and Android as RMSSD, so numbers differ between devices. Compare only with yourself.</Muted>
             </HCard>
           </>
@@ -250,7 +324,7 @@ export default function Heart() {
           <>
             <HTitle title="Daily average HR" />
             <HCard>
-              <TrendChart key={range} data={series((d) => d.avgHr)} kind="bar" color={MC.heart} unit=" bpm" />
+              <TrendChart key={range} data={series((d) => d.avgHr)} kind="bar" color={MC.heart} format={fmt0} unit=" bpm" />
             </HCard>
           </>
         )}

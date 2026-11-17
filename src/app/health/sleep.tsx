@@ -1,26 +1,30 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Delta, HCard, HealthNotice, Hypnogram, HTitle, KpiGrid, KpiTile, LegendRow, MC, RangeTabs, Ring, StackBar, STAGE_COLOR, TrendChart, type IconName } from '../../components/HealthKit';
+import { Pressable, ScrollView, StyleSheet, View, type TextStyle } from 'react-native';
+import { Delta, fmtNum, HCard, HealthNotice, Hypnogram, HTitle, KpiGrid, KpiTile, LegendRow, MC, RangeTabs, Ring, StackBar, STAGE_COLOR, TrendChart, type IconName } from '../../components/HealthKit';
 import { Text } from '../../components/Text';
 import { Btn, Header, Screen } from '../../components/ui';
 import { bedtimeConsistency, dayKey, fmtClock, fmtSleep, setSample, sleepScore, todayKey, useHealth, vsBaseline, type DayHealth } from '../../lib/health';
 import { locale, tr } from '../../lib/i18n';
 import { colors } from '../../lib/theme';
 
-/** Sono: nota da noite, estágios (hipnograma), tendências de 7/30 dias, médias, dívida de sono e dicas. */
+/** Sono: nota da noite, linha da noite na cama, estágios (hipnograma + faixas típicas), tendências de 7/30 dias, médias, dívida de sono e dicas. */
 
 type Range = '7' | '30';
 type StageKey = 'deep' | 'light' | 'rem' | 'awake';
+type RangeStatus = 'ok' | 'low' | 'high';
 
-// Ordem da barra empilhada e da legenda. Faixas típicas = % da noite (referência geral, não diagnóstico).
-const STAGES: { key: StageKey; label: string; range?: string }[] = [
-  { key: 'deep', label: 'Deep sleep', range: '13–23%' },
-  { key: 'light', label: 'Light sleep', range: '50–60%' },
-  { key: 'rem', label: 'REM sleep', range: '20–25%' },
-  { key: 'awake', label: 'Awake' },
+// Ordem da barra empilhada e da legenda. Faixa típica = fração da noite (dormindo + acordado), na mesma escala 0..1
+// da barra de cada estágio. Referência geral, não diagnóstico.
+const STAGES: { key: StageKey; label: string; range: [number, number] }[] = [
+  { key: 'deep', label: 'Deep sleep', range: [0.13, 0.23] },
+  { key: 'light', label: 'Light sleep', range: [0.5, 0.6] },
+  { key: 'rem', label: 'REM sleep', range: [0.2, 0.25] },
+  { key: 'awake', label: 'Awake', range: [0, 0.05] },
 ];
+/** Faixa típica da nota do sono no gráfico (70 = "Good", 85 = "Great night", ver `verdict`). */
+const SCORE_BAND: [number, number] = [70, 85];
 
 const TIPS: { icon: IconName; text: string }[] = [
   { icon: 'alarm-outline', text: 'Keep the same bedtime and wake-up time, even on weekends.' },
@@ -36,7 +40,11 @@ const sleepTxt = (m?: number) => fmtSleep(m == null ? undefined : Math.round(m))
 const hasBreakdown = (d: DayHealth) => (d.deepMin ?? 0) + (d.remMin ?? 0) > 0;
 const verdict = (s: number) => (s >= 85 ? 'Great night' : s >= 70 ? 'Good' : s >= 50 ? 'Fair' : 'Poor');
 const dateLabel = (k: string) => new Date(`${k}T12:00:00`).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
-const fmtHours = (v: number) => `${v.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}h`;
+/** Horas no formato do idioma ("6,5h" em português); valor inteiro sem casa decimal ("Meta 8h"). */
+const fmtHours = (v: number) => `${fmtNum(v, Number.isInteger(v) ? 0 : 1)}h`;
+/** Situação do estágio frente à faixa típica, pelo % arredondado (o mesmo número que aparece na tela). */
+const stageStatus = (pct: number, [lo, hi]: [number, number]): RangeStatus =>
+  pct < Math.round(lo * 100) ? 'low' : pct > Math.round(hi * 100) ? 'high' : 'ok';
 
 /** Últimos `n` dias (AAAA-MM-DD), do mais antigo até hoje. */
 const lastKeys = (n: number) => Array.from({ length: n }, (_, i) => {
@@ -68,12 +76,36 @@ function MiniStat({ label, value, flex = 1 }: { label: string; value: string; fl
   );
 }
 
+/** Duração com os números grandes e as letras das unidades pequenas ("7h 12m"), como nos apps de sono. Sem dado = "–". */
+function BigDuration({ min, size = 28 }: { min?: number; size?: number }) {
+  const big: TextStyle = { fontSize: size, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] };
+  if (min == null) return <Text style={big}>–</Text>;
+  const m = Math.round(min);
+  const unit: TextStyle = { fontSize: Math.round(size * 0.55), fontWeight: '700', color: colors.muted };
+  return (
+    <Text numberOfLines={1} style={big}>
+      {Math.floor(m / 60)}<Text style={unit}>h</Text>{' '}{pad(m % 60)}<Text style={unit}>m</Text>
+    </Text>
+  );
+}
+
 function NavArrow({ icon, onPress, testID }: { icon: IconName; onPress?: () => void; testID: string }) {
   return (
     <Pressable onPress={onPress} disabled={!onPress} hitSlop={10} testID={testID}
       style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, opacity: onPress ? 1 : 0.35 }}>
       <Ionicons name={icon} size={20} color={colors.text} />
     </Pressable>
+  );
+}
+
+/** Selo "dentro / abaixo / acima da faixa típica" (mesmas cores do InRangeChips do kit). */
+function RangePill({ status }: { status: RangeStatus }) {
+  const ok = status === 'ok';
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, backgroundColor: ok ? colors.successSoft : colors.warnSoft }}>
+      <Ionicons name={ok ? 'checkmark-circle' : status === 'low' ? 'arrow-down' : 'arrow-up'} size={12} color={ok ? colors.success : colors.warn} />
+      <Text numberOfLines={1} style={{ fontSize: 12, color: colors.text }}>{ok ? 'In range' : status === 'low' ? 'Low' : 'High'}</Text>
+    </View>
   );
 }
 
@@ -118,8 +150,9 @@ export default function SleepScreen() {
   const stagedSleep = avg(staged.map((d) => d.sleepMin!));
   const avgDeep = avg(staged.map((d) => d.deepMin ?? 0));
   const avgRem = avg(staged.map((d) => d.remMin ?? 0));
-  const avgAwake = avg(staged.map((d) => d.awakeMin ?? 0));
-  const ofSleep = (x?: number) => (x != null && stagedSleep ? `${Math.round((x / stagedSleep) * 100)}% ${tr('of sleep')}` : undefined);
+  // Acordado: só noites que registraram esse número (ausente não vira 0 falso).
+  const avgAwake = avg(staged.filter((d) => d.awakeMin != null).map((d) => d.awakeMin!));
+  const ofSleep = (x?: number) => (x != null && stagedSleep ? `${fmtNum((x / stagedSleep) * 100)}% ${tr('of sleep')}` : undefined);
   const avgBed = clockMean(rangeNights.filter((d) => d.bedtime != null).map((d) => d.bedtime!));
   const avgWake = clockMean(rangeNights.filter((d) => d.wakeTime != null).map((d) => d.wakeTime!));
   const consistency = bedtimeConsistency(rangeNights, Math.max(1, rangeNights.length));
@@ -177,13 +210,14 @@ export default function SleepScreen() {
           <KpiTile icon="eye-outline" color={MC.awake} label="Awake" value={sleepTxt(avgAwake)} sub={avgAwake != null ? tr('per night') : undefined} />
           <KpiTile icon="bed-outline" color={MC.deep} label="Bedtime" value={fmtMinOfDay(avgBed)} />
           <KpiTile icon="sunny-outline" color={MC.calories} label="Wake-up" value={fmtMinOfDay(avgWake)} />
-          <KpiTile icon="time-outline" color={MC.sleep} label="Consistency" value={consistency != null ? `±${consistency}` : '–'} unit={consistency != null ? 'min' : undefined} sub={tr('Bedtime variation')} />
+          <KpiTile icon="time-outline" color={MC.sleep} label="Consistency" value={consistency != null ? `±${fmtNum(consistency)}` : '–'} unit={consistency != null ? 'min' : undefined} sub={tr('Bedtime variation')} />
           <KpiTile icon="hourglass-outline" color={MC.awake} label="Sleep debt" value={sleepTxt(debt)} sub={tr('Last 7 nights')} testID="sleep-debt" />
         </KpiGrid>
 
         <HCard>
           <Text style={{ fontWeight: '700', color: colors.text }}>Sleep score</Text>
-          <TrendChart key={range} kind="line" data={scorePts} color={MC.sleep} />
+          {/* Faixa sombreada 70–85 (rodapé "Typical range 70–85", desenhado pelo TrendChart) */}
+          <TrendChart key={range} kind="line" data={scorePts} color={MC.sleep} band={SCORE_BAND} />
         </HCard>
 
         <HTitle title="Sleep tips" />
@@ -201,13 +235,13 @@ export default function SleepScreen() {
   );
 }
 
-/** Cartão principal da noite: nota (anel), tempo dormindo x meta, veredito, horários, acordado e eficiência. */
+/** Cartão principal da noite: nota (anel), tempo dormindo x meta, veredito, linha da noite na cama e números da noite. */
 function NightHero({ night, goal, days }: { night: DayHealth; goal: number; days: DayHealth[] }) {
   const score = sleepScore(night, goal);
   const slept = night.sleepMin ?? 0;
   const staged = hasBreakdown(night);
-  const inBed = night.bedtime != null && night.wakeTime != null ? (night.wakeTime - night.bedtime) / 60000 : undefined;
-  const eff = staged && inBed && inBed > 0 ? Math.min(100, Math.round((slept / inBed) * 100)) : undefined;
+  const inBed = night.bedtime != null && night.wakeTime != null && night.wakeTime > night.bedtime ? (night.wakeTime - night.bedtime) / 60000 : undefined;
+  const eff = staged && inBed ? Math.min(100, Math.round((slept / inBed) * 100)) : undefined;
   const vs = vsBaseline(days, night.date, (d) => d.sleepMin);
   const tone = score == null ? colors.muted : score >= 70 ? colors.success : score >= 50 ? colors.warn : colors.danger;
   return (
@@ -215,11 +249,11 @@ function NightHero({ night, goal, days }: { night: DayHealth; goal: number; days
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         <Ring value={(score ?? 0) / 100} size={112} stroke={11} color={MC.sleep}>
           <Text style={{ fontSize: 30, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{score ?? '–'}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 11, color: colors.muted, maxWidth: 80 }}>Sleep score</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 11, color: colors.muted, maxWidth: 84 }}>Sleep score</Text>
         </Ring>
         <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
           <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>Time asleep</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 26, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{fmtSleep(night.sleepMin)}</Text>
+          <BigDuration min={night.sleepMin} />
           <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.border }}>
             <View style={{ width: `${goal > 0 ? Math.min(1, slept / goal) * 100 : 0}%`, height: 6, borderRadius: 3, backgroundColor: MC.sleep }} />
           </View>
@@ -233,17 +267,63 @@ function NightHero({ night, goal, days }: { night: DayHealth; goal: number; days
           {score != null && <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '700', color: tone }} testID="sleep-verdict">{verdict(score)}</Text>}
         </View>
       </View>
+      <NightLine night={night} />
       <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <MiniStat label="In bed" value={night.bedtime != null && night.wakeTime != null ? `${fmtClock(night.bedtime)} → ${fmtClock(night.wakeTime)}` : '–'} flex={1.6} />
+        <MiniStat label="In bed" value={sleepTxt(inBed)} />
         <MiniStat label="Awake" value={staged ? fmtSleep(night.awakeMin) : '–'} />
-        <MiniStat label="Efficiency" value={eff != null ? `${eff}%` : '–'} />
+        <MiniStat label="Efficiency" value={eff != null ? `${fmtNum(eff)}%` : '–'} />
       </View>
     </HCard>
   );
 }
 
-/** Estágios: hipnograma (só nas últimas 7 noites), barra empilhada e legenda com % da noite e faixa típica. */
+/**
+ * Linha fina da noite na cama, do deitar (lua) ao acordar (sol): roxo = dormindo, laranja = acordado.
+ * Sem pedaços guardados (noites com mais de 7 dias) a linha fica inteira em roxo; vãos sem registro ficam vazios.
+ */
+function NightLine({ night }: { night: DayHealth }) {
+  const a = night.bedtime, b = night.wakeTime;
+  if (a == null || b == null || b <= a) return null;
+  const span = b - a;
+  // Junta pedaços vizinhos do mesmo tipo (dormindo/acordado) para não aparecer emenda entre eles.
+  const runs: { awake: boolean; a: number; b: number }[] = [];
+  for (const s of [...(night.stages ?? [])].sort((x, y) => x.a - y.a)) {
+    const awake = s.s === 'awake';
+    const last = runs[runs.length - 1];
+    if (last && last.awake === awake && s.a - last.b <= 60000) last.b = Math.max(last.b, s.b);
+    else runs.push({ awake, a: s.a, b: s.b });
+  }
+  const pct = (t: number) => Math.max(0, Math.min(100, ((t - a) / span) * 100));
+  const clock: TextStyle = { fontSize: 13, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] };
+  return (
+    <View style={{ gap: 6 }} testID="sleep-timeline" accessibilityLabel={`${tr('Bedtime')} ${fmtClock(a)}, ${tr('Wake-up')} ${fmtClock(b)}`}>
+      <View style={{ height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: runs.length ? colors.border : MC.sleep }}>
+        {[...runs.filter((r) => !r.awake), ...runs.filter((r) => r.awake)].map((r, i) => {
+          const left = pct(r.a);
+          return (
+            <View key={i} style={{ position: 'absolute', top: 0, bottom: 0, left: `${left}%`, width: `${Math.min(100 - left, Math.max(0.8, pct(r.b) - left))}%`, backgroundColor: r.awake ? MC.awake : MC.sleep }} />
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="moon" size={13} color={MC.sleep} />
+          <Text style={clock}>{fmtClock(a)}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={clock}>{fmtClock(b)}</Text>
+          <Ionicons name="sunny" size={13} color={MC.calories} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Estágios: hipnograma (só nas últimas 7 noites), barra empilhada e uma linha por estágio com a parte da noite (barra)
+ * e a faixa típica (moldura na mesma escala), mais o selo dentro/abaixo/acima da faixa.
+ */
 function StagesCard({ night }: { night: DayHealth }) {
   const staged = hasBreakdown(night);
   const mins: Record<StageKey, number> = { deep: night.deepMin ?? 0, light: night.lightMin ?? 0, rem: night.remMin ?? 0, awake: night.awakeMin ?? 0 };
@@ -263,11 +343,16 @@ function StagesCard({ night }: { night: DayHealth }) {
         <>
           <StackBar parts={STAGES.map((s) => ({ value: mins[s.key], color: STAGE_COLOR[s.key] }))} />
           {STAGES.map((s) => {
-            const pct = Math.round((mins[s.key] / total) * 100);
+            const share = mins[s.key] / total; // parte da noite, mesma escala 0..1 da faixa
+            const pct = Math.round(share * 100);
+            const [lo, hi] = s.range;
             return (
-              <View key={s.key} style={{ gap: 2 }}>
-                <LegendRow color={STAGE_COLOR[s.key]} label={s.label} value={`${fmtSleep(mins[s.key])} · ${pct}%`} frac={mins[s.key] / total} />
-                {!!s.range && <Text style={{ marginLeft: 18, fontSize: 12, color: colors.muted }}>Typical range {s.range}</Text>}
+              <View key={s.key} style={{ gap: 4 }} testID={`sleep-stage-${s.key}`}>
+                <LegendRow color={STAGE_COLOR[s.key]} label={s.label} value={`${fmtSleep(mins[s.key])} · ${fmtNum(pct)}%`} frac={share} range={s.range} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 18 }}>
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: colors.muted }}>Typical range {`${fmtNum(lo * 100)}–${fmtNum(hi * 100)}%`}</Text>
+                  <RangePill status={stageStatus(pct, s.range)} />
+                </View>
               </View>
             );
           })}

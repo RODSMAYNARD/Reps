@@ -2,10 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Delta, HCard, HealthNotice, HTitle, KpiTile, MC, RangeTabs, TrendChart, type IconName } from '../../components/HealthKit';
+import { Delta, fmtNum, HCard, HealthNotice, HTitle, InRangeChips, KpiTile, MC, RangeTabs, TrendChart, type IconName } from '../../components/HealthKit';
 import { Text } from '../../components/Text';
 import { Btn, Header, Screen } from '../../components/ui';
-import { fmtWeight, toDisplayWeight } from '../../lib/format';
+import { toDisplayWeight } from '../../lib/format';
 import { dayKey, setSample, todayKey, useHealth, vsBaseline, type DayHealth } from '../../lib/health';
 import { locale, tr } from '../../lib/i18n';
 import { useStore } from '../../lib/store';
@@ -14,13 +14,19 @@ import { colors } from '../../lib/theme';
 /**
  * Corpo e sinais vitais (como Withings / Apple Saúde): peso, gordura corporal, SpO2, frequência respiratória
  * e a checagem dos sinais da última noite/dia contra a média do próprio usuário (14 dias). Não é diagnóstico.
+ * Números sempre pelo `fmtNum` (vírgula em português: 81,2 kg) e valor grande + unidade pequena em Texts separados:
+ * na web o `adjustsFontSizeToFit` não encolhe nada, e "15,0 resp/min" numa string só cortava em 360 px.
  */
 
 type Range = '7' | '30';
 type Field = 'weightKg' | 'bodyFatPct' | 'spo2' | 'respRate' | 'restingHr' | 'hrv';
 
+/** Arredonda para 1 casa (só para conta; o texto sai pelo `fmtNum`). */
 const r1 = (n: number) => Math.round(n * 10) / 10;
-const fix1 = (n: number) => r1(n).toFixed(1);
+/** 1 casa fixa no formato do idioma (81,2 / 97,0). */
+const f1 = (v: number) => fmtNum(v, 1);
+/** Até 1 casa (97 / 96,8): gráficos com faixa típica, para a legenda sair "95–100%" e não "95,0–100,0%". */
+const upTo1 = (v: number) => fmtNum(v, Number.isInteger(r1(v)) ? 0 : 1);
 /** Sinal na frente do texto já formatado (sem sinal quando arredonda para zero). */
 const signed = (n: number, body: string) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${body}`;
 const avgOf = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : undefined);
@@ -28,13 +34,18 @@ const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const dateOf = (k: string) => new Date(`${k}T12:00:00`);
 const num = (v: unknown): v is number => typeof v === 'number' && isFinite(v);
 
+/** Faixas de referência sombreadas nos gráficos (como a faixa ideal do Eight Sleep): SpO2 95–100%, respiração em repouso 12–20/min. */
+const SPO2_BAND: [number, number] = [95, 100];
+const RESP_BAND: [number, number] = [12, 20];
+
 /**
  * Checagem dos sinais (como Fitbit Health Metrics / Apple Vitals): faixa típica = média de 14 dias ± tolerância.
  * `abs` = tolerância em pontos (SpO2); senão é fração da média.
+ * Respiração usa 'Breathing' (Respiração): 'Respiratory rate' em português cortava na linha ("Frequência respira...").
  */
 const CHECKS: { key: Field; label: string; icon: IconName; color: string; unit: string; digits: 0 | 1; tol: number; abs?: boolean }[] = [
   { key: 'spo2', label: 'Blood oxygen', icon: 'water', color: MC.spo2, unit: '%', digits: 1, tol: 2, abs: true },
-  { key: 'respRate', label: 'Respiratory rate', icon: 'leaf', color: MC.resp, unit: 'br/min', digits: 1, tol: 0.1 },
+  { key: 'respRate', label: 'Breathing', icon: 'leaf', color: MC.resp, unit: 'br/min', digits: 1, tol: 0.1 },
   { key: 'restingHr', label: 'Resting HR', icon: 'heart', color: MC.heart, unit: 'bpm', digits: 0, tol: 0.1 },
   { key: 'hrv', label: 'HRV', icon: 'pulse', color: MC.hrv, unit: 'ms', digits: 0, tol: 0.2 },
 ];
@@ -42,12 +53,27 @@ type Check = (typeof CHECKS)[number];
 /** Mínimo de medidas nos 14 dias anteriores para comparar (com 1 ou 2 noites a "média" acusaria fora da faixa à toa). */
 const MIN_BASE = 3;
 
+/** Unidade dentro de uma frase de uma linha só ("Sua média 96,8%"): "%" colado, as outras com espaço e traduzidas. */
 const unitText = (u: string) => (u === '%' ? '%' : ` ${tr(u)}`);
-const fmtCheck = (c: Check, v: number) => `${c.digits ? fix1(v) : Math.round(v)}${unitText(c.unit)}`;
 
-/** Cartão de métrica: título colorido, até 3 números lado a lado, gráfico e nota. */
-function MetricCard({ icon, color, title, right, stats, children, note }: {
-  icon: IconName; color: string; title: string; right?: React.ReactNode; stats: { label: string; value: string; sub?: string }[]; children?: React.ReactNode; note?: string;
+/**
+ * Número grande + unidade pequena ao lado (como o KpiTile). A unidade é um Text próprio, traduzido na hora
+ * ('br/min' → 'resp/min'), e não encolhe; o número pode encolher no celular. Sem valor ('–') a unidade some.
+ */
+function ValueUnit({ value, unit, size, unitSize }: { value: string; unit?: string; size: number; unitSize: number }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: unit === '%' ? 1 : 3, minWidth: 0 }}>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ flexShrink: 1, fontSize: size, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{value}</Text>
+      {!!unit && value !== '–' && <Text numberOfLines={1} style={{ flexShrink: 0, fontSize: unitSize, fontWeight: '600', color: colors.muted }}>{unit}</Text>}
+    </View>
+  );
+}
+
+type Stat = { label: string; value: string; unit?: string; sub?: string };
+
+/** Cartão de métrica: título colorido, até 3 números lado a lado (valor + unidade) e o gráfico. */
+function MetricCard({ icon, color, title, right, stats, children }: {
+  icon: IconName; color: string; title: string; right?: React.ReactNode; stats: Stat[]; children?: React.ReactNode;
 }) {
   return (
     <HCard>
@@ -60,13 +86,12 @@ function MetricCard({ icon, color, title, right, stats, children, note }: {
         {stats.map((s) => (
           <View key={s.label} style={{ flex: 1, minWidth: 0, gap: 2 }}>
             <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{s.label}</Text>
-            <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 22, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{s.value}</Text>
+            <ValueUnit value={s.value} unit={s.unit} size={22} unitSize={13} />
             {!!s.sub && <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>{s.sub}</Text>}
           </View>
         ))}
       </View>
       {children}
-      {!!note && <Text style={{ fontSize: 12, color: colors.muted }}>{note}</Text>}
     </HCard>
   );
 }
@@ -94,10 +119,12 @@ function VitalRow({ c, cur, base, typical, pos }: VitalRowData) {
           <Ionicons name={c.icon} size={16} color={c.color} />
         </View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{c.label}</Text>
-          <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{base != null ? `${tr('Your avg')} ${fmtCheck(c, base)}` : tr('No baseline yet')}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{c.label}</Text>
+          <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{base != null ? `${tr('Your avg')} ${fmtNum(base, c.digits)}${unitText(c.unit)}` : tr('No baseline yet')}</Text>
         </View>
-        <Text numberOfLines={1} style={{ flexShrink: 0, fontSize: 16, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{fmtCheck(c, cur)}</Text>
+        <View style={{ flexShrink: 0 }}>
+          <ValueUnit value={fmtNum(cur, c.digits)} unit={c.unit} size={16} unitSize={11} />
+        </View>
       </View>
       {pos != null && typical != null && (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginLeft: 40 }}>
@@ -152,17 +179,17 @@ export default function BodyVitals() {
   };
   const periodLabel = range === '7' ? 'Last 7 days' : 'Last 30 days';
 
-  // Peso (mostrado na unidade do perfil)
+  // Peso (na unidade do perfil; a conta é em kg, o texto sai com 1 casa no formato do idioma)
   const wLatest = latest('weightKg');
   const wVals = vals('weightKg');
-  const wDiff = wVals.length >= 2 ? wVals[wVals.length - 1] - wVals[0] : null;
-  const wChange = wDiff == null ? '–' : signed(r1(toDisplayWeight(wDiff, units)), fmtWeight(Math.abs(wDiff), units));
+  const wDiff = wVals.length >= 2 ? r1(toDisplayWeight(wVals[wVals.length - 1] - wVals[0], units)) : null;
+  const wChange = wDiff == null ? '–' : signed(wDiff, f1(Math.abs(wDiff)));
 
   // Gordura corporal
   const fLatest = latest('bodyFatPct');
   const fVals = vals('bodyFatPct');
   const fDiff = fVals.length >= 2 ? r1(fVals[fVals.length - 1] - fVals[0]) : null;
-  const fChange = fDiff == null ? '–' : signed(fDiff, `${Math.abs(fDiff).toFixed(1)}%`);
+  const fChange = fDiff == null ? '–' : signed(fDiff, f1(Math.abs(fDiff)));
 
   // SpO2 e respiração
   const hasSpo2 = latest('spo2') != null;
@@ -196,8 +223,8 @@ export default function BodyVitals() {
       rows.push({ c, cur, base: b.base, typical, pos: spread > 0 ? clamp01((cur - (b.base - spread)) / (2 * spread)) : 0.5 });
     }
   }
-  const compared = rows.filter((r) => r.typical != null).length;
-  const outside = rows.filter((r) => r.typical === false).length;
+  // Resumo no topo (como o "x/6 dentro da faixa" do Ultrahuman): só os sinais que foram de fato comparados.
+  const inRangeItems = rows.filter((r) => r.typical != null).map((r) => ({ label: r.c.label, ok: r.typical === true }));
   const vLabel = !vDate ? '' : vDate === todayKey() ? 'Today' : dateOf(vDate).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
@@ -220,11 +247,11 @@ export default function BodyVitals() {
             </Pressable>
           )}
           stats={[
-            { label: 'Latest', value: wLatest ? fmtWeight(wLatest.v, units) : '–', sub: wLatest ? lab(wLatest.date) : undefined },
-            { label: 'Change', value: wChange, sub: periodLabel },
+            { label: 'Latest', value: wLatest ? f1(toDisplayWeight(wLatest.v, units)) : '–', unit: units.weight, sub: wLatest ? lab(wLatest.date) : undefined },
+            { label: 'Change', value: wChange, unit: units.weight, sub: periodLabel },
           ]}
         >
-          <TrendChart kind="line" color={MC.weight} data={series('weightKg', (v) => r1(toDisplayWeight(v, units)))} format={fix1} unit={` ${units.weight}`} />
+          <TrendChart kind="line" color={MC.weight} data={series('weightKg', (v) => r1(toDisplayWeight(v, units)))} format={f1} unit={` ${units.weight}`} />
         </MetricCard>
 
         {fLatest && (
@@ -233,11 +260,11 @@ export default function BodyVitals() {
             color={MC.fat}
             title="Body fat"
             stats={[
-              { label: 'Latest', value: `${fix1(fLatest.v)}%`, sub: lab(fLatest.date) },
-              { label: 'Change', value: fChange, sub: periodLabel },
+              { label: 'Latest', value: f1(fLatest.v), unit: '%', sub: lab(fLatest.date) },
+              { label: 'Change', value: fChange, unit: '%', sub: periodLabel },
             ]}
           >
-            <TrendChart kind="line" color={MC.fat} data={series('bodyFatPct')} format={fix1} unit="%" />
+            <TrendChart kind="line" color={MC.fat} data={series('bodyFatPct')} format={f1} unit="%" />
           </MetricCard>
         )}
 
@@ -248,12 +275,12 @@ export default function BodyVitals() {
             color={MC.spo2}
             title="Blood oxygen"
             stats={[
-              { label: 'Average', value: sAvg != null ? `${fix1(sAvg)}%` : '–' },
-              { label: 'Lowest', value: sVals.length ? `${fix1(Math.min(...sVals))}%` : '–' },
+              { label: 'Average', value: sAvg != null ? f1(sAvg) : '–', unit: '%' },
+              { label: 'Lowest', value: sVals.length ? f1(Math.min(...sVals)) : '–', unit: '%' },
             ]}
-            note="Typical: 95–100%"
           >
-            <TrendChart kind="line" color={MC.spo2} data={series('spo2')} format={fix1} unit="%" />
+            {/* A faixa sombreada e a legenda "Faixa típica 95–100%" do gráfico substituem a nota de texto que havia aqui. */}
+            <TrendChart kind="line" color={MC.spo2} data={series('spo2')} format={upTo1} unit="%" band={SPO2_BAND} />
           </MetricCard>
         )}
         {hasResp && (
@@ -262,12 +289,11 @@ export default function BodyVitals() {
             color={MC.resp}
             title="Respiratory rate"
             stats={[
-              { label: 'Average', value: rAvg != null ? `${fix1(rAvg)} ${brMin}` : '–' },
-              { label: 'Min – max', value: rVals.length ? `${fix1(Math.min(...rVals))}–${fix1(Math.max(...rVals))}` : '–' },
+              { label: 'Average', value: rAvg != null ? f1(rAvg) : '–', unit: 'br/min' },
+              { label: 'Min – max', value: rVals.length ? `${f1(Math.min(...rVals))}–${f1(Math.max(...rVals))}` : '–' },
             ]}
-            note="Typical at rest: 12–20 breaths/min"
           >
-            <TrendChart kind="line" color={MC.resp} data={series('respRate')} format={fix1} unit={` ${brMin}`} />
+            <TrendChart kind="line" color={MC.resp} data={series('respRate')} format={upTo1} unit={` ${brMin}`} band={RESP_BAND} />
           </MetricCard>
         )}
         {!hasSpo2 && !hasResp && !rhr && !rows.length && (
@@ -279,7 +305,7 @@ export default function BodyVitals() {
               icon="heart"
               color={MC.heart}
               label="Resting HR"
-              value={String(Math.round(rhr.v))}
+              value={fmtNum(rhr.v)}
               unit="bpm"
               sub={lab(rhr.date)}
               delta={<Delta diff={rhrVs?.diff} unit=" bpm" higherIsBetter={false} />}
@@ -304,15 +330,13 @@ export default function BodyVitals() {
                 <Ionicons name="chevron-forward" size={20} color={colors.text} />
               </Pressable>
             </View>
-            {(outside > 0 || (compared > 0 && compared === rows.length)) && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 10, backgroundColor: outside ? colors.warnSoft : colors.successSoft }}>
-                <Ionicons name={outside ? 'alert-circle' : 'checkmark-circle'} size={18} color={outside ? colors.warn : colors.success} />
-                {outside ? (
-                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>{outside} {outside === 1 ? 'vital outside your range' : 'vitals outside your range'}</Text>
-                ) : (
-                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>All vitals in your typical range</Text>
-                )}
-              </View>
+            {inRangeItems.length > 0 && (
+              <>
+                <View testID="vitals-in-range">
+                  <InRangeChips items={inRangeItems} />
+                </View>
+                <View style={{ height: 1, backgroundColor: colors.border }} />
+              </>
             )}
             {rows.map((r) => <VitalRow key={r.c.key} {...r} />)}
             <Text style={{ fontSize: 12, color: colors.muted }}>Compared with your average of the previous 14 days.</Text>
