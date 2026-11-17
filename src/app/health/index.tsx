@@ -1,13 +1,13 @@
 /**
- * Saúde > Hoje: painel do dia como nos apps de relógio (Apple Saúde, Fitbit, Garmin, Oura, Whoop):
- * prontidão, anéis de atividade, grade com todos os indicadores (sono, coração, atividade, sinais vitais e corpo),
- * semana contra a anterior e metas. Dados só no aparelho (`lib/health.ts`); sem dado = "–", nunca 0 inventado.
+ * Saúde > Hoje: painel do dia como nos apps de relógio (Apple Fitness, Fitbit, Garmin, Oura, Whoop, Bevel, Ultrahuman):
+ * semana em mini-anéis, prontidão, anéis de atividade, resumo do dia em frases (regras simples, sem IA), checagem dos sinais vitais,
+ * grade com todos os indicadores, semana contra a anterior e metas. Dados só no aparelho (`lib/health.ts`); sem dado = "–", nunca 0 inventado.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { ActivityRings, Delta, HCard, HealthNotice, HTitle, KpiGrid, KpiTile, LegendRow, MC, Ring, type IconName } from '../../components/HealthKit';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityRings, Delta, fmtNum, HCard, HealthNotice, HTitle, InRangeChips, KpiGrid, KpiTile, LegendRow, MC, Ring, WeekRings, type IconName } from '../../components/HealthKit';
 import { Text } from '../../components/Text';
 import { Btn, Header, IconButton, Screen, Sheet, TextLink } from '../../components/ui';
 import { toDisplayDist, toDisplayWeight } from '../../lib/format';
@@ -18,15 +18,21 @@ import { colors, radius } from '../../lib/theme';
 
 type Num = (d: DayHealth) => number | undefined;
 type Tile = { id: string; icon: IconName; color: string; label: string; value: string; unit?: string; sub?: string; delta?: ReactNode; to: Href };
+/** Frase do resumo do dia: `text` = chave do dicionário (frase inteira, sem o ponto); `a` (negrito) e `b` = números, fora da chave. */
+type Fact = { id: string; text: string; tone: -1 | 0 | 1; w: number; a?: string; b?: string };
 
-const n0 = (v: number) => Math.round(v).toLocaleString(locale());
-const n1 = (v: number) => (Math.round(v * 10) / 10).toLocaleString(locale(), { maximumFractionDigits: 1 });
-const n2 = (v: number) => v.toLocaleString(locale(), { minimumFractionDigits: v >= 10 ? 1 : 2, maximumFractionDigits: v >= 10 ? 1 : 2 });
+/** Números sempre no formato do idioma (11.733 passos e 81,2 kg em português). */
+const n0 = (v: number) => fmtNum(v);
+const n1 = (v: number) => fmtNum(v, 1);
 const sleepTxt = (m: number) => fmtSleep(Math.round(m));
-const pctOf = (v: number, goal: number) => `${Math.round((v / Math.max(1, goal)) * 100)}% ${tr('of goal')}`;
+const pctOf = (v: number, goal: number) => `${fmtNum((v / Math.max(1, goal)) * 100)}% ${tr('of goal')}`;
+/** Sinal na frente (+12% / −4 bpm), com o menos tipográfico. */
+const signed = (v: number, body: string) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${body}`;
 const shortDate = (k: string) => (k === todayKey() ? tr('Today') : new Date(`${k}T12:00:00`).toLocaleDateString(locale(), { day: 'numeric', month: 'short' }));
+const hourNow = () => new Date().getHours();
 const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : undefined);
 const total = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) : undefined);
+const num = (x: unknown): x is number => typeof x === 'number' && isFinite(x);
 /** Valor do cartão: sem dado = "–" e sem unidade. */
 const val = (v: number | undefined, fmt: (x: number) => string, unit?: string) => (v == null ? { value: '–' } : { value: fmt(v), unit });
 /** Cor da prontidão (lida na hora: o tema troca a paleta). */
@@ -41,6 +47,27 @@ const GOALS: { key: keyof Goals; label: string; sub: string; icon: IconName; col
   { key: 'floors', label: 'Floors', sub: 'Per day', icon: 'trending-up', color: MC.floors, step: 1, min: 1, max: 200, fmt: n0, get: (d) => d.floors },
 ];
 const withUnit = (txt: string, unit?: string) => (unit ? `${txt} ${unit}` : txt);
+
+/**
+ * Sinais vitais do dia contra a média dos 14 dias anteriores (como a checagem de Corpo e sinais vitais e o Ultrahuman).
+ * Faixa = média ± `tol` (fração da média; com `abs`, em pontos: SpO2).
+ */
+const HRV_TOL = 0.2;
+const VITALS: { id: string; label: string; f: Num; tol: number; abs?: boolean }[] = [
+  { id: 'rhr', label: 'Resting HR', f: (d) => d.restingHr, tol: 0.1 },
+  { id: 'hrv', label: 'HRV', f: (d) => d.hrv, tol: HRV_TOL },
+  { id: 'spo2', label: 'Blood oxygen', f: (d) => d.spo2, tol: 2, abs: true },
+  { id: 'resp', label: 'Breathing', f: (d) => d.respRate, tol: 0.1 },
+];
+/** Mínimo de medidas nos 14 dias anteriores para comparar (com 1 ou 2 a "média" engana). */
+const MIN_BASE = 3;
+
+/** Sugestão de treino de hoje conforme o rótulo da prontidão (`readiness` em lib/health). */
+const TIPS: Record<string, { text: string; icon: IconName }> = {
+  'Ready to push': { text: 'Good day for a heavy session.', icon: 'barbell' },
+  'Train normally': { text: 'Train as planned at a moderate effort.', icon: 'barbell-outline' },
+  'Take it easy': { text: 'Prefer mobility or a light session today.', icon: 'walk' },
+};
 
 function StepBtn({ icon, onPress, disabled, testID }: { icon: IconName; onPress: () => void; disabled?: boolean; testID?: string }) {
   return (
@@ -67,6 +94,22 @@ function Factor({ color, label, weight, value, base }: { color: string; label: s
   );
 }
 
+/** Uma frase do resumo: a frase vem do dicionário inteira e os números entram à parte, entre parênteses ("6h 10m de 8h 00m"). */
+function FactText({ f, first }: { f: Fact; first: boolean }) {
+  return (
+    <Text>
+      {first ? '' : ' '}
+      {f.text}
+      {f.a != null ? ' (' : ''}
+      {f.a != null ? <Text style={{ fontWeight: '700' }}>{f.a}</Text> : null}
+      {f.b != null ? ` ${tr('of')} ` : ''}
+      {f.b ?? ''}
+      {f.a != null ? ')' : ''}
+      .
+    </Text>
+  );
+}
+
 export default function HealthHome() {
   const h = useHealth();
   const { profile } = useStore();
@@ -82,11 +125,27 @@ export default function HealthHome() {
   const week = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(`${tk}T12:00:00`); d.setDate(d.getDate() - (6 - i)); return d; }), [tk]);
   const byDate = useMemo(() => new Map(h.days.map((d) => [d.date, d])), [h.days]);
 
+  // Mini-anéis de cada dia (Mover, Exercício, Passos contra as metas), como a semana do Apple Fitness
+  const weekDays = useMemo(() => week.map((d) => {
+    const k = dayKey(d);
+    const x = byDate.get(k);
+    const frac = (v: number | undefined, goal: number) => (v != null ? v / Math.max(1, goal) : 0);
+    return {
+      key: k,
+      label: `${d.toLocaleDateString(locale(), { weekday: 'narrow' }).toUpperCase()} ${d.getDate()}`,
+      rings: [
+        { value: frac(x?.activeKcal, g.moveKcal), color: MC.move },
+        { value: frac(x?.exerciseMin, g.exerciseMin), color: MC.exercise },
+        { value: frac(x?.steps, g.steps), color: MC.steps },
+      ],
+    };
+  }), [week, byDate, g.moveKcal, g.exerciseMin, g.steps]);
+
   // Esta semana (7 dias até hoje) contra os 7 anteriores
   const weekRows = useMemo(() => {
     const keys = (back: number) => Array.from({ length: 7 }, (_, i) => { const d = new Date(`${tk}T12:00:00`); d.setDate(d.getDate() - back - i); return dayKey(d); });
     const cur = keys(0), prev = keys(7);
-    const vals = (ks: string[], f: Num) => ks.map((k) => byDate.get(k)).map((d) => (d ? f(d) : undefined)).filter((x): x is number => typeof x === 'number' && isFinite(x));
+    const vals = (ks: string[], f: Num) => ks.map((k) => byDate.get(k)).map((d) => (d ? f(d) : undefined)).filter(num);
     const row = (o: { id: string; icon: IconName; color: string; label: string; f: Num; agg: (xs: number[]) => number | undefined; fmt: (v: number) => string; pct: boolean; unit: string; better: boolean }) => {
       const a = o.agg(vals(cur, o.f)), b = o.agg(vals(prev, o.f));
       if (a == null && b == null) return null;
@@ -140,6 +199,7 @@ export default function HealthHome() {
   }
 
   const day = byDate.get(sel);
+  const isToday = sel === tk;
   const r = readiness(h.days, sel, g.sleepMin);
   const ss = sleepScore(day, g.sleepMin);
   const hrvBase = vsBaseline(h.days, sel, (d) => d.hrv)?.base;
@@ -156,17 +216,26 @@ export default function HealthHome() {
     if (!b) return {};
     return { sub: Math.round(Math.abs(b.diff)) !== 0 ? 'vs avg' : undefined, delta: <Delta diff={b.diff} higherIsBetter={higherIsBetter} /> };
   };
+  /** Valor do dia contra a média dos 14 registros anteriores (mesma janela do `vsBaseline`), só com 3+ medidas nela. */
+  const vsUsual = (f: Num) => {
+    const cur = day ? f(day) : undefined;
+    const xs = h.days.filter((d) => d.date < sel).slice(-14).map(f).filter(num);
+    const base = mean(xs);
+    if (!num(cur) || base == null || xs.length < MIN_BASE) return null;
+    return { cur, base, diff: cur - base, pct: base ? (cur - base) / base : 0 };
+  };
+  const distTxt = (m: number) => { const v = toDisplayDist(m, units); return fmtNum(v, v >= 10 ? 1 : 2); };
 
   const tiles: Tile[] = [];
   const add = (f: Num, t: Tile) => { if (ever(f)) tiles.push(t); };
   add((d) => d.sleepMin, { id: 'sleep', icon: 'moon', color: MC.sleep, label: 'Sleep', ...val(day?.sleepMin, sleepTxt), sub: ss != null ? `${tr('Score')} ${ss}` : undefined, to: '/health/sleep' });
   add((d) => d.restingHr, { id: 'rhr', icon: 'heart', color: MC.heart, label: 'Resting HR', ...val(day?.restingHr, n0, 'bpm'), ...(day?.restingHr != null ? vsAvg((d) => d.restingHr, false) : {}), to: '/health/heart' });
   add((d) => d.hrv, { id: 'hrv', icon: 'pulse', color: MC.hrv, label: 'HRV', ...val(day?.hrv, n0, 'ms'), ...(day?.hrv != null ? vsAvg((d) => d.hrv, true) : {}), to: '/health/heart' });
-  add((d) => d.avgHr, { id: 'avghr', icon: 'heart-outline', color: MC.heart, label: 'Avg HR', ...val(day?.avgHr, n0, 'bpm'), sub: day?.minHr != null && day?.maxHr != null ? `${day.minHr}–${day.maxHr} bpm` : undefined, to: '/health/heart' });
+  add((d) => d.avgHr, { id: 'avghr', icon: 'heart-outline', color: MC.heart, label: 'Avg HR', ...val(day?.avgHr, n0, 'bpm'), sub: day?.minHr != null && day?.maxHr != null ? `${n0(day.minHr)}–${n0(day.maxHr)} bpm` : undefined, to: '/health/heart' });
   add((d) => d.steps, { id: 'steps', icon: 'footsteps', color: MC.steps, label: 'Steps', ...val(day?.steps, n0), sub: day?.steps != null ? pctOf(day.steps, g.steps) : undefined, to: '/health/activity' });
   add((d) => d.activeKcal, { id: 'active', icon: 'flame', color: MC.move, label: 'Active calories', ...val(day?.activeKcal, n0, 'kcal'), sub: day?.activeKcal != null ? pctOf(day.activeKcal, g.moveKcal) : undefined, to: '/health/activity' });
   add((d) => d.totalKcal, { id: 'total', icon: 'flame-outline', color: MC.calories, label: 'Total calories', ...val(day?.totalKcal, n0, 'kcal'), sub: day?.totalKcal != null ? 'Active + resting' : undefined, to: '/health/activity' });
-  add((d) => d.distanceM, { id: 'distance', icon: 'navigate', color: MC.distance, label: 'Distance', ...val(day?.distanceM, (m) => n2(toDisplayDist(m, units)), units.distance), to: '/health/activity' });
+  add((d) => d.distanceM, { id: 'distance', icon: 'navigate', color: MC.distance, label: 'Distance', ...val(day?.distanceM, distTxt, units.distance), to: '/health/activity' });
   add((d) => d.floors, { id: 'floors', icon: 'trending-up', color: MC.floors, label: 'Floors', ...val(day?.floors, n0), sub: day?.floors != null ? pctOf(day.floors, g.floors) : undefined, to: '/health/activity' });
   add((d) => d.exerciseMin, { id: 'exercise', icon: 'stopwatch', color: MC.exercise, label: 'Exercise', ...val(day?.exerciseMin, n0, 'min'), sub: day?.exerciseMin != null ? pctOf(day.exerciseMin, g.exerciseMin) : undefined, to: '/health/activity' });
   add((d) => d.spo2, { id: 'spo2', icon: 'water', color: MC.spo2, label: 'Blood oxygen', ...val(day?.spo2, n1, '%'), to: '/health/body' });
@@ -178,12 +247,58 @@ export default function HealthHome() {
   const fat = latest((d) => d.bodyFatPct);
   add((d) => d.bodyFatPct, { id: 'fat', icon: 'body-outline', color: MC.fat, label: 'Body fat', ...val(fat?.v, n1, '%'), sub: fat ? shortDate(fat.date) : undefined, to: '/health/body' });
 
-  const rings = [
-    { id: 'move', color: MC.move, v: day?.activeKcal, goal: g.moveKcal, unit: 'kcal' },
-    { id: 'exercise', color: MC.exercise, v: day?.exerciseMin, goal: g.exerciseMin, unit: 'min' },
-    { id: 'steps', color: MC.steps, v: day?.steps, goal: g.steps, unit: 'steps' },
+  // Anéis grandes do dia: legenda curta para caber em 360 px também na web (o ícone já diz que são passos)
+  const rings: { id: string; icon: IconName; color: string; v?: number; goal: number; unit?: string }[] = [
+    { id: 'move', icon: 'flame', color: MC.move, v: day?.activeKcal, goal: g.moveKcal, unit: 'kcal' },
+    { id: 'exercise', icon: 'stopwatch', color: MC.exercise, v: day?.exerciseMin, goal: g.exerciseMin, unit: 'min' },
+    { id: 'steps', icon: 'footsteps', color: MC.steps, v: day?.steps, goal: g.steps },
   ];
-  const card = { flex: 1, minWidth: 0, backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, gap: 10 } as const;
+
+  // Resumo do dia (estilo Bevel/Fitbit, por regras): sono x meta, VFC e FC de repouso x média de 14 dias, passos x meta.
+  // Cada fato tem um tom (-1 pior, 0 neutro, +1 melhor) e um peso; os 2 mais fortes viram as frases, puxando os do mesmo tom da prontidão.
+  const facts: Fact[] = [];
+  if (day?.sleepMin != null) {
+    const short = g.sleepMin - day.sleepMin;
+    if (short <= 0) facts.push({ id: 'sleep', text: 'You met your sleep goal', tone: 1, w: 1, a: sleepTxt(day.sleepMin) });
+    else if (short <= 30) facts.push({ id: 'sleep', text: 'You slept close to your goal', tone: 0, w: 0.5, a: sleepTxt(day.sleepMin), b: sleepTxt(g.sleepMin) });
+    else facts.push({ id: 'sleep', text: 'You slept less than your goal', tone: -1, w: 1 + Math.min(2, short / 60), a: sleepTxt(day.sleepMin), b: sleepTxt(g.sleepMin) });
+  }
+  const hv = vsUsual((d) => d.hrv);
+  if (hv) {
+    const p = Math.round(hv.pct * 100);
+    const a = signed(p, `${fmtNum(Math.abs(p))}%`);
+    // Mesma faixa do cartão Vitals (±20%): a frase nunca diz "mais baixa que o normal" com o selo da VFC verde
+    if (hv.pct > HRV_TOL) facts.push({ id: 'hrv', text: 'Your HRV was higher than usual', tone: 1, w: 1 + Math.min(1, (hv.pct - HRV_TOL) * 5), a });
+    else if (hv.pct < -HRV_TOL) facts.push({ id: 'hrv', text: 'Your HRV was lower than usual', tone: -1, w: 1 + Math.min(2, (-hv.pct - HRV_TOL) * 10), a });
+    else facts.push({ id: 'hrv', text: 'Your HRV was within your usual range', tone: 0, w: 0.4 });
+  }
+  const rh = vsUsual((d) => d.restingHr);
+  if (rh) {
+    const bpm = Math.round(rh.diff);
+    const a = signed(bpm, `${fmtNum(Math.abs(bpm))} bpm`);
+    if (bpm >= 3) facts.push({ id: 'rhr', text: 'Your resting heart rate was higher than usual', tone: -1, w: 1 + Math.min(2, (bpm - 3) / 2), a });
+    else if (bpm <= -3) facts.push({ id: 'rhr', text: 'Your resting heart rate was lower than usual', tone: 1, w: 1 + Math.min(1, (-bpm - 3) / 3), a });
+    else facts.push({ id: 'rhr', text: 'Your resting heart rate was steady', tone: 0, w: 0.3 });
+  }
+  if (day?.steps != null) {
+    if (day.steps >= g.steps) facts.push({ id: 'steps', text: 'You hit your step goal', tone: 1, w: 0.9, a: n0(day.steps) });
+    // Hoje cedo os passos ainda são poucos por natureza: só ganham peso no fim da tarde
+    else facts.push({ id: 'steps', text: isToday ? 'You are below your step goal so far' : 'You stayed below your step goal', tone: 0, w: isToday ? (hourNow() >= 17 ? 0.8 : 0.1) : 0.6, a: n0(day.steps), b: n0(g.steps) });
+  }
+  const dir = r ? (r.score >= 75 ? 1 : r.score >= 50 ? 0 : -1) : 0;
+  const rank = (f: Fact) => f.w + (dir !== 0 && f.tone === dir ? 1 : 0);
+  const shown = [...facts].sort((x, y) => rank(y) - rank(x)).slice(0, 2);
+  // Sugestão de treino só para hoje (num dia passado o resumo é só o que aconteceu)
+  const tip = isToday && r ? TIPS[r.label] : undefined;
+
+  // Sinais vitais na faixa (só os que têm valor no dia e média com 3+ medidas)
+  const vitals = VITALS.flatMap((v) => {
+    const c = vsUsual(v.f);
+    return c ? [{ label: v.label, ok: v.abs ? Math.abs(c.diff) <= v.tol : Math.abs(c.pct) <= v.tol }] : [];
+  });
+
+  const box = { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, gap: 10 } as const;
+  const card = { ...box, flex: 1, minWidth: 0 } as const;
   const bands = [
     { range: '75–100', label: 'Ready to push', color: colors.success },
     { range: '50–74', label: 'Train normally', color: colors.warn },
@@ -200,19 +315,13 @@ export default function HealthHome() {
       >
         {h.isSample && <HealthNotice isSample onPress={toIntegrations} />}
 
-        {/* Últimos 7 dias */}
-        <View style={{ flexDirection: 'row', gap: 6 }}>
-          {week.map((d) => {
-            const k = dayKey(d);
-            const on = k === sel;
-            return (
-              <Pressable key={k} onPress={() => setSel(k)} testID={`health-day-${k}`} style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 10, backgroundColor: on ? colors.primary : colors.surface }}>
-                <Text style={{ color: on ? colors.onPrimary : colors.muted, fontSize: 11 }}>{d.toLocaleDateString(locale(), { weekday: 'narrow' }).toUpperCase()}</Text>
-                <Text style={{ color: on ? colors.onPrimary : colors.text, fontWeight: '700' }}>{d.getDate()}</Text>
-                <View style={{ width: 5, height: 5, borderRadius: 3, marginTop: 2, backgroundColor: byDate.has(k) ? (on ? colors.onPrimary : colors.primary) : 'transparent' }} />
-              </Pressable>
-            );
-          })}
+        {/* Últimos 7 dias em mini-anéis. Um WeekRings por dia para cada dia manter o seu testID (o do kit não recebe testID). */}
+        <View testID="health-days" style={{ flexDirection: 'row' }}>
+          {weekDays.map((d) => (
+            <View key={d.key} testID={`health-day-${d.key}`} style={{ flex: 1, alignItems: 'center' }}>
+              <WeekRings days={[d]} selected={d.key === sel ? 0 : undefined} onPress={() => setSel(d.key)} size={40} />
+            </View>
+          ))}
         </View>
 
         {/* Prontidão + Atividade */}
@@ -227,7 +336,8 @@ export default function HealthHome() {
               <Ring value={r ? r.score / 100 : 0} size={88} stroke={10} color={r ? scoreColor(r.score) : colors.faint}>
                 <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{r ? r.score : '–'}</Text>
               </Ring>
-              <Text numberOfLines={1} adjustsFontSizeToFit style={{ alignSelf: 'stretch', textAlign: 'center', fontSize: 13, fontWeight: '700', color: r ? scoreColor(r.score) : colors.muted }}>{r ? r.label : 'Not enough data'}</Text>
+              {/* Até 2 linhas: na web o texto não encolhe sozinho ("Dados insuficientes" quase não cabe em 360 px) */}
+              <Text numberOfLines={2} style={{ alignSelf: 'stretch', textAlign: 'center', fontSize: 13, fontWeight: '700', color: r ? scoreColor(r.score) : colors.muted }}>{r ? r.label : 'Not enough data'}</Text>
             </View>
           </Pressable>
 
@@ -243,15 +353,49 @@ export default function HealthHome() {
             <View style={{ gap: 3 }}>
               {rings.map((x) => (
                 <View key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: x.color }} />
-                  <Text numberOfLines={1} adjustsFontSizeToFit style={{ flex: 1, fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] }}>
-                    <Text style={{ color: colors.text, fontWeight: '700' }}>{x.v != null ? n0(x.v) : '–'}</Text>/{n0(x.goal)} {x.unit}
+                  <Ionicons name={x.icon} size={12} color={x.color} />
+                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] }}>
+                    <Text style={{ color: colors.text, fontWeight: '700' }}>{x.v != null ? n0(x.v) : '–'}</Text>/{n0(x.goal)}{x.unit ? ` ${x.unit}` : ''}
                   </Text>
                 </View>
               ))}
             </View>
           </Pressable>
         </View>
+
+        {/* Resumo do dia em 1–2 frases + sugestão de treino (hoje) */}
+        {(shown.length > 0 || !!tip) && (
+          <View testID="health-insight" style={box}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="bulb" size={16} color={MC.calories} />
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>{isToday ? "Today's insight" : 'Day summary'}</Text>
+              {!isToday && <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{shortDate(sel)}</Text>}
+            </View>
+            {shown.length > 0 && (
+              <Text style={{ fontSize: 15, lineHeight: 21, color: colors.text }}>
+                {shown.map((f, i) => <FactText key={f.id} f={f} first={i === 0} />)}
+              </Text>
+            )}
+            {!!tip && !!r && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }}>
+                <Ionicons name={tip.icon} size={18} color={scoreColor(r.score)} />
+                <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>{tip.text}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Sinais vitais na faixa típica (como o Ultrahuman): toque abre Corpo e sinais vitais */}
+        {vitals.length > 0 && (
+          <Pressable onPress={() => router.push('/health/body')} testID="health-vitals" style={box}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="fitness" size={16} color={MC.heart} />
+              <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>Vitals</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.faint} />
+            </View>
+            <InRangeChips items={vitals} />
+          </Pressable>
+        )}
 
         {/* Todos os indicadores do dia */}
         {tiles.length > 0 && (
@@ -334,8 +478,8 @@ export default function HealthHome() {
             How ready your body looks for training, from 0 to 100. It compares last night&apos;s sleep, your HRV and your resting heart rate with your own 14-day average.
           </Text>
           <Factor color={MC.sleep} label="Sleep" weight="45%" value={ss != null ? `${tr('Score')} ${ss}` : '–'} base={day?.sleepMin != null ? sleepTxt(day.sleepMin) : undefined} />
-          <Factor color={MC.hrv} label="HRV" weight="35%" value={day?.hrv != null ? `${day.hrv} ms` : '–'} base={hrvBase != null ? `${tr('14-day avg')} ${n0(hrvBase)} ms` : undefined} />
-          <Factor color={MC.heart} label="Resting HR" weight="20%" value={day?.restingHr != null ? `${day.restingHr} bpm` : '–'} base={rhrBase != null ? `${tr('14-day avg')} ${n0(rhrBase)} bpm` : undefined} />
+          <Factor color={MC.hrv} label="HRV" weight="35%" value={day?.hrv != null ? `${n0(day.hrv)} ms` : '–'} base={hrvBase != null ? `${tr('14-day avg')} ${n0(hrvBase)} ms` : undefined} />
+          <Factor color={MC.heart} label="Resting HR" weight="20%" value={day?.restingHr != null ? `${n0(day.restingHr)} bpm` : '–'} base={rhrBase != null ? `${tr('14-day avg')} ${n0(rhrBase)} bpm` : undefined} />
           <View style={{ gap: 6, paddingTop: 2 }}>
             {bands.map((b) => (
               <View key={b.range} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -367,10 +511,13 @@ export default function HealthHome() {
                   <Text numberOfLines={1} style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{x.label}</Text>
                   <Text numberOfLines={2} style={{ color: colors.muted, fontSize: 12 }}>{x.sub}</Text>
                 </View>
-                {/* Passo a passo: cabe em 360 px (rótulo com ~130 px) */}
+                {/* Passo a passo: cabe em 360 px (rótulo com ~120 px); valor grande e unidade pequena embaixo (na web o texto não encolhe) */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                   <StepBtn icon="remove" disabled={v <= x.min} onPress={() => change(-1)} testID={`goal-${x.key}-minus`} />
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={{ width: 76, textAlign: 'center', color: colors.text, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{withUnit(x.fmt(v), x.unit)}</Text>
+                  <View style={{ width: 80, alignItems: 'center' }}>
+                    <Text numberOfLines={1} style={{ color: colors.text, fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] }}>{x.fmt(v)}</Text>
+                    {!!x.unit && <Text numberOfLines={1} style={{ color: colors.muted, fontSize: 11 }}>{x.unit}</Text>}
+                  </View>
                   <StepBtn icon="add" disabled={v >= x.max} onPress={() => change(1)} testID={`goal-${x.key}-plus`} />
                 </View>
               </View>

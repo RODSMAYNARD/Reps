@@ -1367,4 +1367,6 @@ export const PT: Record<string, string> = {
   'You stayed below your step goal': 'Você ficou abaixo da sua meta de passos',
   'Today\'s insight': 'Resumo de hoje',
   'Day summary': 'Resumo do dia',
+  // Seção Saúde (relógios e pulseiras)
+
 };
