@@ -68,7 +68,7 @@ function PlanView({ g, onStart }: { g: GState; onStart: () => void }) {
     <View style={{ flex: 1 }}>
       <ScrollView
         ref={ref} horizontal showsHorizontalScrollIndicator={false} snapToInterval={step} decelerationRate="fast" scrollEventThrottle={32}
-        style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 14, gap: GAP, paddingRight: PAD + 16 }}
+        style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 14, gap: GAP, paddingRight: PAD + 16 }}
         onScroll={(e) => { const i = Math.max(0, Math.min(GPLANS.length - 1, Math.round(e.nativeEvent.contentOffset.x / step))); if (GPLANS[i].id !== g.planId) setG({ planId: GPLANS[i].id }); }}>
         {GPLANS.map((p) => {
           const d = g.done[p.id] ?? 0;
@@ -87,7 +87,7 @@ function PlanView({ g, onStart }: { g: GState; onStart: () => void }) {
         {GPLANS.map((p, i) => <View key={p.id} style={{ height: 5, width: i === idx ? 14 : 5, borderRadius: 3, backgroundColor: i === idx ? colors.primary : colors.dot }} />)}
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 24, gap: GAP }} testID="g-days">
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 24, gap: GAP }} testID="g-days">
         {plan.days.map((f, i) => {
           const cur = i === done, past = i < done;
           const title = f ? `${tr('Day')} ${dayNumber(i)}` : tr('Rest Day');

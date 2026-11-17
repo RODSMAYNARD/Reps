@@ -35,7 +35,7 @@ export default function GEquipment() {
   return (
     <Screen>
       <Header title="Equipment" titleAlign="left" right={<HeaderAction label="Default" onPress={() => setSel(presetIds('commercial'))} />} />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 20 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 20 }}>
         {GROUPS.map((x) => (
           <Pressable key={x} onPress={() => setGroup(x)} style={{ paddingTop: 12 }} testID={`g-eq-tab-${x}`}>
             <Text style={{ fontSize: 15, fontWeight: group === x ? '700' : '400', color: group === x ? colors.text : colors.muted }}>{x}</Text>
