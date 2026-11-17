@@ -7,7 +7,7 @@ import { Text, TextInput } from '../../components/Text';
 import { Dialog, Screen } from '../../components/ui';
 import { track } from '../../lib/analytics';
 import { useChallenges } from '../../lib/challenges';
-import { type Action, type Card, type Ctx, type Draft, L, baseChips, clearCoach, greet, pushMsg, reply, setCoach, swapList, useCoach } from '../../lib/coach';
+import { type Action, type Card, type Ctx, type Draft, L, askAI, baseChips, clearCoach, getCoach, greet, pushMsg, reply, setCoach, swapList, useCoach } from '../../lib/coach';
 import { useG } from '../../lib/gplan';
 import { readiness, useHealth } from '../../lib/health';
 import { useKeyboardHeight } from '../../lib/keyboard';
@@ -94,9 +94,17 @@ export default function CoachTab() {
     const out = reply(msg, live.current.ctx, live.current.mem);
     track('coach_message', { intent: out.intent });
     setCoach({ mem: out.mem });
-    say(out.msgs, () => {
+    const local = () => say(out.msgs, () => {
       setChips(out.chips ?? null);
       if (out.run) { const a = out.run; setTimeout(() => run(a), 500); }
+    });
+    if (out.intent !== 'unknown') return local();
+    // assunto que o Coach local não conhece: pergunta para a IA; se ela não responder, vale a resposta local
+    setTyping(true);
+    askAI(getCoach().msgs, live.current.ctx, out.mem).then((answer) => {
+      if (!answer) return local();
+      pushMsg('coach', { text: answer });
+      setTyping(false);
     });
   };
 

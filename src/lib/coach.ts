@@ -8,6 +8,7 @@ import { GPLANS, type GState } from './gplan';
 import { getLang } from './i18n';
 import { dayKey, startOfWeek, weeklySeries } from './stats';
 import { substitutesFor } from './substitutes';
+import { supabase } from './supabase';
 import { dayStreak, estMin, fromTemplate, todayPlan, type TodayPlan } from './today';
 import type { ActiveWorkout, Exercise, Routine, SavedEntry, SetRow, TrainerProgram, Units, Workout } from './types';
 
@@ -62,6 +63,7 @@ export function setCoach(patch: Partial<CoachState> | ((s: CoachState) => Partia
   if (uid) AsyncStorage.setItem(`reps:coach:${uid}`, JSON.stringify({ msgs: state.msgs, mem: state.mem, greeted: state.greeted })).catch(() => {});
 }
 export const pushMsg = (from: Msg['from'], d: Draft) => setCoach((s) => ({ msgs: [...s.msgs, { id: `${Date.now()}-${seq++}`, from, text: d.text, card: d.card, at: Date.now() }] }));
+export const getCoach = () => state;
 export const clearCoach = () => setCoach({ msgs: [], mem: {}, greeted: '' });
 
 export function useCoach(userId: string | null) {
@@ -355,4 +357,42 @@ export function reply(raw: string, c: Ctx, m: Memory): Out {
   const help = L('I can set up today\'s workout, make a shorter or lighter version, swap an exercise, show your progress and suggest plans and challenges. I also answer basic training questions: sets, rest, warm-up, when to add weight.', 'Eu monto o treino de hoje, faço uma versão mais curta ou mais leve, troco um exercício, mostro a sua evolução e sugiro planos e desafios. Também respondo dúvidas básicas de treino: séries, descanso, aquecimento, quando subir o peso.');
   if (/ajuda|help|o que voce (faz|sabe)|what can you/.test(t)) return { intent: 'help', mem: clear, msgs: [{ text: help }] };
   return { intent: 'unknown', mem: clear, msgs: [{ text: `${L('I do not know how to answer that yet.', 'Essa eu ainda não sei responder.')} ${help}` }] };
+}
+
+// ---------- IA (Edge Function `coach`) ----------
+/** Resumo dos dados do usuário que vai junto com a pergunta para a IA (texto curto, sem e-mail nem id). */
+export function contextText(c: Ctx, m: Memory): string {
+  const p = planFor(c, m);
+  const ws = startOfWeek();
+  const week = c.workouts.filter((w) => new Date(w.date) >= ws).length;
+  const goal = c.weeklyGoal || c.trainer?.settings.frequency || 0;
+  const lines = [
+    `language: ${getLang()}`,
+    `name: ${c.name || 'unknown'}`,
+    `weight unit: ${c.units.weight}`,
+    `today: ${dayKey(new Date())}`,
+    c.active ? `workout in progress: ${c.active.title}` : `today's planned workout: ${p.title} (~${p.minutes} min): ${p.entries.map((e) => `${nameOf(c, e.exerciseId)} ${e.sets.length}x${e.sets[0]?.reps ?? '?'}`).join('; ')}`,
+    `workouts this week: ${week}${goal ? ` of a goal of ${goal}` : ''}; day streak: ${dayStreak(c.workouts)}; total workouts: ${c.workouts.length}`,
+    `recent workouts: ${c.workouts.slice(0, 6).map((w) => `${dayKey(w.date)} ${w.title} (${Math.round(w.durationSec / 60)} min, ${w.entries.reduce((a, e) => a + e.sets.length, 0)} sets: ${w.entries.slice(0, 6).map((e) => { const top = e.sets.reduce((b, s) => ((s.kg ?? 0) > (b.kg ?? 0) ? s : b), e.sets[0]); return `${nameOf(c, e.exerciseId)}${top?.kg ? ` ${fmtVolume(top.kg, c.units)} x ${top.reps ?? '?'}` : ''}`; }).join(', ')})`).join(' | ') || 'none yet'}`,
+  ];
+  if (c.trainer) lines.push(`Trainer program: ${c.trainer.name}, goal ${c.trainer.settings.goal}, level ${c.trainer.settings.level}, ${c.trainer.settings.frequency} days a week`);
+  const plan = GPLANS.find((x) => { const d = c.g.done[x.id] ?? 0; return d > 0 && d < 30; });
+  if (plan) lines.push(`30-day plan in progress: ${plan.title}, day ${(c.g.done[plan.id] ?? 0) + 1} of 30`);
+  const act = challengeViews(c.ch, c.workouts, c.units).filter((v) => v.status === 'active' && v.p);
+  if (act.length) lines.push(`challenges in progress: ${act.map((v) => `${v.c.title} ${fmtProgress(v.c, v.p!, c.units)}`).join('; ')}`);
+  if (c.sleepMin) lines.push(`sleep last night: ${hours(c.sleepMin)}`);
+  if (c.readiness != null) lines.push(`recovery score today: ${c.readiness}/100`);
+  lines.push('shortcuts under the chat: start workout, 30-minute version, swap an exercise, sore, my progress, plans and challenges');
+  return lines.join('\n');
+}
+
+/** Pergunta livre para a IA. Devolve o texto, ou null se a função não respondeu (sem chave, sem rede, recusa): aí vale a resposta local. */
+export async function askAI(msgs: Msg[], c: Ctx, m: Memory): Promise<string | null> {
+  try {
+    const messages = msgs.slice(-16).map((x) => ({ role: x.from === 'me' ? 'user' : 'assistant', content: x.text.replace(/\*\*/g, '') }));
+    const { data, error } = await supabase.functions.invoke('coach', { body: { messages, context: contextText(c, m) } });
+    if (error) return null;
+    const text = (data as { text?: string } | null)?.text;
+    return typeof text === 'string' && text.trim() ? text.trim() : null;
+  } catch { return null; }
 }
