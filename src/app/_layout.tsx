@@ -64,6 +64,7 @@ function Routes() {
           <Stack.Screen name="routines" />
           <Stack.Screen name="trainer" />
           <Stack.Screen name="g" />
+          <Stack.Screen name="challenges" />
           <Stack.Screen name="exercises" />
           <Stack.Screen name="feed" />
           <Stack.Screen name="profile" />

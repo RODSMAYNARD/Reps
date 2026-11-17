@@ -7,52 +7,34 @@ import { GymIcon } from '../../components/GymIcon';
 import { RecoveryCard } from '../../components/HealthCards';
 import { Text } from '../../components/Text';
 import { Dialog, Screen } from '../../components/ui';
-import { CAT_BY_EN, catKey } from '../../lib/catalog';
-import { PROGRAMS, type Template } from '../../lib/constants';
+import { challengeViews, fmtProgress, useChallenges } from '../../lib/challenges';
+import { PROGRAMS } from '../../lib/constants';
 import { fmtDate, fmtDuration, fmtVolume, fmtWeight } from '../../lib/format';
+import { GPLANS, planSub, planTint, setG, useG } from '../../lib/gplan';
 import type { GymIcon as GymIconName } from '../../lib/gymIcons';
-import { tr } from '../../lib/i18n';
+import { locale, tr } from '../../lib/i18n';
 import { weeklySeries, workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
-import type { Routine, RoutineExercise, Workout } from '../../lib/types';
+import { dayStreak, estMin, fromTemplate, weekDays } from '../../lib/today';
 
 /** Home alternativa (H2) para o Rodrigo comparar com a Início atual: tudo com os dados reais do app. */
 
 const HERO = require('../../../assets/images/h2-hero.jpg');
 const HERO_BG = '#E5E8ED'; // mesma cor do fundo da foto (o card fica claro nos dois temas, como na referência)
+const STREAK = '#FF6B2C';
 const PAD = 20;
 const GAP = 10;
 
-const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-
-/** Dias seguidos com treino, contando de hoje (ou de ontem, se hoje ainda não treinou). */
-function dayStreak(workouts: Workout[]) {
-  const days = new Set(workouts.map((w) => dayKey(new Date(w.date))));
-  const d = new Date();
-  if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1);
-  let n = 0;
-  while (days.has(dayKey(d))) { n++; d.setDate(d.getDate() - 1); }
-  return n;
-}
-
 const weekStart = () => { const s = new Date(); s.setHours(0, 0, 0, 0); s.setDate(s.getDate() - ((s.getDay() + 6) % 7)); return s; }; // semana começa na segunda
-
-/** Minutos estimados: ~2,5 min por série (execução + descanso). */
-const estMin = (sets: number) => Math.max(10, Math.round((sets * 2.5) / 5) * 5);
-
-const fromTemplate = (t: Template): Routine => ({
-  id: '', title: t.title, notes: t.notes,
-  exercises: t.exercises.flatMap((n) => CAT_BY_EN.get(n) ?? []).map((c): RoutineExercise => ({
-    exerciseId: catKey(c), notes: '', restSec: c.k === 'duration' ? 0 : 90,
-    sets: [1, 2, 3].map(() => ({ type: 'normal' as const, kg: null, reps: c.k === 'duration' ? 30 : 10 })),
-  })),
-});
 
 type Tile = { key: string; title: string; sub: string; icon: { gym?: GymIconName; ion?: keyof typeof Ionicons.glyphMap }; tint: string; onPress: () => void };
 
 export default function H2() {
-  const { profile, workouts, routines, trainer, active, wprefs, measurements, startWorkout, startTrainerWorkout, discardActive } = useStore();
+  const { session, profile, workouts, routines, trainer, active, wprefs, measurements, startWorkout, startTrainerWorkout, discardActive } = useStore();
+  const uid = session?.user.id ?? null;
+  const g = useG(uid);
+  const ch = useChallenges(uid);
   const { width } = useWindowDimensions();
   const [pending, setPending] = useState<(() => void) | null>(null);
   const units = profile.units;
@@ -81,13 +63,19 @@ export default function H2() {
   const weekSets = weekList.reduce((a, w) => a + workoutSets(w), 0);
   const bodyKg = measurements.find((m) => m.values.weight)?.values.weight ?? profile.weightKg;
   const last = workouts[0];
+  const week = weekDays(workouts);
+  const dot = Math.min(44, Math.floor((width - PAD * 2 - 6 * 8) / 7));
+  // planos de 30 dias: os que já estão em andamento vêm primeiro
+  const started = (id: string) => { const d = g.done[id] ?? 0; return d > 0 && d < 30; };
+  const plans = [...GPLANS].sort((a, b) => Number(started(b.id)) - Number(started(a.id)));
+  const challenges = challengeViews(ch, workouts, units);
 
   const preview = (id: string, idx: number) => router.push({ pathname: '/routines/preview', params: { src: 'program', id, idx: String(idx) } });
   const ul = PROGRAMS.find((p) => p.id === 'upperlower')!.routines;
 
-  // 1ª linha: plano, superiores, inferiores · 2ª linha: push, pull, legs
+  // 1ª linha: Trainer, superiores, inferiores · 2ª linha: push, pull, legs (os planos de 30 dias têm a seção própria acima)
   const tiles: Tile[] = [
-    { key: 'plan', title: trainer ? 'My Plan' : '30 Days Plan', sub: trainer ? 'Your Trainer program' : 'Build a habit', icon: { ion: 'calendar' }, tint: '#22B573', onPress: () => router.navigate('/plano') },
+    { key: 'plan', title: trainer ? 'My Plan' : 'Trainer', sub: trainer ? 'Your Trainer program' : 'A program made for you', icon: { ion: 'sparkles' }, tint: '#22B573', onPress: () => router.navigate('/plano') },
     { key: 'upper', title: 'Upper Body', sub: `~${estMin(ul[0].exercises.length * 3)} min`, icon: { gym: 'dumbbell' }, tint: '#8E5CF6', onPress: () => preview('upperlower', 0) },
     { key: 'lower', title: 'Lower Body', sub: `~${estMin(ul[1].exercises.length * 3)} min`, icon: { gym: 'legpress' }, tint: '#1E9BD7', onPress: () => preview('upperlower', 1) },
     { key: 'push', title: 'Push', sub: 'Chest, Shoulders, Triceps', icon: { gym: 'barbell' }, tint: '#F2405D', onPress: () => preview('ppl', 0) },
@@ -131,6 +119,15 @@ export default function H2() {
           <Image source={HERO} resizeMode="cover" style={{ width: '44%', height: '100%' }} />
         </View>
 
+        {/* Semana (segunda a domingo): dia treinado em laranja com ✓, hoje com anel azul */}
+        <Pressable onPress={() => router.push('/profile/calendar')} testID="h2-week" style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          {week.map((d, i) => (
+            <View key={i} testID={d.done ? 'h2-day-done' : 'h2-day'} style={{ width: dot, height: dot, borderRadius: dot / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: d.done ? STREAK : colors.surface, borderWidth: d.today ? 2.5 : 0, borderColor: colors.primary }}>
+              {d.done ? <Ionicons name="checkmark" size={Math.round(dot * 0.5)} color="#fff" /> : <Text style={{ fontWeight: '700', fontSize: 15, color: d.today ? colors.primary : colors.muted }}>{d.date.toLocaleDateString(locale(), { weekday: 'narrow' }).toUpperCase()}</Text>}
+            </View>
+          ))}
+        </Pressable>
+
         {/* Recuperação do relógio/pulseira (só aparece conectado) */}
         <RecoveryCard />
 
@@ -140,6 +137,56 @@ export default function H2() {
           <Stat label="Workouts" value={String(workouts.length)} unit="total" icon="barbell" color={colors.primary} onPress={() => router.push('/profile/stats')} />
           <Stat label="This Week" value={goal ? `${weekList.length}/${goal}` : String(weekList.length)} unit="sessions" icon="stats-chart" color="#22B573" onPress={() => router.push('/settings/reminders')} />
         </View>
+
+        {/* Planos de 30 dias (os mesmos da aba G): toque abre o plano */}
+        <Head title="30-Day Plans" onAll={() => router.navigate('/g')} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: GAP }} style={{ marginHorizontal: -PAD }}>
+          <View style={{ width: PAD - GAP }} />
+          {plans.map((p) => {
+            const d = g.done[p.id] ?? 0;
+            return (
+              <Pressable key={p.id} onPress={() => { setG({ planId: p.id }); router.navigate('/g'); }} testID={`h2-plan-${p.id}`} style={{ width: 188, backgroundColor: `${planTint(p)}1A`, borderRadius: radius.md, padding: 14, gap: 8 }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: planTint(p), alignItems: 'center', justifyContent: 'center' }}>
+                  <GymIcon name={p.icon} size={26} color="#fff" />
+                </View>
+                <View style={{ gap: 2 }}>
+                  <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{p.title}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 12.5 }} numberOfLines={1}>{planSub(p)}</Text>
+                </View>
+                <View style={{ height: 6, borderRadius: 3, backgroundColor: `${planTint(p)}33`, overflow: 'hidden' }}>
+                  <View style={{ height: 6, borderRadius: 3, width: `${Math.min(100, (d / 30) * 100)}%`, backgroundColor: planTint(p) }} />
+                </View>
+                <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>{d >= 30 ? tr('Completed') : d === 0 ? `30 ${tr('days')}` : `${tr('Day')} ${d + 1} ${tr('of')} 30`}</Text>
+              </Pressable>
+            );
+          })}
+          <View style={{ width: PAD - GAP }} />
+        </ScrollView>
+
+        {/* Desafios: em andamento primeiro; a conta vem dos treinos salvos */}
+        <Head title="Challenges" onAll={() => router.push('/challenges')} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: GAP }} style={{ marginHorizontal: -PAD }}>
+          <View style={{ width: PAD - GAP }} />
+          {challenges.map(({ c, p, status }) => (
+            <Pressable key={c.id} onPress={() => router.push('/challenges')} testID={`h2-challenge-${c.id}`} style={{ width: 156, backgroundColor: colors.surface, borderRadius: radius.md, padding: 14, gap: 8 }}>
+              <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: c.tint, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={status === 'done' ? 'checkmark' : c.icon} size={21} color="#fff" />
+              </View>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, lineHeight: 19, height: 38 }} numberOfLines={2}>{c.title}</Text>
+              {p ? (
+                <>
+                  <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: 'hidden' }}>
+                    <View style={{ height: 6, borderRadius: 3, width: `${Math.max(4, p.pct * 100)}%`, backgroundColor: status === 'expired' ? colors.faint : c.tint }} />
+                  </View>
+                  <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>{status === 'done' ? tr('Completed') : status === 'expired' ? tr('Time is up') : fmtProgress(c, p, units)}</Text>
+                </>
+              ) : (
+                <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>{c.days} {tr('days')} · <Text style={{ color: colors.primary, fontWeight: '700' }}>Join</Text></Text>
+              )}
+            </Pressable>
+          ))}
+          <View style={{ width: PAD - GAP }} />
+        </ScrollView>
 
         {/* Explorar: 3 por linha */}
         <Head title="Explore" onAll={() => router.push('/routines/explore')} />

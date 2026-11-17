@@ -17,6 +17,8 @@ export default function TabsLayout() {
       {/* G: planos de 30 dias + treino do dia gerado, em teste */}
       <Tabs.Screen name="g" options={{ title: 'G', tabBarIcon: ({ focused, color }: { focused: boolean; color: any }) => <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={26} color={color} /> }} />
       <Tabs.Screen name="treino" options={tab('Workout', 'barbell', 'barbell-outline')} />
+      {/* Coach: só a conversa com o Coach Reps */}
+      <Tabs.Screen name="coach" options={tab('Coach', 'chatbubble-ellipses', 'chatbubble-ellipses-outline')} />
       <Tabs.Screen name="plano" options={tab('Trainer', 'sparkles', 'sparkles-outline')} />
       <Tabs.Screen name="exercicios" options={tab('Exercises', 'list', 'list-outline')} />
       <Tabs.Screen name="perfil" options={tab('Profile', 'person', 'person-outline')} />
