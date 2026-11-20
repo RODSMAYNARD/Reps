@@ -252,6 +252,10 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - iOS usa a fonte do sistema (SF, padrão Apple). Android usa Inter (`@expo-google-fonts/inter`, carregada em `_layout.tsx` com `useFonts(APP_FONTS)`): com a fonte do fabricante (Xiaomi/OnePlus) o Android cortava a última letra ("Padrã", "Volum", "1mi"). `fontStyle` troca o `fontWeight` pela família Inter certa (400/500/600/700/800).
 - REGRA: todo texto passa por `Text`/`TextInput`/`PlainText` de `components/Text` (nunca o `Text` do react-native); rótulos da tab bar usam `fontStyle`.
 
+## Versão web pública (EAS Hosting, 2026-11-20)
+- Link fixo para testar fora da rede: **https://rodsappz4u-reps--web.expo.app** (alias `web`; o "Production URL" `rodsappz4u-reps.expo.app` dá 404, não usar). Usa o Supabase real (login de verdade); recursos nativos (saúde, sons, notificações) não funcionam na web.
+- Republicar: `npx expo export --platform web` → `eas deploy --prod --non-interactive` → `eas deploy:alias --alias web --id <id novo>`. O envio em lote (`PATCH /asset/batch`, ~715 arquivos) é barrado pelo firewall da Expo ("CDN firewall ... Bad Gateway"); a saída foi trocar, só durante o envio, em `eas-cli/build/commands/deploy/index.js`, o `.map(assets => (assets.length > 1 ? { multipart: assets } : ...))` por `.flatMap(assets => assets.map(asset => ({ asset })))` (um arquivo por vez) e voltar o arquivo depois.
+
 ## Idiomas (2026-11-09, `lib/i18n.ts`)
 - O código fica em inglês; `components/Text.tsx` (`Text`/`TextInput`) traduz na hora de desenhar pelo dicionário `src/i18n/pt.ts` (chave = texto em inglês exato). Todas as telas importam `Text` de `components/Text`, nunca do `react-native`. Texto montado com variáveis só traduz os pedaços literais; para frases dinâmicas usar `tr()`. Títulos das abas usam `tr()`.
 - Preferência no aparelho (`reps:lang`): Automático/English/Português (Settings > Language). A raiz remonta as telas ao trocar (`key` do Stack). Datas usam `locale()`. Nomes e passo a passo do catálogo: `catName`/`catSteps` (pt quando o idioma é pt); a busca acha pelos dois idiomas.
