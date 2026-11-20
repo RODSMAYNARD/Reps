@@ -1381,4 +1381,7 @@ export const PT: Record<string, string> = {
   'trophies': 'troféus',
   'Every challenge is always on. Your saved workouts count automatically, and they start over each week or month.': 'Todos os desafios valem sempre. Seus treinos salvos contam sozinhos, e eles recomeçam a cada semana ou mês.',
   'Challenge completed': 'Desafio concluído',
+  // Home: sequência compacta
+  'week streak': 'semana seguida',
+  'weeks in a row': 'semanas seguidas',
 };

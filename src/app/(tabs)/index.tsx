@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, Pressable, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { ActiveBar } from '../../components/ActiveBar';
 import { RecoveryCard } from '../../components/HealthCards';
@@ -10,7 +10,7 @@ import { WorkoutCard } from '../../components/WorkoutCard';
 import { WorkoutMenu } from '../../components/WorkoutMenu';
 import { Btn, IconButton, Screen } from '../../components/ui';
 import { FEATURES } from '../../lib/constants';
-import { weekStreak } from '../../lib/stats';
+import { startOfWeek, weekStreak } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
 import { locale, tr } from '../../lib/i18n';
@@ -19,6 +19,7 @@ export default function Home() {
   const { workouts, startWorkout, session, offline, pendingCount } = useStore();
   const [target, setTarget] = useState<string | null>(null);
   const streak = weekStreak(workouts);
+  const thisWeek = workouts.filter((w) => new Date(w.date).getTime() >= startOfWeek().getTime()).length;
   const pm = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1);
   const pmKey = `${pm.getFullYear()}-${String(pm.getMonth() + 1).padStart(2, '0')}`;
   const pmCount = workouts.filter((w) => { const d = new Date(w.date); return d.getFullYear() === pm.getFullYear() && d.getMonth() === pm.getMonth(); }).length;
@@ -58,12 +59,17 @@ export default function Home() {
         </View>
       )}
       {streak > 0 && (
-        <View style={{ margin: 16, borderRadius: radius.lg, backgroundColor: colors.dangerSoft, padding: 20, gap: 4 }}>
-          <Ionicons name="flame" size={44} color={colors.danger} />
-          <Text style={{ fontSize: 56, fontWeight: '800', color: colors.text }}>{streak}</Text>
-          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text }}>Week streak</Text>
-          <Text style={{ color: colors.text }}>You&apos;ve worked out consistently for {streak} {streak === 1 ? 'week' : 'weeks'}!</Text>
-        </View>
+        // Sequência compacta (uma linha): antes era um cartão enorme que só repetia o número. Toque abre o calendário.
+        <Pressable onPress={() => router.push('/profile/calendar')} testID="streak-row"
+          style={{ marginHorizontal: 16, marginVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.md, backgroundColor: colors.surface }}>
+          <Ionicons name="flame" size={18} color={colors.danger} />
+          {/* uma linha só, que quebra em telas estreitas em vez de cortar */}
+          <Text style={{ flex: 1, color: colors.text, fontSize: 15, fontWeight: '600' }}>
+            {streak} {tr(streak === 1 ? 'week streak' : 'weeks in a row')}
+            <Text style={{ color: colors.muted, fontWeight: '400' }}>{` · ${thisWeek} ${tr('this week')}`}</Text>
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+        </Pressable>
       )}
     </View>
   );
