@@ -2,7 +2,8 @@ import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, useColorScheme, View } from 'react-native';
-import { Text } from '../components/Text';
+import { useFonts } from 'expo-font';
+import { APP_FONTS, Text } from '../components/Text';
 import { refreshStyles } from '../components/ui';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ChallengeWatcher } from '../components/ChallengeWatcher';
@@ -29,8 +30,9 @@ function Routes() {
   const scheme = useScheme();
   const lang = useLang();
   const [langReady, setLangReady] = useState(false);
+  const [fontsLoaded, fontError] = useFonts(APP_FONTS);
   useEffect(() => { loadLang().finally(() => setLangReady(true)); }, []);
-  if (!ready || !langReady)
+  if (!ready || !langReady || (!fontsLoaded && !fontError))
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, justifyContent: 'center' }}>
         <ActivityIndicator color={colors.primary} />

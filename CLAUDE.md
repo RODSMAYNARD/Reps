@@ -248,6 +248,10 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Tipos `duration_weight` (kg + segundos), `distance_duration` (distância + minutos) e `weight_distance` (kg + distância). Série: `seconds` → `duration_sec`, `distM` (metros) → `distance_m`. O `duration` antigo continua com os segundos em `reps`. Helpers em `lib/exerciseOptions.ts` (`setCols`, `colValue`, `colPatch`, `fmtSet`, `setHasValue`).
 - Migração `tipos_com_distancia` (aplicada em 2026-11-09, cópia em `supabase/migrations/`): CHECK de `exercises.kind` com os 8 tipos e `sync_routine_children` gravando `duration_sec`/`distance_m` (vindos de `seconds`/`distM` do JSON da rotina).
 
+## Fonte (2026-11-19, `components/Text.tsx`)
+- iOS usa a fonte do sistema (SF, padrão Apple). Android usa Inter (`@expo-google-fonts/inter`, carregada em `_layout.tsx` com `useFonts(APP_FONTS)`): com a fonte do fabricante (Xiaomi/OnePlus) o Android cortava a última letra ("Padrã", "Volum", "1mi"). `fontStyle` troca o `fontWeight` pela família Inter certa (400/500/600/700/800).
+- REGRA: todo texto passa por `Text`/`TextInput`/`PlainText` de `components/Text` (nunca o `Text` do react-native); rótulos da tab bar usam `fontStyle`.
+
 ## Idiomas (2026-11-09, `lib/i18n.ts`)
 - O código fica em inglês; `components/Text.tsx` (`Text`/`TextInput`) traduz na hora de desenhar pelo dicionário `src/i18n/pt.ts` (chave = texto em inglês exato). Todas as telas importam `Text` de `components/Text`, nunca do `react-native`. Texto montado com variáveis só traduz os pedaços literais; para frases dinâmicas usar `tr()`. Títulos das abas usam `tr()`.
 - Preferência no aparelho (`reps:lang`): Automático/English/Português (Settings > Language). A raiz remonta as telas ao trocar (`key` do Stack). Datas usam `locale()`. Nomes e passo a passo do catálogo: `catName`/`catSteps` (pt quando o idioma é pt); a busca acha pelos dois idiomas.

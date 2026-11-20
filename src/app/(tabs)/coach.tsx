@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { type Href, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, Text as RawText, ScrollView, type ScrollViewInstance, View } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, type ScrollViewInstance, View } from 'react-native';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
-import { Text, TextInput } from '../../components/Text';
+import { PlainText as RawText, Text, TextInput } from '../../components/Text';
 import { Dialog, Screen } from '../../components/ui';
 import { track } from '../../lib/analytics';
 import { useChallenges } from '../../lib/challenges';

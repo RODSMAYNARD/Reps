@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { fontStyle } from '../../components/Text';
 import { Tabs } from 'expo-router';
 import { tr } from '../../lib/i18n';
 import { colors } from '../../lib/theme';
@@ -10,7 +11,7 @@ const tab = (title: string, on: any, off: any) => ({
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border }, sceneStyle: { backgroundColor: colors.bg } }}>
+    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: fontStyle({}) as object, tabBarStyle: { backgroundColor: colors.bg, borderTopColor: colors.border }, sceneStyle: { backgroundColor: colors.bg } }}>
       <Tabs.Screen name="index" options={tab('Home', 'home', 'home-outline')} />
       {/* H2: Home alternativa em teste (casa de cabeça para baixo) */}
       <Tabs.Screen name="h2" options={{ title: 'H2', tabBarIcon: ({ focused, color }: { focused: boolean; color: any }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={26} color={color} style={{ transform: [{ rotate: '180deg' }] }} /> }} />
