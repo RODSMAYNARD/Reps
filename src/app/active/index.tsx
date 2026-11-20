@@ -313,7 +313,7 @@ export default function ActiveWorkoutScreen() {
                 </View>
               ))}
               <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 6 }}>
-                <Pressable onPress={() => setHelp(HELP.sets)} hitSlop={6} style={{ width: 38 }} testID="help-set"><Text style={h.c}>SET</Text></Pressable>
+                <Pressable onPress={() => setHelp(HELP.sets)} hitSlop={6} style={{ width: 38 }} testID="help-set"><Text style={h.c} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>SET</Text></Pressable>
                 <Pressable onPress={() => setHelp(HELP.previous)} hitSlop={6} style={{ flex: 1.3 }} testID="help-previous"><Text style={h.c}>PREVIOUS</Text></Pressable>
                 {hasWeight(kind) && <Pressable onPress={() => setWsheet(i)} style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 4 }} testID="weight-header" hitSlop={8}><Ionicons name="barbell-outline" size={14} color={colors.muted} /><Text style={h.c}>{weightHeader(kind, eu.weight)}</Text></Pressable>}
                 {setCols(kind).map((c) => <Pressable key={c} onPress={() => setHelp(c === 'dist' ? HELP.distance : c === 'reps' && kind !== 'duration' ? HELP.reps : HELP.time)} hitSlop={6} style={{ flex: 1 }} testID={`help-${c}`}><Text style={h.c}>{colHeader(c, kind, eu)}</Text></Pressable>)}
