@@ -201,6 +201,8 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Boneco de músculos (`components/BodyMap.tsx`) usa o `react-native-body-highlighter` (MIT, só SVG, sem build novo; dorsais e costas altas acendem juntas); `regionsOf` converte músculo/target/secondary do catálogo em regiões. Comparação de peso = emojis (sem ilustrações do Hevy).
 - Compartilhar: Stories e More abrem a folha do sistema com a imagem (Stories direto no Instagram exige pacote nativo); Copy Text; Download (galeria); Send to AI (texto com séries para colar no ChatGPT/Claude); Twitter (X). **Workout Link = só interface** (não existe página web do treino).
 
+- **Padrão dos cartões (2026-11-20, skill `rods-share-card`):** todo cartão de compartilhamento = `CardFrame`/`FitBox` (`components/ShareCard.tsx`): topo e rodapé (REPS + @usuário) fixos, miolo encolhe junto se não couber (nunca vaza nem cobre a marca). Texto com `lineHeight` explícito; frases com número por modelo (`tr('This is your {n} workout')`, ordinal `5º` em pt). Vale para `active/done.tsx` e `profile/report-share.tsx`.
+
 ## Barra de números do treino ativo (como no Hevy, 2026-11-07)
 - Toque em Duration = folha Duration; em Volume e em Sets = pop-up central com a explicação (aquecimento incluído); no boneco = folha "Muscle Distribution" (boneco grande + séries feitas por músculo; principal e secundários contam).
 

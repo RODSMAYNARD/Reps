@@ -10,16 +10,17 @@ import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { BodyMap, Region, regionsOf } from '../../components/BodyMap';
 import { Confetti } from '../../components/Confetti';
+import { CardFrame } from '../../components/ShareCard';
 import { Btn, Screen, Sheet } from '../../components/ui';
 import { track } from '../../lib/analytics';
 import { fmtSet } from '../../lib/exerciseOptions';
 import { fmtVolume } from '../../lib/format';
-import { tr } from '../../lib/i18n';
+import { locale, tr } from '../../lib/i18n';
 import { workoutSets, workoutVolume } from '../../lib/stats';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
-const ordinal = (n: number) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`; };
+const ordinal = (n: number) => { if (locale().startsWith('pt')) return `${n}º`; const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`; };
 const shortDur = (sec: number) => { const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60); return h ? `${h}h ${m}min` : `${m}min`; };
 
 /** Comparação do volume total (kg) com algo do mesmo peso: o maior item que não passa do volume. */
@@ -82,12 +83,13 @@ export default function WorkoutDone() {
   const user = profile.username ? `@${profile.username}` : '';
   const bodyColors = { body: t.body, muscle: t.muscle, on: t.accent };
 
-  const T = (size: number, extra?: object) => ({ color: t.fg, fontSize: size * k, ...extra });
+  // texto do cartão: tamanho proporcional ao cartão e lineHeight fixo (o Android não inventa altura)
+  const T = (size: number, extra?: object) => ({ color: t.fg, fontSize: size * k, lineHeight: size * k * 1.22, ...extra });
   const title = (center?: boolean) => <Text style={T(28, { fontWeight: '700', textAlign: center ? 'center' : 'left' })} numberOfLines={1}>{w.title}</Text>;
-  const brand = (stacked?: boolean) => (
-    <View style={stacked ? { alignItems: 'center', gap: 6 * k } : { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="barbell" size={24 * k} color={t.fg} /><Text style={T(24, { fontWeight: '900', letterSpacing: 2 })}>REPS</Text></View>
-      {!!user && <Text style={T(19)}>{user}</Text>}
+  const brand = (stacked?: boolean, fg = t.fg) => (
+    <View style={stacked ? { alignItems: 'center', gap: 6 * k } : { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 * k }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="barbell" size={24 * k} color={fg} /><Text style={T(24, { color: fg, fontWeight: '900', letterSpacing: 2 })}>REPS</Text></View>
+      {!!user && <Text style={T(19, { color: fg, flexShrink: 1 })} numberOfLines={1}>{user}</Text>}
     </View>
   );
   const list = (max: number) => (
@@ -98,84 +100,71 @@ export default function WorkoutDone() {
       {exs.length > max && <Text style={T(18)}>{tr(exs.length - max === 1 ? '...and {n} more exercise' : '...and {n} more exercises').replace('{n}', String(exs.length - max))}</Text>}
     </View>
   );
-  const frame = (pad = 26) => ({ flex: 1, padding: pad * k, justifyContent: 'space-between' as const });
+  // todo cartão = CardFrame: topo e rodapé fixos, miolo encaixado (encolhe junto se não couber). Ver components/ShareCard.tsx
+  const F = (body: React.ReactNode, o: { top?: React.ReactNode; footer?: React.ReactNode; align?: 'center' | 'top'; pad?: number } = {}) => (
+    <CardFrame pad={(o.pad ?? 26) * k} gap={14 * k} top={o.top} footer={o.footer ?? brand()} align={o.align}>{body}</CardFrame>
+  );
+  const statRow = (center?: boolean) => (
+    <View style={{ flexDirection: 'row', justifyContent: center ? 'space-around' : 'flex-start', gap: center ? 0 : 26 * k }}>
+      {stats.map(([l, v]) => <View key={l} style={{ alignItems: center ? 'center' : 'flex-start' }}><Text style={T(18)}>{l}</Text><Text style={T(21, { fontWeight: '800' })} numberOfLines={1}>{v}</Text></View>)}
+    </View>
+  );
 
   const cards: { key: string; node: React.ReactNode }[] = [
     ...(photo ? [{ key: 'photo', node: (
       <View style={{ flex: 1 }}>
         <Image source={{ uri: photo }} style={{ position: 'absolute', width: cw, height: ch }} resizeMode="cover" />
         <View style={{ position: 'absolute', width: cw, height: ch, backgroundColor: 'rgba(0,0,0,0.25)' }} />
-        <View style={{ flex: 1, padding: 26 * k, justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>{stats.map(([l, v]) => <View key={l}><Text style={{ color: '#fff', fontSize: 16 * k }}>{l}</Text><Text style={{ color: '#fff', fontSize: 19 * k, fontWeight: '700' }}>{v}</Text></View>)}</View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="barbell" size={24 * k} color="#fff" /><Text style={{ color: '#fff', fontSize: 24 * k, fontWeight: '900', letterSpacing: 2 }}>REPS</Text></View>
-            {!!user && <Text style={{ color: '#fff', fontSize: 19 * k }}>{user}</Text>}
-          </View>
-        </View>
+        {F(<View />, {
+          top: <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>{stats.map(([l, v]) => <View key={l}><Text style={T(16, { color: '#fff' })}>{l}</Text><Text style={T(19, { color: '#fff', fontWeight: '700' })} numberOfLines={1}>{v}</Text></View>)}</View>,
+          footer: brand(false, '#fff'),
+        })}
       </View>
     ) }] : []),
-    { key: 'list-body', node: (
-      <View style={frame()}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 * k }}>
-          <View style={{ flex: 1, gap: 10 * k }}>{title()}{list(6)}</View>
-          <View style={{ alignItems: 'center', gap: 4 * k }}>
-            <BodyMap side="front" primary={primary} secondary={secondary} width={66 * k} colors={bodyColors} />
-            <BodyMap side="back" primary={primary} secondary={secondary} width={66 * k} colors={bodyColors} />
-          </View>
+    { key: 'list-body', node: F(
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 * k }}>
+        <View style={{ flex: 1, gap: 10 * k }}>{title()}{list(6)}</View>
+        <View style={{ alignItems: 'center', gap: 4 * k }}>
+          <BodyMap side="front" primary={primary} secondary={secondary} width={66 * k} colors={bodyColors} />
+          <BodyMap side="back" primary={primary} secondary={secondary} width={66 * k} colors={bodyColors} />
         </View>
-        {brand()}
-      </View>
+      </View>,
     ) },
-    { key: 'stats', node: (
-      <View style={frame()}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 * k }}>
-          {stats.map(([l, v]) => <View key={l} style={{ alignItems: 'center' }}><Text style={T(26, { fontWeight: '800' })}>{v}</Text><Text style={T(19)}>{l}</Text></View>)}
-        </View>
-        {brand(true)}
-      </View>
+    { key: 'stats', node: F(
+      <View style={{ alignItems: 'center', gap: 12 * k }}>
+        {stats.map(([l, v]) => <View key={l} style={{ alignItems: 'center' }}><Text style={T(26, { fontWeight: '800' })} numberOfLines={1}>{v}</Text><Text style={T(19)}>{l}</Text></View>)}
+      </View>,
+      { footer: brand(true) },
     ) },
-    { key: 'lifted', node: (
-      <View style={frame()}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 * k }}>
-          <Text style={T(22, { fontWeight: '600' })}>You lifted a total of</Text>
-          <Text style={T(54, { fontWeight: '800' })} numberOfLines={1} adjustsFontSizeToFit>{fmtVolume(vol, u)}</Text>
-          <Text style={T(19, { fontWeight: '600' })}>{lift ? tr("That's like lifting {x}!").replace('{x}', tr(lift[1])) : 'Every rep counts!'}</Text>
-          <Text style={{ fontSize: 96 * k, marginTop: 8 * k }}>{lift ? lift[2] : '💪'}</Text>
-        </View>
-        {brand()}
-      </View>
+    { key: 'lifted', node: F(
+      <View style={{ alignItems: 'center', gap: 4 * k }}>
+        <Text style={T(22, { fontWeight: '600', textAlign: 'center' })}>You lifted a total of</Text>
+        <Text style={T(54, { fontWeight: '800' })} numberOfLines={1} adjustsFontSizeToFit>{fmtVolume(vol, u)}</Text>
+        <Text style={T(19, { fontWeight: '600', textAlign: 'center' })}>{lift ? tr("That's like lifting {x}!").replace('{x}', tr(lift[1])) : 'Every rep counts!'}</Text>
+        <Text style={{ fontSize: 88 * k, lineHeight: 104 * k, marginTop: 4 * k, textAlign: 'center' }}>{lift ? lift[2] : '💪'}</Text>
+      </View>,
     ) },
-    { key: 'stats-list', node: (
-      <View style={frame()}>
-        <View style={{ gap: 14 * k }}>
-          {title()}
-          <View style={{ flexDirection: 'row', gap: 26 * k }}>{stats.map(([l, v]) => <View key={l}><Text style={T(18)}>{l}</Text><Text style={T(21, { fontWeight: '800' })}>{v}</Text></View>)}</View>
-          {list(4)}
-        </View>
-        {brand()}
-      </View>
+    { key: 'stats-list', node: F(
+      <View style={{ gap: 14 * k }}>{statRow()}{list(4)}</View>,
+      { top: title(), align: 'top' },
     ) },
-    { key: 'grid', node: (
-      <View style={frame()}>
-        {title()}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 26 * k }}>
-          {[[shortDur(w.durationSec), 'Duration'], [fmtVolume(vol, u), 'Volume'], [String(exs.length), 'Exercises'], [String(sets), 'Sets']].map(([v, l]) => (
-            <View key={l} style={{ width: '50%' }}><Text style={T(32, { fontWeight: '800' })} numberOfLines={1} adjustsFontSizeToFit>{v}</Text><Text style={T(19)}>{l}</Text></View>
-          ))}
-        </View>
-        {brand()}
-      </View>
+    { key: 'grid', node: F(
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 26 * k }}>
+        {[[shortDur(w.durationSec), 'Duration'], [fmtVolume(vol, u), 'Volume'], [String(exs.length), 'Exercises'], [String(sets), 'Sets']].map(([v, l]) => (
+          <View key={l} style={{ width: '50%' }}><Text style={T(32, { fontWeight: '800' })} numberOfLines={1} adjustsFontSizeToFit>{v}</Text><Text style={T(19)}>{l}</Text></View>
+        ))}
+      </View>,
+      { top: title() },
     ) },
-    { key: 'body-stats', node: (
-      <View style={frame(22)}>
-        {title(true)}
+    { key: 'body-stats', node: F(
+      <View style={{ gap: 14 * k }}>
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18 * k }}>
           <BodyMap side="front" primary={primary} secondary={secondary} width={74 * k} colors={bodyColors} />
           <BodyMap side="back" primary={primary} secondary={secondary} width={74 * k} colors={bodyColors} />
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>{stats.map(([l, v]) => <View key={l} style={{ alignItems: 'center' }}><Text style={T(18)}>{l}</Text><Text style={T(21, { fontWeight: '800' })}>{v}</Text></View>)}</View>
-        {brand()}
-      </View>
+        {statRow(true)}
+      </View>,
+      { top: title(true), pad: 22 },
     ) },
   ];
   const card = cards[page]?.key ?? 'card';
@@ -217,7 +206,7 @@ export default function WorkoutDone() {
       <View style={{ flex: 1 }} testID="workout-done">
         <View style={{ alignItems: 'center', paddingTop: 20, paddingHorizontal: 80, gap: 6 }}>
           <Text style={{ fontSize: 30, fontWeight: '700', color: colors.text }}>Good job!</Text>
-          <Text style={{ fontSize: 17, color: colors.text }}>This is your {ordinal(workouts.length)} workout</Text>
+          <Text style={{ fontSize: 17, color: colors.text, textAlign: 'center' }}>{tr('This is your {n} workout').replace('{n}', ordinal(workouts.length))}</Text>
           <Pressable onPress={() => setParty((n) => n + 1)} testID="done-party" style={{ position: 'absolute', right: 18, top: 16, width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 24 }}>🎉</Text>
           </Pressable>

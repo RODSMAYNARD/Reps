@@ -1025,6 +1025,7 @@ export const PT: Record<string, string> = {
   'times': 'vezes',
   'sets': 'séries',
   'That\'s like lifting {x}!': 'Isso é como levantar {x}!',
+  'This is your {n} workout': 'Este é seu {n} treino',
   '...and {n} more exercise': '...e mais {n} exercício',
   '...and {n} more exercises': '...e mais {n} exercícios',
   'Free for': 'Grátis por',

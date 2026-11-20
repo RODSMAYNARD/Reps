@@ -9,6 +9,7 @@ import { Text } from '../../components/Text';
 import Svg, { Line, Polygon } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
 import { ExerciseThumb } from '../../components/ExerciseThumb';
+import { FitBox } from '../../components/ShareCard';
 import { Header, Screen } from '../../components/ui';
 import { fmtDuration, fmtVolume } from '../../lib/format';
 import { inMonth, metricValue, Metric, tally } from '../../lib/report';
@@ -27,15 +28,16 @@ const AXES = ['Back', 'Chest', 'Core', 'Arms', 'Shoulders', 'Legs'];
 
 function Frame({ t, month, title, user, children }: { t: Theme; month: string; title: string; user: string; children: React.ReactNode }) {
   return (
-    <View style={{ flex: 1, backgroundColor: t.bg, borderRadius: 28, padding: 22, justifyContent: 'space-between' }}>
+    <View style={{ flex: 1, backgroundColor: t.bg, borderRadius: 28, padding: 22, gap: 14 }}>
       <View style={{ gap: 4 }}>
         <Text style={{ color: t.sub, fontSize: 15 }}>{month}</Text>
-        <Text style={{ color: t.fg, fontSize: 26, fontWeight: '800' }}>{title}</Text>
+        <Text style={{ color: t.fg, fontSize: 26, fontWeight: '800' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{title}</Text>
       </View>
-      <View style={{ flex: 1, justifyContent: 'center' }}>{children}</View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* miolo encaixado: encolhe junto se não couber (padrão dos cartões, components/ShareCard.tsx) */}
+      <FitBox>{children}</FitBox>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="barbell" size={22} color={t.fg} /><Text style={{ color: t.fg, fontSize: 20, fontWeight: '900', letterSpacing: 2 }}>REPS</Text></View>
-        <Text style={{ color: t.fg, fontSize: 16 }}>@{user}</Text>
+        <Text style={{ color: t.fg, fontSize: 16, flexShrink: 1 }} numberOfLines={1}>@{user}</Text>
       </View>
     </View>
   );
