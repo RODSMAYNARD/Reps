@@ -1385,4 +1385,20 @@ export const PT: Record<string, string> = {
   // Home: sequência compacta
   'week streak': 'semana seguida',
   'weeks in a row': 'semanas seguidas',
+  // Tela de foco do descanso (FocusRest)
+  'Breathe in': 'Inspire',
+  'Hold': 'Segure',
+  'Breathe out': 'Solte o ar',
+  'Sip more air': 'Puxe mais um pouco',
+  'Last': 'Última',
+  'Up next': 'Próxima',
+  'Open focus mode': 'Abrir modo foco',
+  'Calm down': 'Acalmar',
+  'Recovery sigh': 'Suspiro de recuperação',
+  'Coherent': 'Coerente',
+  'Box': 'Caixa',
+  'Even counts in, hold, out, hold. Steadies focus before a heavy set.': 'Tempos iguais: inspira, segura, solta, segura. Firma o foco antes de uma série pesada.',
+  'Double inhale through the nose, long exhale through the mouth. Fastest way to slow your breathing between sets.': 'Duas inspirações pelo nariz e uma expiração longa pela boca. O jeito mais rápido de acalmar o fôlego entre séries.',
+  'Long hold and longer exhale. Good after a very hard set or at the end of the workout.': 'Segura bastante e solta mais devagar ainda. Bom depois de uma série muito dura ou no fim do treino.',
+  'About 5-6 breaths per minute, no holds. Easy rhythm for long rests.': 'Cerca de 5 a 6 respirações por minuto, sem segurar. Ritmo tranquilo para descansos longos.',
 };

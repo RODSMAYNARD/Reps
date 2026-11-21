@@ -14,6 +14,7 @@ import { DurationSheet } from '../../components/DurationSheet';
 import { BodyMap, regionsOf, type Region } from '../../components/BodyMap';
 import { ClockSheet, fmtStopwatch, swMs, type Stopwatch } from '../../components/ClockSheet';
 import { RestSheet } from '../../components/pickers';
+import { FocusRest, RestProgress } from '../../components/FocusRest';
 import { NoteInput } from '../../components/NoteInput';
 import { PlateIcon } from '../../components/PlateIcon';
 import { SwapPanel } from '../../components/SwapPanel';
@@ -25,6 +26,7 @@ import { Btn, Dialog, Empty, Header, HeaderAction, IconButton, ListRow, Screen, 
 import { SET_TYPES } from '../../lib/constants';
 import { fmtClock, fmtDurationLive, fmtRest, fmtVolume, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
 import { setPickHandler } from '../../lib/picker';
+import { tr } from '../../lib/i18n';
 import { prFlags, records, setVolume } from '../../lib/stats';
 import { elapsedSec, useNow, useStore } from '../../lib/store';
 import { colors, radius } from '../../lib/theme';
@@ -58,6 +60,8 @@ export default function ActiveWorkoutScreen() {
   const [menu, setMenu] = useState<number | null>(null);
   const [durSheet, setDurSheet] = useState(false);
   const [timerSheet, setTimerSheet] = useState(false);
+  /** Início do descanso em que a tela de foco foi aberta (fim − total, não muda com ±15): fecha sozinha no fim e não reabre no próximo. */
+  const [focusRest, setFocusRest] = useState<number | null>(null);
   const [sw, setSw] = useStopwatch(active?.id);
   const swNow = useNow(100, !!sw.startedAt);
   const [cancelAsk, setCancelAsk] = useState(false);
@@ -216,6 +220,17 @@ export default function ActiveWorkoutScreen() {
   };
   // arredonda para cima: o relógio só mostra 0:00 quando o descanso acabou de verdade (o fim é tratado no efeito lá em cima)
   const restLeft = rest ? Math.max(0, Math.min(rest.total, Math.ceil((rest.endsAt - now) / 1000))) : 0;
+  // tela de foco do descanso: próxima série = primeira não feita; última = a feita antes dela no mesmo exercício (ou no anterior)
+  const focusInfo = (() => {
+    if (!rest) return {};
+    const k = shown.findIndex((x) => x.e.sets.some((s) => !s.done));
+    const fmtOf = (e: ActiveEntry, s: ActiveSet) => fmtSet(s, exOf(e.exerciseId)?.kind, { ...u, weight: e.unit ?? u.weight });
+    let last: string | undefined;
+    for (let a = (k < 0 ? shown.length - 1 : k); a >= 0 && !last; a--) { const d = shown[a].e.sets.filter((s) => s.done).at(-1); if (d) last = fmtOf(shown[a].e, d); }
+    if (k < 0) return { exercise: undefined, last, next: undefined };
+    const e = shown[k].e, j = e.sets.findIndex((s) => !s.done);
+    return { exercise: exOf(e.exerciseId)?.name, last, next: `${tr('Set')} ${j + 1} ${tr('of')} ${e.sets.length}` };
+  })();
 
   const label = (e: ActiveEntry, s: ActiveSet, j: number) => {
     const t = SET_TYPES.find((x) => x.type === s.type)!;
@@ -384,10 +399,12 @@ export default function ActiveWorkoutScreen() {
 
       {rest && !reordering && !kbUp && (
         <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: insets.bottom }}>
-          <View style={{ height: 4, backgroundColor: colors.surfaceAlt }}><View style={{ height: 4, backgroundColor: colors.primary, width: `${Math.min(100, (restLeft / rest.total) * 100)}%` }} /></View>
+          <RestProgress endsAt={rest.endsAt} total={rest.total} color={colors.primary} track={colors.surfaceAlt} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10 }}>
             <Btn title="-15" variant="secondary" style={{ minWidth: 54, minHeight: 38, paddingHorizontal: 10 }} onPress={() => st.adjustRest(-15)} />
-            <Text numberOfLines={1} adjustsFontSizeToFit style={{ flex: 1, fontSize: 32, fontWeight: '400', textAlign: 'center', color: colors.text }} testID="rest-clock">{fmtClock(restLeft)}</Text>
+            <Pressable onPress={() => setFocusRest(rest.endsAt - rest.total * 1000)} style={{ flex: 1 }} accessibilityRole="button" accessibilityLabel={tr('Open focus mode')} testID="rest-clock-btn">
+              <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 32, fontWeight: '400', textAlign: 'center', color: colors.text }} testID="rest-clock">{fmtClock(restLeft)}</Text>
+            </Pressable>
             <Btn title="+15" variant="secondary" style={{ minWidth: 54, minHeight: 38, paddingHorizontal: 10 }} onPress={() => st.adjustRest(15)} />
             <Btn title="Skip" style={{ minWidth: 64, minHeight: 38, paddingHorizontal: 12 }} onPress={st.skipRest} testID="rest-skip" />
           </View>
@@ -511,6 +528,11 @@ export default function ActiveWorkoutScreen() {
       <Dialog visible={!!helpType} message={helpType ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setHelpType(null) }]} />
 
       {/* descanso do exercício */}
+      {rest && focusRest === rest.endsAt - rest.total * 1000 && (
+        <FocusRest visible left={restLeft} exercise={focusInfo.exercise} last={focusInfo.last} next={focusInfo.next}
+          pattern={st.wprefs.breath ?? 'box'} onPattern={(b) => st.setWprefs({ breath: b })}
+          onAdjust={st.adjustRest} onSkip={st.skipRest} onClose={() => setFocusRest(null)} />
+      )}
       {restSheet !== null && <RestSheet subtitle={exOf(active.entries[restSheet]?.exerciseId ?? '')?.name} value={active.entries[restSheet]?.restSec ?? 0} onDone={(sec) => st.patchEntry(restSheet, { restSec: sec })} onClose={() => setRestSheet(null)} onSettings={() => router.push('/settings/timer')} />}
 
       {/* menu do exercício */}
