@@ -46,7 +46,7 @@
 - Layout e fluxos inspirados no Hevy (via Mobbin), com identidade própria: nome Reps, sem logo, ícones nem ilustrações do Hevy
 - Textos em português do Brasil; pesos guardados em kg e convertidos na tela
 - Reps em exercícios de duração = segundos
-- Fotos de PROGRESSO ficam no bucket privado `progress-photos` (`<uid>/<uuid>.jpg`, `measurements.photo_uri = storage:<caminho>`, URL assinada de 7 dias ao carregar); a foto do TREINO (active/save) ainda é só da sessão
+- Fotos de PROGRESSO ficam no bucket privado `progress-photos` (`<uid>/<uuid>.jpg`, `measurements.photo_uri = storage:<caminho>`, URL assinada de 7 dias ao carregar); a foto do TREINO (active/save) vai para o mesmo bucket em `<uid>/w-<id do treino>.jpg` (caminho em `workouts.meta.photo`, sem coluna nova; URL assinada de 7 dias na carga) e aparece no cartão do Início e no detalhe; sem rede sobe com a fila; fotos de treinos salvos antes de 2026-11-21 se perderam (eram só da sessão)
 
 ## Desempenho dos exercícios (arquitetura)
 - Catálogo (texto) e miniaturas 96x96 ficam DENTRO do app como recurso nativo de verdade: `src/data/thumbs.ts` tem um `require('../../assets/thumbs/<id>.jpg')` por exercício (gerado por `scripts/build-thumbs.py`), decisão do Rodrigo (2026-11-05) — "deixar o máximo dentro do app". Listas e seletor não fazem rede, sem custo de decodificação (resource id pré-compilado no build).
