@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, Share, View } from 'react-native';
+import { Image, Pressable, Share, View } from 'react-native';
 import { Text } from './Text';
 import { fmtDuration, fmtVolume, timeAgo } from '../lib/format';
 import { workoutVolume } from '../lib/stats';
@@ -32,6 +32,8 @@ export function WorkoutCard({ w, onMenu }: { w: Workout; onMenu?: () => void }) 
         <Stat label="Volume" value={fmtVolume(workoutVolume(w), profile.units)} />
         <Stat label="Sets" value={String(w.entries.reduce((t, e) => t + e.sets.length, 0))} />
       </View>
+      {/* foto do treino (escolhida ao salvar): ocupa a largura do cartão, quadrada, como no feed do Hevy */}
+      {!!w.photoUri && <Image source={{ uri: w.photoUri }} testID="workout-photo" style={{ width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: colors.surface }} resizeMode="cover" />}
       <View style={{ gap: 4 }}>
         {shown.map((e, i) => <ExerciseLabel key={`${e.exerciseId}-${i}`} exerciseId={e.exerciseId} size={36} prefix={`${e.sets.length} × `} nameStyle={{ fontSize: 15 }} numberOfLines={1} />)}
         {w.entries.length > 3 && <Text style={{ color: colors.muted }}>See {w.entries.length - 3} more exercise(s)</Text>}

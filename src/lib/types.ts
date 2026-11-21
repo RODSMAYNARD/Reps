@@ -43,6 +43,10 @@ export type Workout = {
   routineId?: string | null;
   location?: string | null;
   fromTrainer?: boolean;
+  /** Foto do treino (tirada em `active/save`): caminho no bucket privado `progress-photos` (`<uid>/w-<id>.jpg`, gravado em `meta.photo`). */
+  photoPath?: string | null;
+  /** O que a tela mostra: URL assinada da foto, ou o arquivo local enquanto o treino espera na fila. */
+  photoUri?: string | null;
   /** Salvo sem internet, ainda na fila para subir (só no aparelho). */
   pending?: boolean;
   /** O servidor recusou o envio (não é falta de rede): tenta de novo na próxima abertura do app. */

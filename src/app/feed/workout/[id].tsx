@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Share, View } from 'react-native';
+import { Image, ScrollView, Share, View } from 'react-native';
 import { Text } from '../../../components/Text';
 import { WorkoutHeartRateCard } from '../../../components/HealthCards';
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
@@ -35,6 +35,7 @@ export default function WorkoutDetail() {
           </View>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{w.title}</Text>
           {!!w.description && <Text style={{ color: colors.text }}>{w.description}</Text>}
+          {!!w.photoUri && <Image source={{ uri: w.photoUri }} style={{ width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: colors.surface }} resizeMode="cover" />}
           <View style={{ flexDirection: 'row', gap: 28 }}><Stat label="Time" value={fmtDuration(w.durationSec)} /><Stat label="Volume" value={fmtVolume(workoutVolume(w), u)} /><Stat label="Sets" value={String(workoutSets(w))} /></View>
           <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>
           </View>

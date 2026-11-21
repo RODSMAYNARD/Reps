@@ -40,7 +40,18 @@ const mergePending = (queued: Workout[], server: Workout[]) => {
 const byPosition = <T extends { position: number }>(rows: T[] | null | undefined) => [...(rows ?? [])].sort((a, b) => a.position - b.position);
 
 /** Grava treino + exercícios + séries numa transação (função `save_workout` no banco). `meta` continua sendo gravado para o app antigo ainda instalado. */
-const saveWorkoutRpc = (w: { id: string; date: string; title: string; description: string; durationSec: number; visibility: Workout['visibility']; routineId: string | null; location: string | null; fromTrainer: boolean }, entries: SavedEntry[]) =>
+/** Foto do treino: sobe para o bucket privado `progress-photos` na pasta do usuário (mesmo nível das fotos de progresso, que a
+ * exclusão de conta já limpa). Uma por treino: `<uid>/w-<id do treino>.jpg`. Devolve o caminho. */
+const uploadWorkoutPhoto = async (uid: string, workoutId: string, uri: string) => {
+  const path = `${uid}/w-${workoutId}.jpg`;
+  const bytes = await (await fetch(uri)).arrayBuffer();
+  const up = await supabase.storage.from('progress-photos').upload(path, bytes, { contentType: 'image/jpeg', upsert: true });
+  if (up.error) throw up.error;
+  return path;
+};
+const PHOTO_TTL = 60 * 60 * 24 * 7;
+
+const saveWorkoutRpc = (w: { id: string; date: string; title: string; description: string; durationSec: number; visibility: Workout['visibility']; routineId: string | null; location: string | null; fromTrainer: boolean; photoPath?: string | null }, entries: SavedEntry[]) =>
   supabase.rpc('save_workout', {
     p_workout: {
       id: w.id, performed_at: w.date, title: w.title, description: w.description, duration_sec: Math.round(w.durationSec), visibility: w.visibility,
@@ -49,7 +60,7 @@ const saveWorkoutRpc = (w: { id: string; date: string; title: string; descriptio
         notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
         rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
         superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
-        routineId: w.routineId, location: w.location, trainer: w.fromTrainer || undefined,
+        routineId: w.routineId, location: w.location, trainer: w.fromTrainer || undefined, photo: w.photoPath || undefined,
       },
     },
     p_entries: entries.map((e) => ({
@@ -157,7 +168,8 @@ type Store = {
   /** Ao finalizar: séries com kg/reps digitados e sem ✓ passam a contar como feitas (como no Hevy). */
   completeTypedSets: () => void;
   discardActive: () => void;
-  finishActive: (meta: { title: string; description: string; visibility: Workout['visibility']; date: string; durationSec: number; location?: string | null }) => Promise<Workout | null>;
+  /** `photo` = arquivo local da foto escolhida em `active/save` (sobe para o Storage junto com o treino). */
+  finishActive: (meta: { title: string; description: string; visibility: Workout['visibility']; date: string; durationSec: number; location?: string | null; photo?: string | null }) => Promise<Workout | null>;
   // descanso
   startRest: (sec: number) => void;
   adjustRest: (delta: number) => void;
@@ -382,7 +394,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let wk: { data: any[] | null; error: { message: string } | null } = { data: [], error: null };
     for (let from = 0; ; from += 1000) {
       const page = await supabase.from('workouts')
-      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type,duration_sec,distance_m))')
+      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,photo:meta->>photo,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type,duration_sec,distance_m))')
       .order('performed_at', { ascending: false }).range(from, from + 999);
       if (page.error) { wk = { data: null, error: page.error }; break; }
       rowsAll.push(...page.data);
@@ -397,9 +409,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     // apagados no aparelho que o servidor ainda não apagou: ficam fora da lista e o app tenta apagar de novo
     const deletes = await readDeletes(uid);
     if (deletes.length) supabase.from('workouts').delete().in('id', deletes).then((r) => { if (!r.error) writeDeletes(uid, []); }, () => {});
+    // fotos dos treinos: uma URL assinada (7 dias) por foto, pedidas de uma vez só
+    const photoPaths: string[] = wk.data!.map((w: any) => w.photo).filter((x: unknown): x is string => typeof x === 'string' && !!x);
+    const signed = new Map<string, string>();
+    if (photoPaths.length) {
+      const s = await supabase.storage.from('progress-photos').createSignedUrls(photoPaths, PHOTO_TTL).catch(() => null);
+      (s?.data ?? []).forEach((x) => { if (x.path && x.signedUrl) signed.set(x.path, x.signedUrl); });
+    }
     const serverWk = wk.data!.filter((w: any) => !deletes.includes(w.id) && !dl.deleted.has(w.id)).map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
+      photoPath: w.photo || null, photoUri: w.photo ? signed.get(w.photo) ?? null : null,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
         exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
         sets: byPosition(e.workout_sets).map((s: any): SetRow => withExtra({ type: s.set_type, kg: Number(s.weight), reps: s.reps }, s)),
@@ -648,7 +668,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const r = await ensureRaw(uniq);
         const idMap = new Map(uniq.map((id, k) => [id, r.ids[k]]));
         const entries = w.entries.map((e) => ({ ...e, exerciseId: idMap.get(e.exerciseId) ?? e.exerciseId }));
-        const err = r.error ?? await saveWorkoutRpc({ id: w.id, date: w.date, title: w.title, description: w.description, durationSec: w.durationSec, visibility: w.visibility, routineId: w.routineId ?? null, location: w.location ?? null, fromTrainer }, entries)
+        // foto escolhida sem internet: sobe agora (sem rede = tenta depois; recusada = o treino sobe sem ela)
+        let photoPath = w.photoPath ?? null;
+        if (!photoPath && w.photoUri && !r.error) {
+          try { photoPath = await uploadWorkoutPhoto(userId, w.id, w.photoUri); } catch (x) {
+            if (isNetworkError(x as { message: string })) break;
+            reportError(x, { where: 'outbox-photo' });
+          }
+        }
+        const err = r.error ?? await saveWorkoutRpc({ id: w.id, date: w.date, title: w.title, description: w.description, durationSec: w.durationSec, visibility: w.visibility, routineId: w.routineId ?? null, location: w.location ?? null, fromTrainer, photoPath }, entries)
           .then((x) => x.error, (x) => x as { message: string });
         if (err && isNetworkError(err)) break;
         if (err) reportError(err, { where: 'outbox' });
@@ -1021,10 +1049,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (r.error && !isNetworkError(r.error)) { reportError(r.error, { where: 'save-workout' }); fail(r.error.message); return null; }
       const idMap = new Map(uniq.map((id, k) => [id, r.ids[k]]));
       entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
-      const err = r.error ?? await saveWorkoutRpc({ id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, routineId: a.fromRoutineId ?? null, location: meta.location || null, fromTrainer: !!a.fromTrainer }, entries)
+      // foto: sobe antes do treino (o caminho vai em meta.photo). Sem rede o treino vai para a fila com o arquivo local e a foto sobe com ele
+      let photoPath: string | null = null;
+      let photoNet: { message: string } | null = null;
+      if (meta.photo && !r.error && userId) {
+        try { photoPath = await uploadWorkoutPhoto(userId, a.id, meta.photo); } catch (x) {
+          if (isNetworkError(x as { message: string })) photoNet = x as { message: string };
+          else { reportError(x, { where: 'workout-photo' }); showToast("Couldn't upload the photo. The workout was saved without it.", 4000); }
+        }
+      }
+      const err = r.error ?? photoNet ?? await saveWorkoutRpc({ id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, routineId: a.fromRoutineId ?? null, location: meta.location || null, fromTrainer: !!a.fromTrainer, photoPath }, entries)
         .then((x) => x.error, (x) => x as { message: string });
       if (err && !isNetworkError(err)) { reportError(err, { where: 'save-workout' }); fail(err.message); return null; }
       const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null, location: meta.location || null };
+      if (meta.photo && (photoPath || err)) { saved.photoPath = photoPath; saved.photoUri = meta.photo; }
       // sem internet: o treino fica no aparelho e sobe sozinho quando a conexão voltar
       if (a.fromTrainer) saved.fromTrainer = true;
       if (err) { saved.pending = true; await enqueue({ workout: saved, fromTrainer: !!a.fromTrainer }); showToast('Saved on this device. It will upload when you are back online.', 4000); }
@@ -1061,7 +1099,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
       const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((x, k) => [x, realIds[k]]));
       entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
-      const u = await saveWorkoutRpc({ id, date: patch.date, title: patch.title || 'Workout', description: patch.description, durationSec: patch.durationSec, visibility: patch.visibility, routineId: old.routineId ?? null, location: patch.location || null, fromTrainer: !!old.fromTrainer }, entries);
+      const u = await saveWorkoutRpc({ id, date: patch.date, title: patch.title || 'Workout', description: patch.description, durationSec: patch.durationSec, visibility: patch.visibility, routineId: old.routineId ?? null, location: patch.location || null, fromTrainer: !!old.fromTrainer, photoPath: old.photoPath ?? null }, entries);
       if (u.error) { reportError(u.error, { where: 'update-workout' }); fail(u.error.message); return false; }
       setWorkouts((l) => l.map((w) => (w.id === id ? { ...w, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries } : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
       return true;
@@ -1073,8 +1111,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setWorkouts((l) => l.filter((w) => w.id !== id));
         return;
       }
+      const photo = wkRef.current.find((w) => w.id === id)?.photoPath;
       const { error: e } = await supabase.from('workouts').delete().eq('id', id);
       if (e) return fail(e.message);
+      if (photo) supabase.storage.from('progress-photos').remove([photo]).then(() => {}, () => {});
       duringLoad.current.deleted.add(id);
       setWorkouts((l) => l.filter((w) => w.id !== id));
     },
