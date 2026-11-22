@@ -78,4 +78,4 @@ export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/d
 /** Termos próprios (texto em `docs/legal/terms-of-use.md`) numa URL pública: usados fora do iOS (o EULA da Apple não vale no Google Play). Vazio = abre a tela do app (`/terms`, ver `lib/legal.ts`). */
 export const OWN_TERMS_URL: string = '';
 /** Política de privacidade publicada numa URL pública (texto em `docs/legal/privacy-policy.md`). Vazio = os links abrem a tela do app (`/privacy`, ver `lib/legal.ts`). */
-export const PRIVACY_URL: string = '';
+export const PRIVACY_URL: string = 'https://rodsappz4u-reps--web.expo.app/privacy';
