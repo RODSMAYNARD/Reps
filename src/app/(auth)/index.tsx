@@ -6,7 +6,7 @@ import { Text } from '../../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dialog } from '../../components/ui';
 
-import { appleAvailable, signInWithApple } from '../../lib/socialAuth';
+import { appleAvailable, googleAvailable, signInWithApple, signInWithGoogle } from '../../lib/socialAuth';
 import { colors } from '../../lib/theme';
 
 export function SocialButton({ icon, label, onPress, color }: { icon: any; label: string; onPress: () => void; color?: string }) {
@@ -29,8 +29,9 @@ export default function Welcome() {
           <Text style={{ color: '#9AA3AF', fontSize: 15, marginTop: 6 }}>Log workouts. See progress.</Text>
         </View>
         <View style={{ gap: 10 }}>
-          {/* Apple nativo só no iOS com o módulo no build (lib/socialAuth); Google ainda sem credenciais */}
+          {/* Apple nativo só no iOS com o módulo no build e Google nativos (lib/socialAuth): só aparecem em build com os módulos */}
           {appleAvailable && <SocialButton icon="logo-apple" label="Continue with Apple" onPress={async () => { const m = await signInWithApple(); if (m) setErr(m); }} />}
+          {googleAvailable && <SocialButton icon="logo-google" label="Continue with Google" onPress={async () => { const m = await signInWithGoogle(); if (m) setErr(m); }} />}
           <SocialButton icon="mail-outline" label="Sign up with email" onPress={() => router.push('/signup')} />
           <Pressable onPress={() => router.push('/login')} style={{ alignItems: 'center', paddingVertical: 14 }}>
             <Text style={{ color: '#fff' }}>Already have an account? <Text style={{ color: '#4DA3FF' }}>Log in</Text></Text>

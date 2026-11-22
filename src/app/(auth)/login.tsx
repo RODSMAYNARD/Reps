@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, ScrollView, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { Btn, Field, Header, Screen, TextLink } from '../../components/ui';
-import { appleAvailable, signInWithApple } from '../../lib/socialAuth';
+import { appleAvailable, googleAvailable, signInWithApple, signInWithGoogle } from '../../lib/socialAuth';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 import { SocialButton } from './index';
@@ -24,12 +24,13 @@ export default function Login() {
           <TextLink title="Forgot password?" onPress={() => router.push('/forgot')} style={{ alignSelf: 'center', padding: 8 }} />
           {!!msg && <Text style={{ color: colors.danger }}>{msg}</Text>}
           <Btn title="Log in" testID="login-submit" disabled={!email.includes('@') || password.length < 6} loading={busy} onPress={async () => { setBusy(true); setMsg(await signIn(email.trim(), password)); setBusy(false); }} />
-          {appleAvailable && (
+          {(appleAvailable || googleAvailable) && (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} /><Text style={{ color: colors.muted }}>or</Text><View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
               </View>
-              <SocialButton icon="logo-apple" label="Continue with Apple" onPress={async () => { const m = await signInWithApple(); if (m) setMsg(m); }} />
+              {appleAvailable && <SocialButton icon="logo-apple" label="Continue with Apple" onPress={async () => { const m = await signInWithApple(); if (m) setMsg(m); }} />}
+              {googleAvailable && <SocialButton icon="logo-google" label="Continue with Google" onPress={async () => { const m = await signInWithGoogle(); if (m) setMsg(m); }} />}
             </>
           )}
           <TextLink title="Don't have an account? Sign up" onPress={() => router.replace('/signup')} style={{ padding: 10 }} />

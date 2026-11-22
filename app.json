@@ -135,6 +135,10 @@
             "minSdkVersion": 26
           }
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        { "iosUrlScheme": "com.googleusercontent.apps.344092833336-gkn0bpmf87jhmmfrhfbnl85asq32unpf" }
       ]
     ],
     "scheme": "reps",

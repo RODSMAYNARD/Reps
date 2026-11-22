@@ -156,14 +156,14 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Links legais (2026-11-09): `TERMS_URL` (EULA padrão da Apple) e `PRIVACY_URL` em `lib/constants.ts`, abertos por `openTerms`/`openPrivacy` (`lib/legal.ts`) no rodapé do Paywall, em About e no texto do Sign up (exigência 3.1.2 da App Store para assinaturas). Com `PRIVACY_URL` vazio, a privacidade abre a tela do próprio app `src/app/privacy.tsx` (rota pública, fora dos grupos protegidos; texto em inglês e português, resumo de `docs/legal/privacy-policy.md`). A App Store Connect ainda exige uma URL pública.
 - Paywall: comparações ("X if paid monthly", "SAVE N%", preço riscado da oferta de saída) vêm dos produtos da loja quando carregados e na mesma moeda; senão somem (os preços de exemplo só valem sem produto). Compra/restauração com sucesso chama `onPurchased` (onboarding marca `onboarded` e registra plano 'pro'; settings/pro volta).
 - `Telemetry.tsx`: logout do RevenueCat e reset do PostHog só quando o usuário SAI (uid de algo → null), não a cada abertura.
-- Login social: os botões Apple/Google/Facebook ficam escondidos por `FEATURES.socialLogin = false` (antes abriam "Coming soon", motivo de recusa na revisão).
+- **Login com Apple e Google (2026-11-22, `lib/socialAuth.ts`):** nativos, token direto ao Supabase (`signInWithIdToken`). Apple: `expo-apple-authentication`, `ios.usesAppleSignIn`, capability no App ID, provedor Apple no Supabase com Client ID = bundle id (sem chave). Google: `@react-native-google-signin/google-signin` (plugin com `iosUrlScheme`), projeto Google Cloud **Reps** (`infra-filament-473001-j9`, era "My First Project"; a conta está no limite de projetos), consentimento Externo em modo TESTE (só usuários de teste entram até publicar o app no Google Auth Platform), clientes Web (`344092833336-2jep…`, o que o Supabase confere), iOS (`…-gkn0…`) e Android (pacote + SHA-1 do keystore de upload do EAS). Provedor Google no Supabase com Web+iOS em Client IDs e "Skip nonce checks"; a chave secreta do cliente Web ficou com o Rodrigo (JSON baixado), não foi colada no Supabase (só o login web precisaria). Botões só aparecem em build com os módulos (try/require). Facebook removido. **Falta:** build novo (não autorizado ainda), testar em aparelho, e ao publicar na Play adicionar outro cliente Android com o SHA-1 da "App signing key" do Play Console.
+- Supabase Auth: "Confirm email" LIGADO (2026-11-22; o cadastro já mostra "Confirm the email we sent"). "Leaked password protection" exige plano Pro: o Rodrigo decidiu NÃO ligar.
 
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Mídia dos exercícios: exige licença própria da Gym visual (https://gymvisual.com/) ou outra fonte livre
 - Conferir amostras das traduções (feitas por IA) e corrigir termos
-- Supabase > Authentication: ativar "Leaked password protection" (único alerta do advisor de segurança em 2026-11-09) e decidir confirmação de e-mail
-- Apple/Google sign-in nativos (os botões ficam escondidos por `FEATURES.socialLogin` até existirem)
+- Apple/Google sign-in: código e contas prontos (2026-11-22), falta build novo + teste em aparelho + publicar o consentimento do Google
 - Publicar a política de privacidade numa URL (a App Store Connect exige) e preencher `PRIVACY_URL` em `lib/constants.ts` (até lá os links abrem a tela `/privacy` do app)
 
 ## Regras do dono (builds)
