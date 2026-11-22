@@ -296,7 +296,8 @@ export default function ActiveWorkoutScreen() {
           const toggle = () => setCollapsed((c) => ({ ...c, [uid]: !c[uid] }));
           return (
             <View key={uid} style={{ paddingTop: 16 }} testID="entry">
-              <Pressable onPress={isCollapsed ? toggle : undefined} onLongPress={() => setReordering(true)} delayLongPress={450} testID="entry-header" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
+              <Pressable onPress={isCollapsed ? toggle : undefined} onLongPress={() => setReordering(true)} delayLongPress={450} testID="entry-header" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 4, paddingRight: 16 }}>
+                <IconButton name={isCollapsed ? 'chevron-down' : 'chevron-up'} onPress={toggle} testID="entry-toggle" />
                 <ExerciseThumb catalogId={ex?.catalogId} uri={ex?.assetUri} size={isCollapsed ? 36 : 44} />
                 <View style={{ flex: 1 }}>
                   <Text onPress={() => router.push({ pathname: '/exercises/[id]', params: { id: e.exerciseId } })} style={{ color: colors.primary, fontSize: isCollapsed ? 16 : 17, fontWeight: '600' }}>{ex?.name ?? 'Removed exercise'}</Text>
@@ -304,7 +305,6 @@ export default function ActiveWorkoutScreen() {
                   {!!e.swappedFrom && <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600', marginTop: 1 }} numberOfLines={1}>Swapped today · was {exOf(e.swappedFrom)?.name ?? 'original'}</Text>}
                   {!e.swappedFrom && !!e.madeMain && <Text style={{ color: '#E8890C', fontSize: 12, fontWeight: '700', marginTop: 1 }} numberOfLines={1} testID="main-tag">Now the main exercise</Text>}
                 </View>
-                <IconButton name={isCollapsed ? 'chevron-down' : 'chevron-up'} onPress={toggle} testID="entry-toggle" />
                 <IconButton name="ellipsis-vertical" onPress={() => setMenu(i)} testID="entry-menu" />
               </Pressable>
               {isCollapsed ? <View style={{ height: 8, borderBottomWidth: 1, borderBottomColor: colors.surface }} /> : <>
