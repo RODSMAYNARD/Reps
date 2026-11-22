@@ -9,6 +9,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rodrigomaynard.reps",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

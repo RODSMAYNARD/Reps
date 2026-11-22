@@ -5,7 +5,8 @@ import { Pressable, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dialog } from '../../components/ui';
-import { FEATURES } from '../../lib/constants';
+
+import { appleAvailable, signInWithApple } from '../../lib/socialAuth';
 import { colors } from '../../lib/theme';
 
 export function SocialButton({ icon, label, onPress, color }: { icon: any; label: string; onPress: () => void; color?: string }) {
@@ -18,7 +19,7 @@ export function SocialButton({ icon, label, onPress, color }: { icon: any; label
 }
 
 export default function Welcome() {
-  const [soon, setSoon] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   return (
     <View style={{ flex: 1, backgroundColor: '#0B0B0F' }}>
       <SafeAreaView style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
@@ -28,16 +29,15 @@ export default function Welcome() {
           <Text style={{ color: '#9AA3AF', fontSize: 15, marginTop: 6 }}>Log workouts. See progress.</Text>
         </View>
         <View style={{ gap: 10 }}>
-          {/* Apple/Google ainda sem login nativo: escondidos até FEATURES.socialLogin (nada de "Coming soon") */}
-          {FEATURES.socialLogin && <SocialButton icon="logo-apple" label="Sign up with Apple" onPress={() => setSoon(true)} />}
-          {FEATURES.socialLogin && <SocialButton icon="logo-google" label="Sign up with Google" onPress={() => setSoon(true)} />}
+          {/* Apple nativo só no iOS com o módulo no build (lib/socialAuth); Google ainda sem credenciais */}
+          {appleAvailable && <SocialButton icon="logo-apple" label="Continue with Apple" onPress={async () => { const m = await signInWithApple(); if (m) setErr(m); }} />}
           <SocialButton icon="mail-outline" label="Sign up with email" onPress={() => router.push('/signup')} />
           <Pressable onPress={() => router.push('/login')} style={{ alignItems: 'center', paddingVertical: 14 }}>
             <Text style={{ color: '#fff' }}>Already have an account? <Text style={{ color: '#4DA3FF' }}>Log in</Text></Text>
           </Pressable>
         </View>
       </SafeAreaView>
-      {FEATURES.socialLogin && <Dialog visible={soon} title="Coming soon" message="This kind of login needs native setup and will be enabled in the published version. Use email for now." actions={[{ label: 'Ok', primary: true, onPress: () => setSoon(false) }]} />}
+      <Dialog visible={!!err} title="Couldn't sign in" message={err ?? ''} actions={[{ label: 'Ok', primary: true, onPress: () => setErr(null) }]} />
     </View>
   );
 }
