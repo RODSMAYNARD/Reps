@@ -13,6 +13,7 @@ This policy explains what information Reps ("we", "us") collects when you use th
 | Data | Why we use it |
 |---|---|
 | Email address and password | To create and secure your account and to send account emails (welcome, password reset code, account deletion confirmation). Passwords are stored hashed by our authentication provider; we never see them. |
+| Sign in with Apple or Google (optional): the email and, if you allow it, the name shared by Apple or Google | To create your account without a password. With Apple you can hide your real email (relay address). We never receive your Apple or Google password. |
 | Profile: username, display name, bio, link, sex, birth year, body weight, preferred units, theme | To personalize the app (for example units and strength comparisons). Sex, birth year and weight are optional. |
 | Training data: workouts, sets, weights, reps, times, distances, notes, routines, exercises you create, Trainer program settings (goal, level, equipment, injuries you choose to enter) | This is the core of the service: to save your history, show statistics and records, and build your plan. |
 | Body measurements and progress photos | To show your progress. Progress photos are stored in a private storage bucket that only your account can access. |
@@ -26,6 +27,7 @@ Injury information you choose to enter is used only to avoid exercises in your p
 - **Crash and error reports (Sentry):** technical details when the app fails (device model, OS version, app version, error trace), linked to the same random account ID.
 - **Purchases (RevenueCat):** if you subscribe to Reps Pro, the subscription status and purchase receipts from the App Store / Google Play, linked to the random account ID. We never receive your card details; payments are processed by Apple or Google.
 - **Data kept on your device:** the workout in progress, preferences, a cached copy of your data for offline use, and workouts waiting to upload. These stay on your phone until synced or until you log out / delete the app.
+- **Health data (optional, on device only):** if you connect Apple Health (iOS) or Health Connect (Android), Reps reads sleep (duration and stages), resting heart rate, heart rate variability, heart rate during workouts, steps, active and total calories, distance, floors, exercise minutes, blood oxygen, respiratory rate, VO2 max, body weight and body fat, and can write finished strength workouts. This data is processed **only on your device**: it is never sent to our servers, analytics or error reports, never shared or sold, and never used for advertising. Disconnect anytime in Settings > Watches & Health or in the system settings.
 
 We do **not** sell your personal information, and we do not use it for third-party advertising.
 

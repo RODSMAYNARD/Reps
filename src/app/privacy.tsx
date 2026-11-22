@@ -10,11 +10,12 @@ import { colors } from '../lib/theme';
 type Doc = { updated: string; intro: string; sections: { title: string; body: string[] }[] };
 
 const EN: Doc = {
-  updated: 'Last updated: November 9, 2026',
+  updated: 'Last updated: November 22, 2026',
   intro: `This policy explains what information Reps collects, why, who it is shared with and the choices you have. Reps is developed by Rodrigo Maynard, who is responsible for your data. Contact: ${SUPPORT_EMAIL}.`,
   sections: [
     { title: 'Information you give us', body: [
       'Account: your email and password, used to create and secure your account and to send account emails (welcome, password reset code, account deletion). Passwords are stored hashed by our authentication provider; we never see them.',
+      'Sign in with Apple or Google (optional): we receive only the email and, if you allow it, the name that Apple or Google shares, to create your account. With Apple you can hide your real email. We never receive your Apple or Google password.',
       'Profile: username, name, bio, link, sex, birth year, body weight, units and theme. Sex, birth year and weight are optional and are used for features such as strength levels.',
       'Training data: workouts, sets, weights, reps, times, distances, notes, routines, exercises you create and your Trainer settings, including injuries you choose to enter, which are only used to avoid exercises in your plan.',
       'Body measurements and progress photos. Photos are kept in private storage that only your account can access.',
@@ -25,6 +26,7 @@ const EN: Doc = {
       'Crash reports (Sentry): technical details when the app fails (device model, system and app version, error trace), linked to the same random ID.',
       'Subscriptions (RevenueCat): subscription status and purchase receipts from the App Store or Google Play. We never receive your card details.',
       'On your device: the workout in progress, preferences, a copy of your data for offline use and workouts waiting to upload.',
+      'Health data (optional): if you connect Apple Health or Health Connect, Reps reads sleep, heart rate, heart rate variability, steps, activity, body weight and similar data, and can save finished workouts there. This data stays only on your device: it is never sent to our servers or to analytics, never shared or sold and never used for advertising. You can disconnect at any time in Settings > Watches & Health or in your phone settings.',
       'We do not sell your personal information and we do not use it for third-party advertising.',
     ] },
     { title: 'Who we share it with', body: [
@@ -46,11 +48,12 @@ const EN: Doc = {
 };
 
 const PT: Doc = {
-  updated: 'Última atualização: 9 de novembro de 2026',
+  updated: 'Última atualização: 22 de novembro de 2026',
   intro: `Esta política explica quais informações o Reps coleta, por quê, com quem são compartilhadas e quais são as suas escolhas. O Reps é desenvolvido por Rodrigo Maynard, responsável pelos seus dados. Contato: ${SUPPORT_EMAIL}.`,
   sections: [
     { title: 'Informações que você nos dá', body: [
       'Conta: e-mail e senha, usados para criar e proteger a conta e enviar e-mails da conta (boas-vindas, código para trocar a senha, exclusão da conta). As senhas ficam guardadas com criptografia pelo nosso provedor de login; nós nunca as vemos.',
+      'Entrar com Apple ou Google (opcional): recebemos só o e-mail e, se você permitir, o nome que a Apple ou o Google compartilham, para criar sua conta. Com a Apple você pode esconder seu e-mail real. Nunca recebemos sua senha da Apple ou do Google.',
       'Perfil: nome de usuário, nome, bio, link, sexo, ano de nascimento, peso, unidades e tema. Sexo, ano de nascimento e peso são opcionais e servem para recursos como o nível de força.',
       'Dados de treino: treinos, séries, pesos, repetições, tempos, distâncias, notas, rotinas, exercícios que você cria e os ajustes do Trainer, incluindo lesões que você escolher informar, usadas só para evitar exercícios no seu plano.',
       'Medidas do corpo e fotos de progresso. As fotos ficam num armazenamento privado que só a sua conta acessa.',
@@ -61,6 +64,7 @@ const PT: Doc = {
       'Relatórios de erro (Sentry): detalhes técnicos quando o app falha (modelo do aparelho, versão do sistema e do app, rastro do erro), ligados ao mesmo identificador.',
       'Assinaturas (RevenueCat): situação da assinatura e recibos de compra da App Store ou do Google Play. Nunca recebemos os dados do seu cartão.',
       'No seu aparelho: o treino em andamento, preferências, uma cópia dos seus dados para uso sem internet e treinos esperando envio.',
+      'Dados de saúde (opcional): se você conectar o Apple Saúde ou o Health Connect, o Reps lê sono, frequência cardíaca, variabilidade da frequência cardíaca, passos, atividade, peso e dados parecidos, e pode gravar lá os treinos concluídos. Esses dados ficam só no seu aparelho: nunca vão para nossos servidores nem para a análise de uso, nunca são compartilhados ou vendidos e nunca são usados para publicidade. Você pode desconectar quando quiser em Settings > Watches & Health ou nos ajustes do celular.',
       'Não vendemos suas informações pessoais e não as usamos para publicidade de terceiros.',
     ] },
     { title: 'Com quem compartilhamos', body: [
