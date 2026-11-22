@@ -165,7 +165,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Mídia dos exercícios: exige licença própria da Gym visual (https://gymvisual.com/) ou outra fonte livre
 - Conferir amostras das traduções (feitas por IA) e corrigir termos
 - Apple/Google sign-in: código e contas prontos (2026-11-22), falta build novo + teste em aparelho + publicar o consentimento do Google
-- Política de privacidade: `PRIVACY_URL` = https://rodsappz4u-reps--web.expo.app/privacy (2026-11-22, a tela `/privacy` da versão web; usar essa URL na App Store Connect e no Play). Falta no texto (`src/app/privacy.tsx`, depois republicar a web): login com Apple/Google e dados de saúde (Apple Saúde/Health Connect, só no aparelho) — exigência das lojas
+- Política de privacidade: `PRIVACY_URL` = https://rodsappz4u-reps--web.expo.app/privacy (2026-11-22, a tela `/privacy` da versão web; usar essa URL na App Store Connect e no Play). Texto com login Apple/Google e dados de saúde (só no aparelho) publicado em 2026-11-22 (deploy web `n7s2r16cg2`, alias `web`). Mudou `privacy.tsx` = republicar a web
 
 ## Regras do dono (builds)
 - NÃO disparar builds (Android/iOS) nem enviar ao TestFlight sem autorização expressa do Rodrigo na mensagem. Implementar, validar (`tsc`, lint) e commitar; perguntar antes de buildar.
