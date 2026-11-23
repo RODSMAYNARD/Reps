@@ -1401,4 +1401,17 @@ export const PT: Record<string, string> = {
   'Double inhale through the nose, long exhale through the mouth. Fastest way to slow your breathing between sets.': 'Duas inspirações pelo nariz e uma expiração longa pela boca. O jeito mais rápido de acalmar o fôlego entre séries.',
   'Long hold and longer exhale. Good after a very hard set or at the end of the workout.': 'Segura bastante e solta mais devagar ainda. Bom depois de uma série muito dura ou no fim do treino.',
   'About 5-6 breaths per minute, no holds. Easy rhythm for long rests.': 'Cerca de 5 a 6 respirações por minuto, sem segurar. Ritmo tranquilo para descansos longos.',
+  // Pastas de rotinas (aba Workout)
+  'My Routines': 'Minhas rotinas',
+  'New Folder': 'Nova pasta',
+  'Folder name': 'Nome da pasta',
+  'Rename Folder': 'Renomear pasta',
+  'Rename': 'Renomear',
+  'Delete Folder': 'Apagar pasta',
+  'Delete folder?': 'Apagar pasta?',
+  'The routines in it go back to My Routines. No routine is deleted.': 'As rotinas dela voltam para Minhas rotinas. Nenhuma rotina é apagada.',
+  'Add New Routine': 'Adicionar nova rotina',
+  'Move to Folder': 'Mover para pasta',
+  'This folder is empty': 'Esta pasta está vazia',
+  'Clear title': 'Limpar título',
 };

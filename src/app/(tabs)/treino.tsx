@@ -31,6 +31,8 @@ export default function Treino() {
   /** Tira a rotina de qualquer pasta e, com `to`, põe no fim dessa pasta. */
   const moveTo = (rid: string, to: string | null) => setFolders(wprefs.routineFolders.map((f) => ({ ...f, ids: f.id === to ? [...f.ids.filter((x) => x !== rid), rid] : f.ids.filter((x) => x !== rid) })));
   const [folderMenu, setFolderMenu] = useState<RoutineFolder | null>(null);
+  const [mineMenu, setMineMenu] = useState(false);
+  const mineTitle = wprefs.mineName?.trim() || tr('My Routines');
   const [moveOf, setMoveOf] = useState<Routine | null>(null);
   /** Pop-up do nome: pasta nova (com `moveId`, a rotina já entra nela) ou renomear. */
   const [nameAsk, setNameAsk] = useState<{ rename?: string; moveId?: string } | null>(null);
@@ -39,7 +41,8 @@ export default function Treino() {
   const saveName = () => {
     const name = nameDraft.trim();
     if (!name || !nameAsk) return;
-    if (nameAsk.rename) setFolders(wprefs.routineFolders.map((f) => (f.id === nameAsk.rename ? { ...f, name } : f)));
+    if (nameAsk.rename === 'mine') setWprefs({ mineName: name });
+    else if (nameAsk.rename) setFolders(wprefs.routineFolders.map((f) => (f.id === nameAsk.rename ? { ...f, name } : f)));
     else {
       const id = `f${Date.now().toString(36)}`;
       const rest = wprefs.routineFolders.map((f) => ({ ...f, ids: f.ids.filter((x) => x !== nameAsk.moveId) }));
@@ -62,7 +65,7 @@ export default function Treino() {
         style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name="play" size={15} color="#fff" style={{ marginLeft: 2 }} />
       </Pressable>
-      <IconButton name="ellipsis-horizontal" onPress={() => setMenu(r)} />
+      <IconButton name="ellipsis-horizontal" size={20} onPress={() => setMenu(r)} />
     </Card>
   );
   const check = <Ionicons name="checkmark" size={20} color={colors.primary} />;
@@ -104,7 +107,7 @@ export default function Treino() {
         ))}
         {loose.length > 0 && (
           <View>
-            <FolderHead title={`${tr('My Routines')} (${loose.length})`} open={!closed.has('mine')} onToggle={() => toggle('mine')} />
+            <FolderHead title={`${mineTitle} (${loose.length})`} open={!closed.has('mine')} onToggle={() => toggle('mine')} onMenu={() => setMineMenu(true)} />
             {!closed.has('mine') && loose.map(card)}
           </View>
         )}
@@ -132,7 +135,7 @@ export default function Treino() {
           const pick = (to: string | null) => { if (moveOf) moveTo(moveOf.id, to); setMoveOf(null); };
           return (
             <>
-              <ListRow icon="list-outline" label="My Routines" onPress={() => pick(null)} right={cur === null ? check : undefined} />
+              <ListRow icon="list-outline" label={mineTitle} onPress={() => pick(null)} right={cur === null ? check : undefined} />
               {wprefs.routineFolders.map((f) => (
                 <ListRow key={f.id} icon="folder-outline" label={f.name} onPress={() => pick(f.id)} right={cur === f.id ? check : undefined} />
               ))}
@@ -146,7 +149,11 @@ export default function Treino() {
         <ListRow icon="create-outline" label="Rename Folder" onPress={() => { const f = folderMenu!; setFolderMenu(null); askName({ rename: f.id }, f.name); }} />
         <ListRow icon="trash-outline" label="Delete Folder" danger last onPress={() => { const f = folderMenu!; setFolderMenu(null); setConfirm({ title: 'Delete folder?', message: 'The routines in it go back to My Routines. No routine is deleted.', label: 'Delete', run: () => setWprefs({ routineFolders: wprefs.routineFolders.filter((x) => x.id !== f.id), closedFolders: wprefs.closedFolders.filter((x) => x !== f.id) }) }); }} />
       </Sheet>
-      <Dialog visible={!!nameAsk} hasInput title={nameAsk?.rename ? 'Rename Folder' : 'New Folder'} onClose={() => setNameAsk(null)}
+      <Sheet visible={mineMenu} onClose={() => setMineMenu(false)} title={mineTitle}>
+        <ListRow icon="add" label="Add New Routine" onPress={() => { setMineMenu(false); router.push('/routines/edit'); }} />
+        <ListRow icon="create-outline" label="Rename" last onPress={() => { setMineMenu(false); askName({ rename: 'mine' }, mineTitle); }} testID="rename-mine" />
+      </Sheet>
+      <Dialog visible={!!nameAsk} hasInput title={nameAsk?.rename === 'mine' ? 'Rename' : nameAsk?.rename ? 'Rename Folder' : 'New Folder'} onClose={() => setNameAsk(null)}
         actions={[{ label: 'Cancel', onPress: () => setNameAsk(null) }, { label: nameAsk?.rename ? 'Save' : 'Create', primary: true, onPress: saveName }]}>
         <TextInput value={nameDraft} onChangeText={setNameDraft} autoFocus placeholder="Folder name" placeholderTextColor={colors.faint} onSubmitEditing={saveName} maxLength={40}
           style={{ backgroundColor: colors.surface, borderRadius: 10, padding: 12, fontSize: 16, color: colors.text }} testID="folder-name" />
