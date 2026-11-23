@@ -14,7 +14,7 @@ import { Routine, RoutineFolder } from '../../lib/types';
 const half = { flexDirection: 'row', justifyContent: 'center', paddingVertical: 11 } as const;
 
 export default function Treino() {
-  const { trainer, routines, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast, wprefs, setWprefs } = useStore();
+  const { trainer, routines, workouts, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast, wprefs, setWprefs } = useStore();
   const [menu, setMenu] = useState<Routine | null>(null);
   const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [ask, setAsk] = useState<'replace' | null>(null);
@@ -57,10 +57,19 @@ export default function Treino() {
     router.push('/active');
   };
 
+  // Quantas vezes cada rotina foi concluída (treinos salvos com routineId)
+  const doneCount = new Map<string, number>();
+  for (const w of workouts) if (w.routineId) doneCount.set(w.routineId, (doneCount.get(w.routineId) ?? 0) + 1);
   // Cartão compacto (pedido do Rodrigo, 2026-11-23): só o nome, play azul redondo e ⋯
   const card = (r: Routine) => (
     <Card key={r.id} onPress={() => router.push({ pathname: '/routines/[id]', params: { id: r.id } })} testID="routine-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, marginBottom: 8 }}>
-      <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 17, lineHeight: 22, color: colors.text, flex: 1 }}>{r.title}</Text>
+      <View style={{ flex: 1, gap: 6, alignItems: 'flex-start' }}>
+        <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 17, lineHeight: 22, color: colors.text }}>{r.title}</Text>
+        <View testID="routine-done" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
+          <Ionicons name="flame" size={13} color="#F97316" />
+          <Text style={{ fontSize: 13, lineHeight: 17, color: colors.muted }}>{tr('{n} completed').replace('{n}', String(doneCount.get(r.id) ?? 0))}</Text>
+        </View>
+      </View>
       <Pressable onPress={() => start(r)} hitSlop={6} accessibilityLabel={tr('Start Routine')} testID="routine-start"
         style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name="play" size={15} color="#fff" style={{ marginLeft: 2 }} />
