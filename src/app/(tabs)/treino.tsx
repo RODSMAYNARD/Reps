@@ -67,7 +67,7 @@ export default function Treino() {
         <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 17, lineHeight: 22, color: colors.text }}>{r.title}</Text>
         <View testID="routine-done" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
           <Ionicons name="flame" size={13} color="#F97316" />
-          <Text style={{ fontSize: 13, lineHeight: 17, color: colors.muted }}>{tr('{n} completed').replace('{n}', String(doneCount.get(r.id) ?? 0))}</Text>
+          <Text style={{ fontSize: 13, lineHeight: 17, color: colors.muted }}>{(() => { const n = doneCount.get(r.id) ?? 0; return tr(n === 1 ? '1 completed' : '{n} completed').replace('{n}', String(n)); })()}</Text>
         </View>
       </View>
       <Pressable onPress={() => start(r)} hitSlop={6} accessibilityLabel={tr('Start Routine')} testID="routine-start"

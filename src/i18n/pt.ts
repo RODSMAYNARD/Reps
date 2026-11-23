@@ -1408,6 +1408,7 @@ export const PT: Record<string, string> = {
   'Rename Folder': 'Renomear pasta',
   'Rename': 'Renomear',
   '{n} completed': '{n} concluídos',
+  '1 completed': '1 concluído',
   'Delete Folder': 'Apagar pasta',
   'Delete folder?': 'Apagar pasta?',
   'The routines in it go back to My Routines. No routine is deleted.': 'As rotinas dela voltam para Minhas rotinas. Nenhuma rotina é apagada.',
