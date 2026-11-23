@@ -59,8 +59,8 @@ export default function Treino() {
     <Card key={r.id} onPress={() => router.push({ pathname: '/routines/[id]', params: { id: r.id } })} testID="routine-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, marginBottom: 8 }}>
       <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 17, lineHeight: 22, color: colors.text, flex: 1 }}>{r.title}</Text>
       <Pressable onPress={() => start(r)} hitSlop={6} accessibilityLabel={tr('Start Routine')} testID="routine-start"
-        style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name="play" size={20} color="#fff" style={{ marginLeft: 3 }} />
+        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="play" size={15} color="#fff" style={{ marginLeft: 2 }} />
       </Pressable>
       <IconButton name="ellipsis-horizontal" onPress={() => setMenu(r)} />
     </Card>
