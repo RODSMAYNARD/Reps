@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { track } from '../../lib/analytics';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { useLocalSearchParams } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import { useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { NativeScrollEvent, NativeSyntheticEvent, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { useShare } from '../../lib/useShare';
 import { Text } from '../../components/Text';
 import Svg, { Line, Polygon } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -55,6 +55,7 @@ function Btn2({ icon, label: l, onPress, children }: { icon?: keyof typeof Ionic
 export default function ReportShare() {
   const { month } = useLocalSearchParams<{ month?: string }>();
   const st = useStore();
+  const share = useShare();
   const { workouts, profile } = st;
   const u = profile.units;
   const { width } = useWindowDimensions();
@@ -158,10 +159,12 @@ export default function ReportShare() {
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => setPage(Math.round(e.nativeEvent.contentOffset.x / width));
   const capture = async () => { const r = refs.current[page]; if (!r) return null; return captureRef(r as Parameters<typeof captureRef>[0], { format: 'png', quality: 1 }); };
-  const doShare = async () => { track('report_card_shared', { card: page }); try { const uri = await capture(); if (uri && (await Sharing.isAvailableAsync())) await Sharing.shareAsync(uri, { mimeType: 'image/png' }); } catch { st.showToast('Could not share the image.'); } };
+  const doShare = async () => { track('report_card_shared', { card: page }); try { const uri = await capture(); if (uri) await share.image(uri, 'reps-report.png'); else st.showToast('Could not share the image.'); } catch { st.showToast('Could not share the image.'); } };
   const doDownload = async () => {
     track('report_card_downloaded', { card: page });
     try {
+      // web: a galeria não existe; baixa o PNG
+      if (Platform.OS === 'web') { const uri = await capture(); if (uri) await share.downloadImage(uri, 'reps-report.png'); return; }
       const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) return st.showToast('Permission to save was denied.');
       const uri = await capture();

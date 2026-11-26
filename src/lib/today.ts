@@ -4,7 +4,7 @@ import type { Routine, RoutineExercise, SavedEntry, TrainerProgram, Workout } fr
 
 /** "Treino de hoje" e sequência de dias: a mesma conta para a Home (H2) e para o Coach. */
 
-const dayId = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+export const dayId = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 /** Dias seguidos com treino, contando de hoje (ou de ontem, se hoje ainda não treinou). */
 export function dayStreak(workouts: Workout[]) {

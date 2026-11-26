@@ -1,0 +1,971 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><a href="./" style="position:fixed;z-index:60;top:calc(10px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));font:600 13px system-ui,sans-serif;background:#0066D6;color:#fff;text-decoration:none;padding:8px 12px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.2)">← Reps Final Design</a>
+<meta charset="utf-8">
+<title>Reps Screen Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: barra fixa com seções + grade de celulares; cada cartão traz suas ações embaixo. */
+:root {
+  --bg: #EEF1F6; --panel: #FFFFFF; --ink: #0E1116; --sub: #5B6472; --line: #D9DEE7; --accent: #0A84FF; --danger: #E5484D; --fav: #F5A524;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif; --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0C0F14; --panel: #161B23; --ink: #EEF1F6; --sub: #96A0AF; --line: #262E3A; --accent: #3D9BFF; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #0C0F14; --panel: #161B23; --ink: #EEF1F6; --sub: #96A0AF; --line: #262E3A; --accent: #3D9BFF; color-scheme: dark }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); margin: 0; }
+* { box-sizing: border-box; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; max-width: 1500px; margin: 0 auto; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 14px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-family: var(--display); font-size: 26px; margin: 0; letter-spacing: -0.02em; }
+.brand p { margin: 0; color: var(--sub); font-size: 13px; }
+.tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.tab { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 8px 14px; font: 600 14px var(--body); cursor: pointer; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; }
+.tab .n { font-size: 12px; color: var(--sub); font-weight: 600; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tab[aria-selected="true"] .n { color: var(--bg); opacity: .7; }
+.tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--sub); }
+.tools label { display: inline-flex; gap: 8px; align-items: center; }
+.tools input[type=range] { width: 130px; accent-color: var(--accent); }
+.tbtn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 10px; padding: 7px 11px; font: 600 13px var(--body); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.tbtn:hover { border-color: var(--accent); }
+.tbtn.on { background: var(--fav); border-color: var(--fav); color: #111; }
+.sec-intro { margin: 18px 0 6px; display: flex; flex-direction: column; gap: 4px; }
+.sec-intro h2 { font-family: var(--display); font-size: 21px; margin: 0; }
+.sec-intro p { margin: 0; color: var(--sub); max-width: 70ch; font-size: 14px; line-height: 1.5; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--z) * 300px + 28px), 1fr)); gap: 22px; margin-top: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card.fav { border-color: var(--fav); box-shadow: 0 0 0 2px color-mix(in srgb, var(--fav) 35%, transparent); }
+.card.editing { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.meta { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.meta h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.meta .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.meta .desc { margin: 3px 0 0; color: var(--sub); font-size: 12.5px; line-height: 1.45; }
+.num { font: 700 12px var(--display); color: var(--sub); border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; white-space: nowrap; }
+.stage { display: flex; justify-content: center; }
+.phone-box { width: calc(var(--z) * 300px); height: calc(var(--z) * 640px); position: relative; }
+.phone { position: absolute; left: 0; top: 0; width: 300px; height: 640px; transform: scale(var(--z)); transform-origin: top left; border-radius: 40px; background: #0B0D11; padding: 9px; box-shadow: 0 18px 40px -18px rgba(10,20,40,.45); }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.act { flex: 1 1 auto; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 10px; padding: 7px 8px; font: 600 12px var(--body); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; justify-content: center; }
+.act:hover { border-color: var(--accent); color: var(--accent); }
+.act.danger:hover { border-color: var(--danger); color: var(--danger); }
+.act.on { background: var(--fav); color: #111; border-color: var(--fav); }
+.act.edit-on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.note { width: 100%; min-height: 54px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font: 13px var(--body); padding: 8px 10px; }
+.empty { padding: 40px 0; color: var(--sub); text-align: center; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 12px; font: 600 13px var(--body); display: flex; gap: 12px; align-items: center; z-index: 30; }
+.toast button { background: transparent; border: 0; color: var(--accent); font: 700 13px var(--body); cursor: pointer; }
+.lb { position: fixed; inset: 0; z-index: 40; background: rgba(8,10,14,.82); display: flex; flex-direction: column; align-items: center; padding: calc(14px + env(safe-area-inset-top, 0px)) 16px calc(14px + env(safe-area-inset-bottom, 0px)); gap: 12px; }
+.lb .bar { display: flex; gap: 8px; align-items: center; color: #fff; flex-wrap: wrap; justify-content: center; }
+.lb .bar b { font-family: var(--display); margin-right: 8px; }
+.lb .bar button { border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; border-radius: 10px; padding: 7px 11px; font: 600 13px var(--body); cursor: pointer; }
+.lb .view { flex: 1; overflow: auto; width: 100%; display: flex; justify-content: center; align-items: flex-start; }
+button:focus-visible, .tab:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Telas do app (paleta própria, fixa, como o app no tema claro) ---------- */
+.scr { --p: #0A84FF; --g: #22B573; --o: #FF7A1A; --r: #F2405D; --v: #8E5CF6; --y: #F5B70A; --c: #1E9BD7;
+  --sbg: #F5F6F9; --sc: #FFFFFF; --st: #0E1116; --sm: #6B7280; --sl: #E7EAF0;
+  width: 282px; height: 622px; border-radius: 32px; overflow: hidden; background: var(--sbg); color: var(--st); font: 13px/1.35 var(--body); position: relative; display: flex; flex-direction: column; }
+.scr.dk { --sbg: #0D0F14; --sc: #181C24; --st: #F2F4F8; --sm: #8D96A5; --sl: #262C37; }
+.scr [contenteditable="true"] { outline: 1px dashed var(--p); outline-offset: 1px; }
+.sb { height: 30px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 6px 22px 0; font-weight: 700; font-size: 12px; }
+.sb i { width: 74px; height: 20px; border-radius: 12px; background: #000; display: block; }
+.bd { flex: 1; overflow: hidden; padding: 6px 14px 10px; display: flex; flex-direction: column; gap: 10px; }
+.tb { height: 54px; flex: none; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--sl); background: var(--sc); padding-bottom: 6px; }
+.tb span { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; color: var(--sm); font-weight: 600; }
+.tb span.on { color: var(--p); }
+.row { display: flex; align-items: center; gap: 8px; }
+.col { display: flex; flex-direction: column; gap: 6px; }
+.sp { justify-content: space-between; }
+.f1 { flex: 1; min-width: 0; }
+.cd { background: var(--sc); border-radius: 16px; padding: 12px; }
+.cd.tight { padding: 9px 10px; }
+.t1 { font: 800 21px/1.15 var(--body); letter-spacing: -.02em; }
+.t2 { font: 800 16px/1.2 var(--body); letter-spacing: -.01em; }
+.t3 { font-weight: 700; font-size: 13.5px; }
+.mu { color: var(--sm); font-size: 11.5px; }
+.xs { font-size: 10px; }
+.big { font: 900 34px/1 var(--display); letter-spacing: -.03em; }
+.mid { font: 800 20px/1 var(--display); }
+.btn { background: var(--st); color: var(--sbg); border-radius: 12px; padding: 10px 14px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.btn.p { background: var(--p); color: #fff; }
+.btn.g { background: var(--g); color: #fff; }
+.btn.ghost { background: transparent; color: var(--st); border: 1.5px solid var(--sl); }
+.btn.sm { padding: 6px 10px; font-size: 11.5px; border-radius: 10px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--sl); color: var(--st); }
+.ic { width: 34px; height: 34px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex: none; color: #fff; }
+.av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; background: var(--p); flex: none; }
+.bar { height: 7px; border-radius: 99px; background: var(--sl); overflow: hidden; }
+.bar > b { display: block; height: 100%; border-radius: 99px; background: var(--p); }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.dots { display: flex; gap: 5px; }
+.dot { width: 26px; height: 26px; border-radius: 50%; background: var(--sl); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--sm); }
+.dot.on { background: var(--o); color: #fff; }
+.dot.today { box-shadow: 0 0 0 2px var(--p); }
+.hr { height: 1px; background: var(--sl); }
+.set { display: grid; grid-template-columns: 22px 1fr 44px 38px 26px; gap: 6px; align-items: center; font-weight: 600; }
+.set .in { background: var(--sbg); border-radius: 8px; padding: 5px 0; text-align: center; }
+.set .ok { width: 24px; height: 24px; border-radius: 7px; background: var(--sl); display: flex; align-items: center; justify-content: center; }
+.set.done { background: color-mix(in srgb, var(--g) 14%, transparent); border-radius: 9px; }
+.set.done .ok { background: var(--g); color: #fff; }
+.ctr { text-align: center; align-items: center; }
+.glow { box-shadow: 0 8px 22px -10px var(--p); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>Reps Screen Lab</h1><p>50 versões de tela para escolher. Favorite, modifique os textos, duplique, apague e amplie.</p></div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Seções"></nav>
+    <div class="tools">
+      <label for="zoom">Zoom <input type="range" id="zoom" min="0.6" max="1.4" step="0.05"><span id="zv"></span></label>
+      <button class="tbtn" id="reset-all" type="button"><span>Restaurar tudo</span></button>
+    </div>
+  </header>
+  <section class="sec-intro" id="intro"></section>
+  <main class="grid" id="grid"></main>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+<div class="lb" id="lb" hidden></div>
+<script>
+// Ícones de traço (24x24) desenhados aqui, sem biblioteca externa.
+const P = {
+  home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+  dumbbell: 'M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12',
+  play: 'M8 5l11 7-11 7z',
+  check: 'M5 12l5 5 9-10',
+  flame: 'M12 2c2 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 3 2 3-4z',
+  trophy: 'M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8M10 17h4',
+  chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  bolt: 'M13 2L4 14h7l-1 8 9-12h-7z',
+  star: 'M12 3l2.8 5.8 6.2.9-4.5 4.4 1 6.2L12 17.4 6.5 20.3l1-6.2L3 9.7l6.2-.9z',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+  user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+  users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 20a7 7 0 0 1 14 0M16 4a3.5 3.5 0 0 1 0 7M18 13a6 6 0 0 1 4 7',
+  bell: 'M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
+  plus: 'M12 5v14M5 12h14',
+  crown: 'M3 8l4 4 5-7 5 7 4-4-2 11H5z',
+  medal: 'M8 2l4 7 4-7M12 21a5 5 0 1 0 0-10 5 5 0 0 0 0 10z',
+  heart: 'M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 6-8 11-8 11z',
+  scale: 'M5 4h14v16H5zM9 10a3 3 0 0 1 6 0M12 10l1.5-2',
+  ruler: 'M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2',
+  camera: 'M4 7h4l2-3h4l2 3h4v13H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  lock: 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4',
+  gift: 'M4 10h16v11H4zM2 7h20v3H2zM12 7v14M12 7S10 3 8 3 6 5 8 7M12 7s2-4 4-4 2 2 0 4',
+  map: 'M9 4l6 2 6-2v16l-6 2-6-2-6 2V6zM9 4v16M15 6v16',
+  msg: 'M4 5h16v11H8l-4 4z',
+  spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z',
+  swap: 'M7 7h13l-3-3M17 17H4l3 3',
+  timer: 'M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4M9 2h6',
+  body: 'M12 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 9h14M12 9v6M9 22l3-7 3 7',
+  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2',
+  chev: 'M9 6l6 6-6 6',
+  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  moon: 'M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10z',
+  trend: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  mic: 'M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zM5 11a7 7 0 0 0 14 0M12 18v3',
+  list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
+  book: 'M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-6M20 4v14h-6',
+  sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v3M12 20v3M1 12h3M20 12h3',
+  photo: 'M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M15 9h.01',
+  minus: 'M5 12h14',
+  zz: 'M4 6h6l-6 6h6M14 4h6l-6 6h6',
+  share: 'M12 3v13M7 8l5-5 5 5M5 14v6h14v-6',
+  edit: 'M4 20h4L19 9l-4-4L4 16z',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  expand: 'M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6',
+  copy: 'M8 8h12v12H8zM4 16V4h12',
+  undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3',
+  x: 'M6 6l12 12M18 6L6 18',
+};
+const FILLED = new Set(['play', 'flame', 'star', 'bolt', 'crown', 'heart']);
+function I(n, s = 16, c = 'currentColor', fill) {
+  const f = fill ?? FILLED.has(n);
+  return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${f ? c : 'none'}" stroke="${c}" stroke-width="${f ? 1.4 : 2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+}
+const ic = (n, bg, s = 34, is = 18) => `<span class="ic" style="width:${s}px;height:${s}px;background:${bg}">${I(n, is, '#fff')}</span>`;
+const icSoft = (n, col, s = 34, is = 18) => `<span class="ic" style="width:${s}px;height:${s}px;background:color-mix(in srgb, ${col} 16%, transparent)">${I(n, is, col)}</span>`;
+
+// Gráficos simples
+function ring(pct, col, size = 64, w = 8, inner = '') {
+  const r = (size - w) / 2, c = 2 * Math.PI * r;
+  return `<span style="position:relative;width:${size}px;height:${size}px;display:inline-flex;align-items:center;justify-content:center;flex:none">
+  <svg width="${size}" height="${size}" style="position:absolute;inset:0;transform:rotate(-90deg)"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--sl)" stroke-width="${w}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${c * pct} ${c}"/></svg>
+  <span style="position:relative;text-align:center;line-height:1.1">${inner}</span></span>`;
+}
+function rings(vals, size = 92) {
+  const cols = ['var(--r)', 'var(--g)', 'var(--c)'];
+  return `<span style="position:relative;width:${size}px;height:${size}px;display:inline-block;flex:none">${vals.map((v, i) => {
+    const s = size - i * 22, w = 9, r = (s - w) / 2, c = 2 * Math.PI * r, o = i * 11;
+    return `<svg width="${s}" height="${s}" style="position:absolute;left:${o}px;top:${o}px;transform:rotate(-90deg)"><circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="none" stroke="color-mix(in srgb, ${cols[i]} 22%, transparent)" stroke-width="${w}"/><circle cx="${s / 2}" cy="${s / 2}" r="${r}" fill="none" stroke="${cols[i]}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${c * v} ${c}"/></svg>`;
+  }).join('')}</span>`;
+}
+function bars(vals, col = 'var(--p)', h = 56, labels, hi = vals.length - 1) {
+  const m = Math.max(...vals, 1);
+  return `<div style="display:flex;align-items:flex-end;gap:5px;height:${h + (labels ? 14 : 0)}px">${vals.map((v, i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;height:${Math.max(3, (v / m) * h)}px;border-radius:5px;background:${i === hi ? col : `color-mix(in srgb, ${col} 28%, transparent)`}"></div>${labels ? `<span class="xs mu">${labels[i]}</span>` : ''}</div>`).join('')}</div>`;
+}
+function line(vals, col = 'var(--p)', w = 250, h = 70, area = true, dotLast = true) {
+  const mn = Math.min(...vals), mx = Math.max(...vals), rg = mx - mn || 1;
+  const pts = vals.map((v, i) => [4 + (i * (w - 8)) / (vals.length - 1), 4 + (h - 8) * (1 - (v - mn) / rg)]);
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join('');
+  const lp = pts[pts.length - 1];
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="display:block;height:${h}px">${area ? `<path d="${d}L${lp[0]} ${h}L4 ${h}Z" fill="${col}" opacity=".12"/>` : ''}<path d="${d}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${dotLast ? `<circle cx="${lp[0]}" cy="${lp[1]}" r="4" fill="${col}"/>` : ''}</svg>`;
+}
+function heat(weeks = 15, seed = 3, col = 'var(--g)') {
+  let s = seed, out = '';
+  for (let w = 0; w < weeks; w++) {
+    out += '<div style="display:flex;flex-direction:column;gap:2px">';
+    for (let d = 0; d < 7; d++) { s = (s * 9301 + 49297) % 233280; const v = s / 233280; const lv = v > .82 ? 1 : v > .62 ? .7 : v > .45 ? .4 : 0; out += `<i style="width:12px;height:12px;border-radius:3px;background:${lv ? `color-mix(in srgb, ${col} ${lv * 100}%, transparent)` : 'var(--sl)'}"></i>`; }
+    out += '</div>';
+  }
+  return `<div style="display:flex;gap:2px">${out}</div>`;
+}
+function radar(vals, labels, col = 'var(--v)', size = 170) {
+  const c = size / 2, R = size / 2 - 22, n = vals.length;
+  const pt = (i, r) => [c + r * Math.sin((2 * Math.PI * i) / n), c - r * Math.cos((2 * Math.PI * i) / n)];
+  const grid = [1, .66, .33].map((k) => `<polygon points="${vals.map((_, i) => pt(i, R * k).join(',')).join(' ')}" fill="none" stroke="var(--sl)"/>`).join('');
+  const poly = `<polygon points="${vals.map((v, i) => pt(i, R * v).join(',')).join(' ')}" fill="${col}" fill-opacity=".22" stroke="${col}" stroke-width="2"/>`;
+  const lab = labels.map((l, i) => { const [x, y] = pt(i, R + 13); return `<text x="${x}" y="${y + 3}" font-size="9" text-anchor="middle" fill="var(--sm)" font-weight="600">${l}</text>`; }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${grid}${poly}${lab}</svg>`;
+}
+
+// Moldura da tela: barra de status + corpo + abas do app
+const TABS = [['home', 'Início'], ['dumbbell', 'Treino'], ['spark', 'Trainer'], ['chart', 'Progresso'], ['user', 'Perfil']];
+const tabbar = (on) => `<div class="tb">${TABS.map(([n, l], i) => `<span class="${i === on ? 'on' : ''}">${I(n, 19)}${l}</span>`).join('')}</div>`;
+const screen = (body, { tab = 0, dark = false, noTabs = false, pad = true } = {}) =>
+  `<div class="scr${dark ? ' dk' : ''}"><div class="sb"><span>9:41</span><i></i><span>●●● 87%</span></div><div class="bd"${pad ? '' : ' style="padding:0"'}>${body}</div>${noTabs ? '' : tabbar(tab)}</div>`;
+const hdr = (title, right = '', sub = '') => `<div class="row sp"><div class="f1"><div class="t1">${title}</div>${sub ? `<div class="mu">${sub}</div>` : ''}</div>${right}</div>`;
+const xp = (txt) => `<span class="pill" style="background:color-mix(in srgb, var(--y) 22%, transparent);color:#8A6200">${I('bolt', 11, '#C98A00')}${txt}</span>`;
+const V = [];
+
+const HERO = "data:image/jpeg;base64,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";
+// ===================== INÍCIO =====================
+const week = (on, today = 3) => `<div class="dots">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((d, i) => `<span class="dot${on.includes(i) ? ' on' : ''}${i === today ? ' today' : ''}">${on.includes(i) ? I('check', 12, '#fff') : d}</span>`).join('')}</div>`;
+
+V.push({ sec: 'home', id: 'h1', name: 'Card do atleta', tag: 'Referência', desc: 'O layout que você mandou: saudação, treino de hoje com foto, 3 números, Explorar 3×2, Meus treinos e Progresso.', html: () => screen(`
+  <div class="row sp"><div><div class="mu">Olá, Rodrigo</div><div class="t1" style="font-size:18px;white-space:nowrap">Pronto para treinar?</div></div><span class="row">${icSoft('bell', 'var(--st)', 32, 16)}<span class="av">R</span></span></div>
+  <div class="cd" style="background:#E5E8ED;padding:0;display:flex;height:150px;overflow:hidden;color:#0E1116"><div class="col f1" style="padding:12px;justify-content:center"><span class="mu" style="color:#5B6472">Treino de hoje</span><div class="t2" style="font-size:19px">Full Body</div><span class="mu" style="color:#5B6472">5 exercícios · ~40 min</span><span class="btn sm" style="background:#0E1116;color:#fff;align-self:flex-start;margin-top:6px">${I('play', 11, '#fff')} Começar</span></div><img src="${HERO}" alt="" style="width:44%;height:100%;object-fit:cover"></div>
+  <div class="g3">${[['flame', 'var(--o)', 'Sequência', '12', 'dias'], ['dumbbell', 'var(--p)', 'Treinos', '36', 'total'], ['chart', 'var(--g)', 'Nesta semana', '4/5', 'treinos']].map(([n, c, l, v, u]) => `<div class="cd tight col" style="gap:3px"><span class="mu xs">${l}</span><span class="row" style="gap:5px">${I(n, 15, c)}<b class="mid" style="font-size:17px">${v}</b></span><span class="mu xs">${u}</span></div>`).join('')}</div>
+  <div class="row sp"><b class="t2">Explorar</b><span class="mu" style="color:var(--p)">Ver tudo</span></div>
+  <div class="g3">${[['cal', 'var(--g)', 'Plano 30 dias'], ['dumbbell', 'var(--v)', 'Superiores'], ['body', 'var(--c)', 'Inferiores'], ['bolt', 'var(--r)', 'Push'], ['swap', 'var(--p)', 'Pull'], ['trend', 'var(--o)', 'Legs']].map(([n, c, l]) => `<div class="cd tight col" style="background:color-mix(in srgb, ${c} 12%, var(--sc));gap:6px">${ic(n, c, 26, 14)}<b style="font-size:11.5px">${l}</b></div>`).join('')}</div>
+`) });
+
+V.push({ sec: 'home', id: 'h2', name: 'Sequência em chamas', tag: 'Hábito', desc: 'A sequência é o herói. Missões diárias valem XP e um "protetor" salva a sequência num dia ruim. Motivo para voltar todo dia.', html: () => screen(`
+  <div class="row sp"><span class="pill">${I('shield', 11, 'var(--c)')} 2 protetores</span>${xp('1.240 XP')}</div>
+  <div class="cd ctr col" style="background:linear-gradient(160deg,#FF8A1F,#F2405D);color:#fff;padding:18px 12px">${I('flame', 46, '#fff')}<span class="big" style="font-size:48px">23</span><b>dias seguidos</b><span style="opacity:.85;font-size:11.5px">Treine hoje para chegar a 24 e liberar a medalha Bronze.</span></div>
+  ${week([0, 1, 2], 3)}
+  <b class="t2">Missões de hoje</b>
+  ${[['Fazer 1 treino', 'dumbbell', '+50', 0], ['Bater 1 recorde', 'trophy', '+80', 0], ['Registrar o peso', 'scale', '+20', 1]].map(([t, n, x, d]) => `<div class="cd tight row">${icSoft(n, d ? 'var(--g)' : 'var(--p)', 30, 15)}<span class="f1 t3" style="${d ? 'text-decoration:line-through;color:var(--sm)' : ''}">${t}</span>${d ? I('check', 16, 'var(--g)') : xp(x)}</div>`).join('')}
+  <span class="btn p" style="margin-top:auto">${I('play', 12, '#fff')} Treinar agora · Pernas</span>
+`) });
+
+V.push({ sec: 'home', id: 'h3', name: 'Nível e XP', tag: 'Gamificação', desc: 'Cada série vale XP. Barra de nível, baú de recompensa semanal e o próximo desbloqueio sempre visível.', html: () => screen(`
+  <div class="row">${ring(0.68, 'var(--v)', 64, 7, `<b style="font:900 20px var(--display)">12</b><br><span class="xs mu">nível</span>`)}<div class="f1 col" style="gap:4px"><b class="t2">Rodrigo</b><span class="mu">Atleta de Ferro</span><div class="bar"><b style="width:68%;background:var(--v)"></b></div><span class="mu xs">680 / 1.000 XP para o nível 13</span></div></div>
+  <div class="cd row" style="background:color-mix(in srgb, var(--y) 18%, var(--sc))">${ic('gift', 'var(--y)', 42, 22)}<div class="f1"><b>Baú da semana</b><div class="mu">Mais 2 treinos para abrir</div><div class="bar" style="margin-top:6px"><b style="width:60%;background:var(--y)"></b></div></div></div>
+  <div class="cd col"><div class="row sp"><b>Próximo desbloqueio</b>${I('lock', 15, 'var(--sm)')}</div><div class="row">${icSoft('crown', 'var(--v)', 38, 20)}<div class="f1"><b>Tema Ouro</b><div class="mu">Chegue ao nível 13</div></div></div></div>
+  <div class="cd col"><b>Hoje</b><div class="row sp"><div><div class="t2">Push A</div><div class="mu">6 exercícios · 52 min</div></div>${xp('+180')}</div><span class="btn p">${I('play', 12, '#fff')} Começar</span></div>
+`) });
+
+V.push({ sec: 'home', id: 'h4', name: 'Anéis do dia', tag: 'Visão rápida', desc: 'Três anéis (volume, séries, minutos) que fecham ao longo da semana. Simples de ler para iniciante e satisfatório de completar.', html: () => screen(`
+  ${hdr('Quarta, 12', `<span class="av" style="background:var(--g)">R</span>`, 'Semana 46 · 3 de 4 treinos')}
+  <div class="cd row" style="gap:14px">${rings([0.82, 0.64, 0.45], 104)}<div class="col" style="gap:8px">${[['var(--r)', 'Volume', '18,4 t / 22 t'], ['var(--g)', 'Séries', '58 / 90'], ['var(--c)', 'Minutos', '135 / 300']].map(([c, l, v]) => `<div><span class="row" style="gap:5px"><i style="width:8px;height:8px;border-radius:50%;background:${c}"></i><b style="font-size:11.5px">${l}</b></span><span class="mu xs">${v}</span></div>`).join('')}</div></div>
+  <div class="cd row sp"><div><div class="mu">Sugestão de hoje</div><div class="t2">Costas + bíceps</div><div class="mu">fecha o anel de séries</div></div><span class="btn p sm">${I('play', 11, '#fff')} Ir</span></div>
+  <div class="g2">${[['trophy', 'var(--y)', '3 recordes', 'nesta semana'], ['moon', 'var(--v)', 'Descanso', 'peito recuperado']].map(([n, c, a, b]) => `<div class="cd tight row">${icSoft(n, c, 30, 15)}<div><b style="font-size:12px">${a}</b><div class="mu xs">${b}</div></div></div>`).join('')}</div>
+  <div class="cd col"><b>Últimos 7 dias</b>${bars([40, 0, 62, 55, 0, 80, 48], 'var(--r)', 44, ['Q', 'Q', 'S', 'S', 'D', 'S', 'T'])}</div>
+`) });
+
+V.push({ sec: 'home', id: 'h5', name: 'Mapa da jornada', tag: 'Progressão', desc: 'Trilha com etapas (estilo jogo): cada treino é um passo, baús no caminho e um chefe no fim do ciclo de 6 semanas.', html: () => screen(`
+  <div class="row sp"><div><div class="mu">Ciclo 2 · Semana 3</div><div class="t2">Jornada da Força</div></div>${xp('2.310')}</div>
+  <div style="position:relative;flex:1;background:linear-gradient(180deg,color-mix(in srgb, var(--g) 10%, var(--sbg)),var(--sbg));border-radius:18px;padding:8px 0">
+    <svg viewBox="0 0 250 420" style="position:absolute;inset:0;width:100%;height:100%" preserveAspectRatio="none"><path d="M125 410 C 40 360, 210 320, 125 270 S 40 180, 125 140 S 210 60, 125 20" fill="none" stroke="var(--sl)" stroke-width="10" stroke-linecap="round" stroke-dasharray="2 16"/></svg>
+    ${[[50, 88, 'check', 'var(--g)', 'Push'], [74, 30, 'check', 'var(--g)', 'Pull'], [60, 62, 'play', 'var(--p)', 'Pernas'], [43, 30, 'gift', 'var(--y)', ''], [27, 66, 'lock', 'var(--sm)', ''], [6, 50, 'crown', 'var(--r)', 'Chefe']].map(([t, l, n, c, lb], i) => `<div style="position:absolute;top:${t}%;left:${l}%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px"><span class="ic" style="width:${i === 2 ? 58 : 44}px;height:${i === 2 ? 58 : 44}px;border-radius:50%;background:${c};box-shadow:0 5px 0 color-mix(in srgb, ${c} 60%, #000)">${I(n, i === 2 ? 26 : 18, '#fff')}</span>${lb ? `<b class="xs">${lb}</b>` : ''}</div>`).join('')}
+  </div>
+  <span class="btn p">${I('play', 12, '#fff')} Continuar: Pernas</span>
+`) });
+
+V.push({ sec: 'home', id: 'h6', name: 'Coach conversa', tag: 'Personal', desc: 'O Trainer fala com você como um personal: o que fazer hoje, por quê, e respostas rápidas. Ótimo para iniciantes.', html: () => screen(`
+  <div class="row">${ic('spark', 'var(--v)', 36, 18)}<div class="f1"><b>Coach Reps</b><div class="mu xs">online · conhece seus 36 treinos</div></div></div>
+  <div class="col" style="gap:8px;flex:1">
+    ${['Bom dia, Rodrigo! Ontem você fez Push e dormiu 7h.', 'Hoje é dia de <b>Pernas</b>. Subi 2,5 kg no agachamento porque você fez 3×10 com folga.', 'Leva uns 45 min. Bora?'].map((t) => `<div class="cd tight" style="max-width:86%;border-radius:16px 16px 16px 4px">${t}</div>`).join('')}
+    <div class="cd tight" style="align-self:flex-end;background:var(--p);color:#fff;border-radius:16px 16px 4px 16px;max-width:70%">Tenho só 30 min hoje</div>
+    <div class="cd tight" style="max-width:86%;border-radius:16px 16px 16px 4px">Sem problema: versão curta com 4 exercícios e descanso de 60 s.<div class="cd tight row" style="background:var(--sbg);margin-top:6px">${icSoft('dumbbell', 'var(--p)', 28, 14)}<div class="f1"><b style="font-size:12px">Pernas Express</b><div class="mu xs">4 exercícios · 30 min</div></div>${I('chev', 14, 'var(--sm)')}</div></div>
+  </div>
+  <div class="row" style="flex-wrap:wrap;gap:6px">${['Começar', 'Trocar exercício', 'Estou dolorido'].map((t, i) => `<span class="pill" style="padding:7px 10px;${i === 0 ? 'background:var(--p);color:#fff' : ''}">${t}</span>`).join('')}</div>
+`) });
+
+V.push({ sec: 'home', id: 'h7', name: 'Agenda da semana', tag: 'Planejamento', desc: 'Faixa de dias no topo, treino de hoje e os próximos já marcados. Para quem gosta de rotina organizada.', html: () => screen(`
+  ${hdr('Minha semana', icSoft('cal', 'var(--p)', 32, 16))}
+  <div class="row sp">${['S 10', 'T 11', 'Q 12', 'Q 13', 'S 14', 'S 15', 'D 16'].map((d, i) => { const [a, b] = d.split(' '); const on = i < 2, t = i === 2; return `<span class="col ctr" style="gap:3px;padding:6px 0;width:34px;border-radius:12px;${t ? 'background:var(--p);color:#fff' : ''}"><span class="xs" style="opacity:.75">${a}</span><b>${b}</b><i style="width:5px;height:5px;border-radius:50%;background:${on ? 'var(--g)' : t ? '#fff' : 'transparent'}"></i></span>`; }).join('')}</div>
+  <div class="cd col" style="border-left:4px solid var(--p)"><span class="mu">Hoje · 18:30</span><div class="t2">Pernas</div><span class="mu">Agachamento, leg press, stiff, panturrilha</span><span class="btn p sm" style="align-self:flex-start">${I('play', 11, '#fff')} Começar</span></div>
+  <b>Próximos</b>
+  ${[['Sex 14', 'Push B', '7:00', 'var(--r)'], ['Sáb 15', 'Cardio leve', 'livre', 'var(--c)'], ['Seg 17', 'Pull B', '18:30', 'var(--v)']].map(([d, t, h, c]) => `<div class="cd tight row"><span class="col ctr" style="width:40px"><b style="font-size:11px">${d.split(' ')[0]}</b><span class="mu xs">${d.split(' ')[1]}</span></span><i style="width:3px;align-self:stretch;border-radius:2px;background:${c}"></i><div class="f1"><b>${t}</b><div class="mu xs">${h}</div></div>${I('bell', 15, 'var(--sm)')}</div>`).join('')}
+`) });
+
+V.push({ sec: 'home', id: 'h8', name: 'Primeiros 7 dias', tag: 'Iniciante', desc: 'Para quem nunca treinou: um único botão grande, checklist de primeiros passos e dica do dia. Nada de números assustadores.', html: () => screen(`
+  <div class="col" style="gap:2px"><span class="mu">Dia 2 de 7</span><div class="t1">Seu treino de hoje leva 20 minutos</div></div>
+  <div class="cd ctr col" style="background:var(--p);color:#fff;padding:12px;gap:5px">${ring(0.28, '#fff', 62, 7, `<b style="font:900 22px var(--display);color:#fff">2/7</b>`)}<b style="font-size:15px">Corpo inteiro · iniciante</b><span style="opacity:.85;font-size:11.5px">5 exercícios com vídeo e dica de postura</span><span class="btn" style="background:#fff;color:var(--p);width:100%">${I('play', 12, 'var(--p)')} Começar agora</span></div>
+  <div class="cd col"><b>Primeiros passos</b>${[['Criar a conta', 1], ['Fazer o 1º treino', 1], ['Escolher seus dias', 0], ['Registrar o peso', 0]].map(([t, d]) => `<div class="row">${d ? `<span class="ic" style="width:22px;height:22px;border-radius:50%;background:var(--g)">${I('check', 12, '#fff')}</span>` : `<span style="width:22px;height:22px;border-radius:50%;border:2px solid var(--sl)"></span>`}<span style="${d ? 'color:var(--sm);text-decoration:line-through' : 'font-weight:600'}">${t}</span></div>`).join('')}</div>
+  <div class="cd row" style="background:color-mix(in srgb, var(--y) 18%, var(--sc))">${I('sun', 22, '#C98A00')}<span class="f1" style="font-size:12px"><b>Dica:</b> músculo dolorido no dia 2 é normal. Treinar leve ajuda a passar.</span></div>
+`) });
+
+V.push({ sec: 'home', id: 'h9', name: 'Painel avançado', tag: 'Avançado', desc: 'Prontidão do dia, volume por músculo na semana, recordes recentes e alerta de deload. Denso, escuro, para quem acompanha tudo.', html: () => screen(`
+  <div class="row sp"><div><div class="mu">Prontidão</div><div class="row" style="gap:6px"><span class="big" style="color:var(--g)">86</span><span class="mu">/100<br>pronto para pesado</span></div></div>${ring(0.86, 'var(--g)', 58, 6, I('heart', 18, 'var(--g)'))}</div>
+  <div class="cd col"><div class="row sp"><b>Séries por músculo</b><span class="mu xs">meta 10-20</span></div>${[['Peito', 14, 'var(--r)'], ['Costas', 18, 'var(--p)'], ['Pernas', 9, 'var(--o)'], ['Ombros', 12, 'var(--v)']].map(([m, v, c]) => `<div class="row"><span style="width:52px" class="xs">${m}</span><div class="bar f1"><b style="width:${v * 5}%;background:${c}"></b></div><b class="xs" style="width:18px;text-align:right">${v}</b></div>`).join('')}</div>
+  <div class="cd col"><b>Recordes (14 dias)</b>${[['Supino reto', '102,5 kg × 3', '+2,5'], ['Terra', '180 kg × 1', '+5'], ['Barra fixa', '+20 kg × 6', '+1 rep']].map(([e, v, d]) => `<div class="row sp"><span class="row">${I('trophy', 14, 'var(--y)')}<span>${e}</span></span><span class="row"><b class="xs">${v}</b><span class="pill" style="background:color-mix(in srgb, var(--g) 22%, transparent);color:var(--g)">${d}</span></span></div>`).join('')}</div>
+  <div class="cd row" style="border:1px solid color-mix(in srgb, var(--o) 50%, transparent)">${I('moon', 20, 'var(--o)')}<span class="f1 xs"><b style="font-size:12px">Deload na semana 7</b><br>Volume 40% menor para recuperar.</span></div>
+`, { dark: true }) });
+
+V.push({ sec: 'home', id: 'h10', name: 'Liga semanal', tag: 'Social', desc: 'Liga com 20 pessoas do seu nível: quem fizer mais XP na semana sobe de divisão. Desafio entre amigos e feed de atividade.', html: () => screen(`
+  <div class="cd row" style="background:linear-gradient(135deg,#B87333,#E0A15E);color:#fff">${I('shield', 34, '#fff')}<div class="f1"><b style="font-size:15px">Liga Bronze</b><div style="font-size:11px;opacity:.9">Termina em 3 dias · top 5 sobem</div></div><span class="big" style="font-size:26px">#4</span></div>
+  <div class="cd col" style="gap:7px">${[['1', 'Marina C.', '2.940', 'var(--y)'], ['2', 'Lucas P.', '2.610', '#A7B0BE'], ['3', 'Bia N.', '2.480', '#C98A5A'], ['4', 'Você', '2.310', 'var(--p)'], ['5', 'Rafa L.', '2.050', '']].map(([p, n, x, c]) => `<div class="row" style="${n === 'Você' ? 'background:color-mix(in srgb, var(--p) 12%, transparent);border-radius:10px;padding:4px;margin:-4px' : ''}"><b style="width:16px;color:${c || 'var(--sm)'}">${p}</b><span class="av" style="width:26px;height:26px;font-size:11px;background:${c || 'var(--sm)'}">${n[0]}</span><span class="f1 t3">${n}</span><b class="xs">${x} XP</b></div>`).join('')}<div class="hr"></div><span class="mu xs ctr">Faltam 140 XP para o 3º lugar</span></div>
+  <div class="cd row">${icSoft('users', 'var(--r)', 34, 17)}<div class="f1"><b>Desafio com Lucas</b><div class="mu xs">Quem fizer mais séries até domingo</div><div class="bar" style="margin-top:5px"><b style="width:56%;background:var(--r)"></b></div></div></div>
+  <span class="btn p">${I('bolt', 12, '#fff')} Ganhar XP · treinar agora</span>
+`) });
+
+// ===================== TREINO (registrar treino) =====================
+const tr_top = (title, time, btn = 'Finalizar') => `<div class="row sp"><span class="row" style="gap:6px">${I('chev', 16, 'var(--sm)')}<div><b style="font-size:14px">${title}</b><div class="mu xs" style="color:var(--p)">${I('clock', 10, 'var(--p)')} ${time}</div></div></span><span class="btn sm g">${btn}</span></div>`;
+const tr_head = () => `<div class="set mu xs" style="font-weight:700;letter-spacing:.04em"><span>SÉR</span><span>ANTERIOR</span><span class="ctr" style="text-align:center">KG</span><span style="text-align:center">REPS</span><span>${I('check', 12, 'var(--sm)')}</span></div>`;
+const tr_set = (n, prev, kg, reps, done, tag) => `<div class="set${done ? ' done' : ''}" style="padding:3px 2px"><b style="text-align:center;color:${tag === 'A' ? 'var(--y)' : 'inherit'}">${tag || n}</b><span class="mu xs">${prev}</span><span class="in">${kg}</span><span class="in">${reps}</span><span class="ok">${I('check', 13, done ? '#fff' : 'var(--sm)')}</span></div>`;
+const tr_step = (lbl, val, unit) => `<div class="col ctr" style="gap:4px"><span class="mu xs" style="font-weight:700;letter-spacing:.06em">${lbl}</span><div class="row" style="gap:10px"><span class="ic" style="width:40px;height:40px;border-radius:50%;background:var(--sl)">${I('minus', 18, 'var(--st)')}</span><span class="big" style="font-size:54px;min-width:84px;text-align:center">${val}</span><span class="ic" style="width:40px;height:40px;border-radius:50%;background:var(--p)">${I('plus', 18, '#fff')}</span></div><span class="mu xs">${unit}</span></div>`;
+const tr_plateCol = { 25: '#F2405D', 20: '#0A84FF', 15: '#F5B70A', 10: '#22B573', 5: '#E9ECF1', 2.5: '#30343C' };
+function tr_bar(side) {
+  const H = { 25: 70, 20: 66, 15: 58, 10: 48, 5: 36, 2.5: 28 }, W = { 25: 12, 20: 11, 15: 10, 10: 9, 5: 7, 2.5: 6 };
+  let x = 156, r = '', l = '';
+  side.forEach((p) => { r += `<rect x="${x}" y="${45 - H[p] / 2}" width="${W[p]}" height="${H[p]}" rx="2.5" fill="${tr_plateCol[p]}" stroke="rgba(0,0,0,.18)"/>`; l += `<rect x="${250 - x - W[p]}" y="${45 - H[p] / 2}" width="${W[p]}" height="${H[p]}" rx="2.5" fill="${tr_plateCol[p]}" stroke="rgba(0,0,0,.18)"/>`; x += W[p] + 2; });
+  return `<svg viewBox="0 0 250 90" width="100%" height="90"><rect x="6" y="42" width="238" height="6" rx="3" fill="#A7B0BE"/><rect x="88" y="39" width="74" height="12" rx="3" fill="#C4CAD4"/><rect x="150" y="36" width="5" height="18" rx="1.5" fill="#7C8594"/><rect x="95" y="36" width="5" height="18" rx="1.5" fill="#7C8594"/>${r}${l}</svg>`;
+}
+const tr_delta = (d) => { const up = d.startsWith('+'), eq = d === '='; const c = eq ? 'var(--sm)' : up ? 'var(--g)' : 'var(--r)'; return `<span class="pill" style="background:color-mix(in srgb, ${c} 18%, transparent);color:${c};min-width:44px;justify-content:center">${eq ? 'igual' : d}</span>`; };
+
+V.push({ sec: 'treino', id: 't1', name: 'Tabela de séries', tag: 'Clássico', desc: 'A tabela que todo mundo já conhece: série, valor anterior, kg, reps e check. O valor da última vez fica ao lado e dá vontade de bater.', html: () => screen(`
+  ${tr_top('Push A', '32:14')}
+  <div class="g3">${[['Duração', '32 min'], ['Volume', '3.420 kg'], ['Séries', '7 / 16']].map(([l, v]) => `<div class="col" style="gap:1px"><span class="mu xs">${l}</span><b style="font-size:13px">${v}</b></div>`).join('')}</div>
+  <div class="cd col" style="gap:6px">
+    <div class="row">${icSoft('dumbbell', 'var(--p)', 30, 15)}<b class="f1" style="color:var(--p)">Supino reto (barra)</b>${I('list', 15, 'var(--sm)')}</div>
+    <div class="row" style="gap:6px"><span class="pill" style="color:var(--p)">${I('timer', 11, 'var(--p)')} Descanso 2:00</span><span class="pill">${I('msg', 11)} Nota</span></div>
+    ${tr_head()}
+    ${tr_set(1, '40 × 10', '40', '10', 1, 'A')}${tr_set(1, '80 × 8', '80', '8', 1)}${tr_set(2, '80 × 8', '82,5', '7', 1)}${tr_set(3, '80 × 7', '82,5', '', 0)}
+    <span class="btn ghost sm">${I('plus', 12)} Adicionar série</span>
+  </div>
+  <div class="cd col" style="gap:6px">
+    <div class="row">${icSoft('dumbbell', 'var(--v)', 30, 15)}<b class="f1" style="color:var(--p)">Desenvolvimento c/ halteres</b>${I('list', 15, 'var(--sm)')}</div>
+    ${tr_head()}${tr_set(1, '22 × 10', '24', '10', 0)}${tr_set(2, '22 × 9', '24', '', 0)}
+  </div>
+`, { tab: 1, noTabs: true }) });
+
+V.push({ sec: 'treino', id: 't2', name: 'Foco numa série', tag: 'Foco', desc: 'Um exercício e uma série por vez, com números enormes e botões +/- fáceis de tocar com a mão suada. Nada para pensar, só levantar.', html: () => screen(`
+  ${tr_top('Pernas', '18:40')}
+  <div class="col ctr" style="gap:3px;margin-top:4px"><span class="mu">Exercício 2 de 5</span><div class="t1">Agachamento livre</div><div class="row" style="gap:5px;margin-top:4px">${[1, 1, 0, 0].map((d, i) => `<i style="width:${i === 2 ? 26 : 18}px;height:6px;border-radius:3px;background:${d ? 'var(--g)' : i === 2 ? 'var(--p)' : 'var(--sl)'}"></i>`).join('')}</div><span class="mu xs">Série 3 de 4</span></div>
+  <div class="cd col" style="gap:14px;padding:16px 10px">${tr_step('PESO', '100', 'kg')}<div class="hr"></div>${tr_step('REPETIÇÕES', '6', 'reps')}</div>
+  <div class="row sp cd tight"><span class="row">${I('undo', 14, 'var(--sm)')}<span class="mu">Última vez: <b style="color:var(--st)">97,5 kg × 6</b></span></span>${xp('+2,5 kg')}</div>
+  <span class="btn g" style="padding:14px">${I('check', 15, '#fff')} Concluir série</span>
+  <div class="row cd tight" style="margin-top:auto">${icSoft('dumbbell', 'var(--sm)', 30, 15)}<div class="f1"><span class="mu xs">A seguir</span><div class="t3">Leg press 45°</div></div><span class="mu xs">3 × 12</span></div>
+`, { tab: 1, noTabs: true }) });
+
+V.push({ sec: 'treino', id: 't3', name: 'Descanso imersivo', tag: 'Descanso', desc: 'O descanso ocupa a tela inteira: anel que esvazia, ajuste rápido de 15 s e a próxima série já preenchida. Você sabe exatamente quando voltar.', html: () => screen(`
+  <div class="row sp"><span class="mu">${I('chev', 14, 'var(--sm)')} Costas e bíceps</span><span class="mu xs">41:08</span></div>
+  <div class="col ctr" style="gap:2px;margin-top:6px"><span class="mu" style="letter-spacing:.12em;font-weight:700;font-size:10px">DESCANSO</span></div>
+  <div class="row" style="justify-content:center">${ring(0.62, 'var(--p)', 200, 12, `<span class="big" style="font-size:52px">1:14</span><br><span class="mu">de 2:00</span>`)}</div>
+  <div class="row" style="justify-content:center;gap:10px">${['-15s', 'Pular', '+15s'].map((t, i) => `<span class="btn sm" style="background:${i === 1 ? 'var(--p)' : 'var(--sc)'};color:${i === 1 ? '#fff' : 'var(--st)'};min-width:66px">${t}</span>`).join('')}</div>
+  <div class="cd col" style="gap:6px;border:1px solid var(--sl)"><span class="mu xs" style="font-weight:700;letter-spacing:.06em">PRÓXIMA SÉRIE</span><div class="row">${icSoft('dumbbell', 'var(--p)', 34, 17)}<div class="f1"><b>Remada curvada</b><div class="mu xs">Série 3 de 4</div></div><div style="text-align:right"><b class="mid" style="font-size:18px">70 kg</b><div class="mu xs">× 8 reps</div></div></div></div>
+  <div class="cd tight row" style="background:color-mix(in srgb, var(--v) 18%, var(--sc))">${I('heart', 16, 'var(--v)')}<span class="xs f1">Respire fundo: 4 s inspirando, 6 s soltando. Ajuda a recuperar mais rápido.</span></div>
+`, { tab: 1, noTabs: true, dark: true }) });
+
+V.push({ sec: 'treino', id: 't4', name: 'Linha do superset', tag: 'Superset', desc: 'Supersets e circuitos viram uma linha do tempo: o ponto azul mostra onde você está e as voltas ficam contadas. Sem se perder entre exercícios.', html: () => screen(`
+  ${tr_top('Upper B', '27:52')}
+  <div class="row sp"><div><div class="mu">Superset A</div><div class="t2">Volta 2 de 3</div></div><div class="row" style="gap:4px">${[1, 1, 0].map((d, i) => `<span class="dot${d ? ' on' : ''}" style="${d ? 'background:var(--g)' : i === 1 ? '' : ''}">${d ? I('check', 11, '#fff') : i + 1}</span>`).join('')}</div></div>
+  <div style="position:relative;padding-left:26px" class="col">
+    <i style="position:absolute;left:10px;top:12px;bottom:12px;width:3px;border-radius:2px;background:var(--sl)"></i>
+    ${[['check', 'var(--g)', 'A1 · Supino inclinado', '60 kg × 10', 'feito', 1], ['play', 'var(--p)', 'A2 · Remada curvada', '65 kg × 10', 'agora', 2], ['timer', 'var(--sm)', 'Descanso', '90 s depois do A2', '', 0], ['lock', 'var(--sm)', 'Volta 3', 'A1 + A2', '', 0]].map(([n, c, t, s, st, k]) => `<div class="cd tight row" style="position:relative;${k === 2 ? 'box-shadow:0 0 0 2px var(--p)' : ''}"><span class="ic" style="position:absolute;left:-26px;width:22px;height:22px;border-radius:50%;background:${c}">${I(n, 11, '#fff')}</span><div class="f1"><b style="font-size:12.5px">${t}</b><div class="mu xs">${s}</div></div>${st ? `<span class="pill" style="${k === 2 ? 'background:var(--p);color:#fff' : 'color:var(--g)'}">${st}</span>` : ''}</div>`).join('')}
+  </div>
+  <div class="cd col" style="gap:6px"><b>Remada curvada · série 2</b><div class="g2">${[['KG', '65'], ['REPS', '10']].map(([l, v]) => `<div class="col ctr" style="background:var(--sbg);border-radius:12px;padding:8px;gap:0"><span class="mu xs">${l}</span><b class="mid">${v}</b></div>`).join('')}</div><span class="btn p">${I('check', 13, '#fff')} Feito, ir para o descanso</span></div>
+  <div class="row cd tight">${icSoft('swap', 'var(--o)', 28, 14)}<span class="f1 xs"><b style="font-size:12px">Superset B</b> · Rosca direta + Tríceps corda</span>${I('chev', 14, 'var(--sm)')}</div>
+`, { tab: 1, noTabs: true }) });
+
+V.push({ sec: 'treino', id: 't5', name: 'Modo combo', tag: 'Gamificação', desc: 'Cada série vale XP e séries seguidas sem pular sobem o multiplicador. Bater recorde acende a tela. Treinar vira uma partida que você quer terminar.', html: () => screen(`
+  <div class="row sp"><span class="row" style="gap:6px">${I('chev', 16, 'var(--sm)')}<b>Pernas · Combo</b></span>${xp('640 XP')}</div>
+  <div class="cd row" style="background:linear-gradient(135deg,#8E5CF6,#F2405D);color:#fff"><span class="big" style="font-size:40px">×3</span><div class="f1"><b>Combo de 9 séries</b><div style="font-size:11px;opacity:.9">Mais 3 séries sem pular = ×4</div><div class="bar" style="background:rgba(255,255,255,.25);margin-top:6px"><b style="width:66%;background:#fff"></b></div></div></div>
+  <div class="cd col ctr" style="gap:4px;background:radial-gradient(circle at 50% 30%,color-mix(in srgb, var(--y) 40%, var(--sc)),var(--sc) 70%);border:1.5px solid var(--y)">${I('trophy', 34, 'var(--y)')}<b style="color:var(--y);letter-spacing:.1em;font-size:11px">NOVO RECORDE</b><div class="t2">Agachamento livre</div><span class="big" style="font-size:30px">120 kg × 5</span><span class="mu xs">antes: 117,5 kg × 5</span>${xp('+150 XP bônus')}</div>
+  <div class="cd col" style="gap:6px">${[['Agachamento livre', '120 × 5', '+75', 1], ['Agachamento livre', '120 × 4', '+60', 1], ['Stiff', '90 × 10', '+45', 0]].map(([e, v, x, d]) => `<div class="row"><span class="ic" style="width:22px;height:22px;border-radius:7px;background:${d ? 'var(--g)' : 'var(--sl)'}">${I('check', 12, d ? '#fff' : 'var(--sm)')}</span><span class="f1 xs" style="font-size:12px">${e}</span><b class="xs">${v}</b><span style="color:var(--y);font-weight:800;font-size:11px;width:30px;text-align:right">${d ? x : '...'}</span></div>`).join('')}</div>
+  <span class="btn p">${I('bolt', 12, '#fff')} Próxima série · +45 XP ×3</span>
+`, { tab: 1, noTabs: true, dark: true }) });
+
+V.push({ sec: 'treino', id: 't6', name: 'Anilhas na barra', tag: 'Visual', desc: 'Ao digitar o peso, a barra aparece montada com as anilhas certas de cada lado. Acaba a conta de cabeça na academia, bom para todos os níveis.', html: () => screen(`
+  ${tr_top('Levantamento terra', '12:05')}
+  <div class="cd col" style="gap:4px"><div class="row sp"><span class="mu">Série 2 de 3</span><span class="pill">Barra 20 kg</span></div><div class="row" style="justify-content:center;gap:6px;align-items:baseline"><span class="big" style="font-size:46px">140</span><b class="mu" style="font-size:14px">kg</b></div>${tr_bar([25, 25, 10])}<div class="row" style="justify-content:center;gap:10px">${[[25, '×2'], [10, '×1']].map(([p, q]) => `<span class="row" style="gap:4px"><i style="width:12px;height:12px;border-radius:3px;background:${tr_plateCol[p]}"></i><b class="xs">${p} kg ${q}</b></span>`).join('')}<span class="mu xs">por lado</span></div></div>
+  <div class="row" style="gap:6px">${['130', '135', '140', '145'].map((w) => `<span class="pill f1" style="justify-content:center;padding:7px 0;${w === '140' ? 'background:var(--p);color:#fff' : ''}">${w}</span>`).join('')}</div>
+  <div class="cd col" style="gap:5px">${tr_head()}${tr_set(1, '130 × 5', '130', '5', 1)}${tr_set(2, '135 × 5', '140', '5', 0)}${tr_set(3, '135 × 4', '140', '', 0)}</div>
+  <div class="cd tight row" style="background:color-mix(in srgb, var(--g) 14%, var(--sc))">${I('trend', 16, 'var(--g)')}<span class="xs f1"><b style="font-size:12px">Faltam 5 kg</b> para o seu recorde de 145 kg.</span></div>
+`, { tab: 1, noTabs: true }) });
+
+V.push({ sec: 'treino', id: 't7', name: 'Teclado rápido', tag: 'Velocidade', desc: 'Teclado numérico grande e atalhos como "igual à anterior" e +2,5 kg. Registra uma série em dois toques, sem o teclado pequeno do celular.', html: () => screen(`
+  ${tr_top('Pull A', '22:31')}
+  <div class="row"><b class="f1">Puxada frontal · série 3</b><span class="mu xs">ant. 60 × 10</span></div>
+  <div class="g2">${[['KG', '62,5', 1], ['REPS', '10', 0]].map(([l, v, on]) => `<div class="col ctr" style="gap:0;border-radius:14px;padding:9px;background:var(--sc);${on ? 'box-shadow:0 0 0 2px var(--p)' : ''}"><span class="mu xs">${l}</span><b class="big" style="font-size:30px">${v}${on ? '<i style="display:inline-block;width:2px;height:26px;background:var(--p);margin-left:2px;vertical-align:-3px"></i>' : ''}</b></div>`).join('')}</div>
+  <div class="row" style="gap:6px">${['= anterior', '-2,5', '+2,5', '+5'].map((t, i) => `<span class="pill f1" style="justify-content:center;padding:7px 0;${i === 0 ? 'background:color-mix(in srgb, var(--p) 18%, transparent);color:var(--p)' : ''}">${t}</span>`).join('')}</div>
+  <div class="g3" style="gap:6px">${['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', 'x'].map((k) => `<span class="ctr" style="display:flex;justify-content:center;height:42px;border-radius:12px;background:var(--sc);font:700 19px var(--display)">${k === 'x' ? I('undo', 18, 'var(--st)') : k}</span>`).join('')}</div>
+  <div class="g2"><span class="btn ghost">Próximo campo</span><span class="btn g">${I('check', 13, '#fff')} Salvar</span></div>
+`, { tab: 1, noTabs: true, dark: true }) });
+
+V.push({ sec: 'treino', id: 't8', name: 'Fantasma da última vez', tag: 'Comparação', desc: 'Cada série mostra o que você fez na última vez e a diferença de hoje, em verde ou vermelho. Competir contra você mesmo traz você de volta.', html: () => screen(`
+  ${tr_top('Pull A', '35:10')}
+  <div class="cd row" style="background:linear-gradient(135deg,#0A84FF,#1E9BD7);color:#fff">${I('trend', 28, '#fff')}<div class="f1"><b style="font-size:15px">+6% de volume</b><div style="font-size:11px;opacity:.9">vs. Pull A de 5 nov · 4 de 6 séries à frente</div></div></div>
+  <div class="cd col" style="gap:7px">
+    <div class="row">${icSoft('dumbbell', 'var(--p)', 28, 14)}<b class="f1">Remada curvada</b></div>
+    <div class="row mu xs" style="font-weight:700"><span style="width:22px">#</span><span class="f1">5 nov</span><span class="f1">Hoje</span><span style="width:44px;text-align:center">Dif.</span></div>
+    ${[['1', '60 × 10', '65 × 10', '+50'], ['2', '60 × 10', '65 × 9', '+45'], ['3', '60 × 9', '65 × 8', '-20'], ['4', '57,5 × 8', '57,5 × 8', '=']].map(([n, a, b, d]) => `<div class="row"><b style="width:22px">${n}</b><span class="f1 mu" style="opacity:.75">${a}</span><b class="f1">${b}</b>${tr_delta(d)}</div>`).join('')}
+  </div>
+  <div class="cd col" style="gap:7px">
+    <div class="row">${icSoft('dumbbell', 'var(--v)', 28, 14)}<b class="f1">Barra fixa</b><span class="mu xs">corpo + kg</span></div>
+    ${[['1', '+10 × 6', '+10 × 7', '+1 rep'], ['2', '+10 × 5', '+10 × 6', '+1 rep']].map(([n, a, b, d]) => `<div class="row"><b style="width:22px">${n}</b><span class="f1 mu" style="opacity:.75">${a}</span><b class="f1">${b}</b>${tr_delta(d)}</div>`).join('')}
+  </div>
+  <div class="cd tight row">${I('target', 16, 'var(--o)')}<span class="xs f1">Faça <b>65 kg × 9</b> na série 3 para ficar à frente em tudo.</span></div>
+`, { tab: 1, noTabs: true }) });
+
+V.push({ sec: 'treino', id: 't9', name: 'Modo guiado', tag: 'Iniciante', desc: 'Para quem está começando: vídeo do movimento, três dicas de postura e o esforço em Fácil, Médio ou Difícil. O app ajusta o peso da próxima vez.', html: () => screen(`
+  ${tr_top('Corpo inteiro · dia 2', '09:12', 'Sair')}
+  <div style="height:140px;border-radius:16px;background:linear-gradient(160deg,#1B2230,#0D0F14);display:flex;align-items:center;justify-content:center;position:relative"><span class="ic" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.18)">${I('play', 24, '#fff')}</span><span class="pill" style="position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.5);color:#fff">0:18 · veja antes</span></div>
+  <div><div class="t2">Agachamento goblet</div><div class="mu">Série 1 de 3 · 12 kg · 10 reps</div></div>
+  <div class="cd col" style="gap:7px">${['Pés na largura dos ombros', 'Peito aberto, halter colado no peito', 'Desça até a coxa ficar paralela'].map((t, i) => `<div class="row"><span class="ic" style="width:22px;height:22px;border-radius:50%;background:color-mix(in srgb, var(--p) 16%, transparent);color:var(--p);font-weight:800;font-size:11px">${i + 1}</span><span style="font-size:12px">${t}</span></div>`).join('')}</div>
+  <b>Como foi essa série?</b>
+  <div class="g3">${[['Fácil', 'var(--g)', 'sun'], ['Médio', 'var(--y)', 'target'], ['Difícil', 'var(--r)', 'flame']].map(([t, c, n], i) => `<div class="col ctr" style="gap:4px;padding:10px 0;border-radius:14px;background:color-mix(in srgb, ${c} ${i === 1 ? 26 : 12}%, var(--sc));${i === 1 ? `box-shadow:0 0 0 2px ${c}` : ''}">${I(n, 18, c)}<b style="font-size:12px">${t}</b></div>`).join('')}</div>
+  <div class="cd tight row" style="background:color-mix(in srgb, var(--y) 18%, var(--sc))">${I('spark', 16, '#C98A00')}<span class="xs f1">Médio é o ideal. Se for fácil 2 vezes, subimos 2 kg.</span></div>
+`, { tab: 1, noTabs: true }) });
+
+V.push({ sec: 'treino', id: 't10', name: 'Treino concluído', tag: 'Celebração', desc: 'O fim do treino comemora: XP ganho, sequência +1, medalhas novas e recordes. Um card pronto para compartilhar mostra o progresso e dá motivo para voltar.', html: () => screen(`
+  <div class="cd col ctr" style="gap:4px;padding:16px 12px;color:#fff;background:linear-gradient(160deg,#0A84FF,#8E5CF6);position:relative;overflow:hidden">${[[12, 18, '#F5B70A'], [80, 12, '#22B573'], [30, 78, '#F2405D'], [88, 70, '#fff'], [55, 8, '#FF7A1A'], [8, 60, '#fff']].map(([l, t, c]) => `<i style="position:absolute;left:${l}%;top:${t}%;width:7px;height:7px;border-radius:2px;background:${c};transform:rotate(${l}deg)"></i>`).join('')}${I('trophy', 40, '#fff')}<b style="font-size:17px">Treino concluído!</b><span style="font-size:11.5px;opacity:.9">Pernas · 54 min · 12.860 kg</span><span class="big" style="font-size:36px;margin-top:4px">+420 XP</span><div class="bar" style="width:80%;background:rgba(255,255,255,.25)"><b style="width:84%;background:#F5B70A"></b></div><span style="font-size:10.5px;opacity:.9">Nível 12 · faltam 160 XP para o 13</span></div>
+  <div class="g2"><div class="cd tight row">${ic('flame', 'var(--o)', 30, 16)}<div><b class="mid" style="font-size:17px">13</b><div class="mu xs">dias (+1)</div></div></div><div class="cd tight row">${ic('trophy', 'var(--y)', 30, 16)}<div><b class="mid" style="font-size:17px">2</b><div class="mu xs">recordes</div></div></div></div>
+  <div class="cd col" style="gap:6px"><b>Recordes de hoje</b>${[['Agachamento livre', '120 kg × 5'], ['Leg press 45°', '260 kg × 10']].map(([e, v]) => `<div class="row sp"><span class="row">${I('star', 13, 'var(--y)')}<span>${e}</span></span><b class="xs">${v}</b></div>`).join('')}</div>
+  <div class="cd col" style="gap:6px"><b>Medalhas</b><div class="row" style="gap:10px">${[['medal', 'var(--o)', 'Perna de aço'], ['crown', 'var(--v)', '50 treinos'], ['lock', 'var(--sm)', 'Ton. 15 t']].map(([n, c, t]) => `<div class="col ctr f1" style="gap:3px">${icSoft(n, c, 40, 20)}<span class="xs" style="font-weight:700">${t}</span></div>`).join('')}</div></div>
+  <div class="g2" style="margin-top:auto"><span class="btn ghost">${I('share', 13)} Compartilhar</span><span class="btn p">Concluir</span></div>
+`, { tab: 1, noTabs: true }) });
+
+// ===================== TRAINER =====================
+const rt_grip = (c = 'var(--sm)') => `<svg width="10" height="16" viewBox="0 0 10 16" aria-hidden="true">${[2, 8, 14].map((y) => `<circle cx="2.5" cy="${y}" r="1.6" fill="${c}"/><circle cx="7.5" cy="${y}" r="1.6" fill="${c}"/>`).join('')}</svg>`;
+const rt_slider = (label, icon, col, pct, val, lo, hi) => `<div class="col" style="gap:5px"><div class="row sp"><span class="row" style="gap:6px">${I(icon, 14, col)}<b style="font-size:12.5px">${label}</b></span><b class="xs" style="color:${col}">${val}</b></div><div style="position:relative;height:18px;display:flex;align-items:center"><div class="bar f1" style="height:6px"><b style="width:${pct}%;background:${col}"></b></div><span style="position:absolute;left:calc(${pct}% - 9px);width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,.15)"></span></div></div>`;
+const rt_node = (n, c, sz, lb, sub, state) => `<div class="col ctr" style="gap:3px;width:96px"><span class="ic" style="width:${sz}px;height:${sz}px;border-radius:50%;background:${state === 'lock' ? 'var(--sl)' : c};box-shadow:${state === 'now' ? `0 0 0 4px color-mix(in srgb, ${c} 30%, transparent)` : 'none'}">${I(n, sz * 0.45, state === 'lock' ? 'var(--sm)' : '#fff')}</span><span class="col ctr" style="gap:1px;background:var(--sc);border-radius:6px;padding:1px 4px"><b style="font-size:11px;line-height:1.15;${state === 'lock' ? 'color:var(--sm)' : ''}">${lb}</b><span class="mu xs" style="line-height:1.2">${sub}</span></span></div>`;
+const rt_proj = () => {
+  const w = 250, h = 100, mn = 95, mx = 145;
+  const y = (v) => (8 + (h - 16) * (1 - (v - mn) / (mx - mn))).toFixed(1);
+  const hist = [100, 102.5, 105, 107.5, 107.5, 112.5, 115, 117.5, 120, 122.5];
+  const step = 130 / (hist.length - 1);
+  const hp = hist.map((v, i) => `${i ? 'L' : 'M'}${(6 + i * step).toFixed(1)} ${y(v)}`).join('');
+  const x0 = 6 + 130, pj = [[x0, 122.5], [x0 + 38, 128.5], [x0 + 76, 134.5], [w - 8, 140]];
+  const pp = pj.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${y(p[1])}`).join('');
+  return `<svg width="100%" viewBox="0 0 ${w} ${h}" style="display:block;height:${h}px">
+    <line x1="0" x2="${w}" y1="${y(140)}" y2="${y(140)}" stroke="var(--g)" stroke-width="1.5" stroke-dasharray="4 4"/>
+    <text x="4" y="${+y(140) - 4}" font-size="9" font-weight="700" fill="var(--g)">Meta 140 kg</text>
+    <path d="${pp}L${w - 8} ${y(146)}L${x0} ${y(124)}Z" fill="var(--p)" opacity=".08"/>
+    <path d="${hp}L${x0} ${h}L6 ${h}Z" fill="var(--p)" opacity=".12"/>
+    <path d="${hp}" fill="none" stroke="var(--p)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${pp}" fill="none" stroke="var(--p)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="3 5"/>
+    <circle cx="${x0}" cy="${y(122.5)}" r="4.5" fill="var(--p)" stroke="var(--sc)" stroke-width="2"/>
+    <circle cx="${w - 8}" cy="${y(140)}" r="5" fill="var(--g)" stroke="var(--sc)" stroke-width="2"/>
+    <text x="${x0}" y="${+y(122.5) + 16}" font-size="9" text-anchor="middle" font-weight="700" fill="var(--st)">hoje</text>
+  </svg>`;
+};
+
+V.push({ sec: 'trainer', id: 'r1', name: 'Visão do programa', tag: 'Programa', desc: 'O ciclo inteiro numa grade: cada treino feito vira um quadrado verde, e a semana atual fica em destaque. Ver o programa se completando dá vontade de preencher o próximo quadrado.', html: () => screen(`
+  ${hdr('Meu programa', icSoft('gear', 'var(--sm)', 32, 16), 'Hipertrofia · 4x por semana')}
+  <div class="cd row" style="gap:12px">${ring(0.42, 'var(--p)', 62, 7, `<b style="font:900 18px var(--display)">3</b><br><span class="xs mu">de 6</span>`)}<div class="f1 col" style="gap:4px"><b class="t3">Semana 3 de 6</b><span class="mu">10 de 24 treinos feitos</span><div class="bar"><b style="width:42%"></b></div><span class="mu xs">Deload na semana 7</span></div></div>
+  <div class="cd col" style="gap:6px">
+    <div class="row" style="gap:5px"><span style="width:26px"></span>${['Push', 'Pull', 'Pernas', 'Full'].map((t) => `<b class="xs f1" style="text-align:center;color:var(--sm)">${t}</b>`).join('')}</div>
+    ${[1, 2, 3, 4, 5, 6, 7].map((w) => `<div class="row" style="gap:5px"><b class="xs" style="width:26px;color:${w === 3 ? 'var(--p)' : w === 7 ? 'var(--o)' : 'var(--sm)'}">${w === 7 ? 'DL' : 'S' + w}</b>${[0, 1, 2, 3].map((d) => { const done = w < 3 || (w === 3 && d < 2); const now = w === 3 && d === 2; return `<span class="f1 ctr" style="height:22px;border-radius:7px;display:flex;justify-content:center;background:${done ? 'var(--g)' : now ? 'var(--p)' : w === 7 ? 'color-mix(in srgb, var(--o) 16%, transparent)' : 'var(--sl)'}">${done ? I('check', 12, '#fff') : now ? I('play', 10, '#fff') : ''}</span>`; }).join('')}</div>`).join('')}
+  </div>
+  <div class="cd row">${icSoft('dumbbell', 'var(--p)', 36, 18)}<div class="f1"><div class="mu xs">Próximo · quinta</div><b class="t3">Pernas A</b><div class="mu xs">6 exercícios · ~55 min</div></div><span class="btn p sm">${I('play', 11, '#fff')} Ir</span></div>
+  <div class="row sp"><span class="mu xs">Sequência do programa</span><span class="pill" style="background:color-mix(in srgb, var(--o) 18%, transparent);color:var(--o)">${I('flame', 11, 'var(--o)')} 10 sem faltar</span></div>
+`, { tab: 2 }) });
+
+V.push({ sec: 'trainer', id: 'r2', name: 'Por que hoje', tag: 'Ciência', desc: 'O próximo treino vem com o motivo: recuperação, progressão e o que a pesquisa recomenda. Entender o plano gera confiança e faz a pessoa voltar para ver o raciocínio do dia seguinte.', html: () => screen(`
+  <div class="row sp"><div><div class="mu">Quinta, 12 de nov.</div><div class="t1">Treino de hoje</div></div>${xp('+190')}</div>
+  <div class="cd col" style="background:linear-gradient(150deg,#0A84FF,#5B5CF6);color:#fff;gap:8px">
+    <div class="row sp"><span class="pill" style="background:rgba(255,255,255,.2);color:#fff">Semana 3 · Dia 3</span>${I('spark', 18, '#fff')}</div>
+    <div><div style="font:800 22px/1.1 var(--body)">Pull A</div><div style="opacity:.85;font-size:12px">Costas e bíceps · 6 exercícios · ~50 min</div></div>
+    <div class="row" style="gap:6px">${['Barra fixa', 'Remada', 'Rosca'].map((t) => `<span class="pill" style="background:rgba(255,255,255,.16);color:#fff;white-space:nowrap">${t}</span>`).join('')}<span class="xs" style="opacity:.8">+3</span></div>
+  </div>
+  <b class="t2">Por que hoje?</b>
+  ${[['moon', 'var(--v)', 'Costas recuperadas', 'Último treino de costas há 72 h. O músculo recupera em 48 a 72 h.'], ['trend', 'var(--g)', 'Hora de subir carga', 'Você fez 3×10 na remada com 2 reps sobrando: +2,5 kg hoje.'], ['book', 'var(--c)', 'Volume da semana', 'Faltam 8 séries de costas para chegar a 14, dentro da faixa de 10 a 20.']].map(([n, c, t, s]) => `<div class="cd tight row" style="align-items:flex-start">${icSoft(n, c, 30, 15)}<div class="f1"><b style="font-size:12.5px">${t}</b><div class="mu xs" style="line-height:1.35">${s}</div></div></div>`).join('')}
+  <span class="btn p" style="margin-top:auto">${I('play', 12, '#fff')} Começar Pull A</span>
+`, { tab: 2 }) });
+
+V.push({ sec: 'trainer', id: 'r3', name: 'Passe da temporada', tag: 'Recompensa', desc: 'Cada semana do programa é um nível do passe, com recompensa grátis e Pro. Terminar a semana libera o prêmio, e o próximo fica visível com cadeado para puxar o retorno.', html: () => screen(`
+  <div class="row sp"><div><div class="mu">Temporada 2 · faltam 23 d</div><div class="t2">Passe da Força</div></div>${xp('3.420')}</div>
+  <div class="cd col" style="gap:6px"><div class="row sp"><b>Nível 3</b><span class="mu xs">2 de 4 treinos da semana</span></div><div class="bar" style="height:9px"><b style="width:50%;background:linear-gradient(90deg,var(--v),var(--p))"></b></div></div>
+  <div class="row" style="gap:6px"><span style="width:32px"></span><b class="xs f1 ctr" style="color:var(--sm)">GRÁTIS</b><b class="xs f1 ctr" style="color:var(--y)">PRO</b></div>
+  ${[[1, 'medal', 'Medalha S1', 'crown', 'Tema Grafite', 'ok'], [2, 'bolt', '+200 XP', 'star', 'Ícone Ouro', 'ok'], [3, 'shield', 'Protetor', 'gift', 'Baú raro', 'now'], [4, 'trophy', 'Selo Ferro', 'camera', 'Moldura', 'lock'], [5, 'bolt', '+400 XP', 'crown', 'Coroa', 'lock'], [6, 'medal', 'Medalha Final', 'spark', 'Título Lenda', 'lock']].map(([n, a, at, b, bt, s]) => `<div class="row" style="gap:6px"><span class="ic" style="width:32px;height:32px;border-radius:50%;background:${s === 'ok' ? 'var(--g)' : s === 'now' ? 'var(--p)' : 'var(--sl)'};font:800 12px var(--display);color:${s === 'lock' ? 'var(--sm)' : '#fff'}">${s === 'ok' ? I('check', 14, '#fff') : n}</span>${[[a, at, 'var(--c)'], [b, bt, 'var(--y)']].map(([ic2, t, c]) => `<div class="cd tight row f1" style="gap:6px;padding:6px 8px;${s === 'now' ? `border:1.5px solid ${c}` : ''};${s === 'lock' ? 'opacity:.55' : ''}">${s === 'lock' ? I('lock', 13, 'var(--sm)') : I(ic2, 14, c)}<span class="xs" style="font-weight:700">${t}</span></div>`).join('')}</div>`).join('')}
+  <span class="btn p" style="margin-top:auto">${I('gift', 13, '#fff')} Mais 2 treinos para o nível 4</span>
+`, { tab: 2, dark: true }) });
+
+V.push({ sec: 'trainer', id: 'r4', name: 'Escolha seu objetivo', tag: 'Configuração', desc: 'Primeiro passo do assistente: quatro objetivos em cartões grandes e o nível em três toques. Configurar em menos de um minuto faz o iniciante chegar ao primeiro treino sem desistir.', html: () => screen(`
+  <div class="row sp"><span class="ic" style="background:var(--sl)">${I('undo', 16, 'var(--st)')}</span><span class="mu">Passo 1 de 5</span><span class="mu" style="color:var(--p);font-weight:700">Pular</span></div>
+  <div class="row" style="gap:4px">${[1, 0, 0, 0, 0].map((on) => `<i class="f1" style="height:4px;border-radius:2px;background:${on ? 'var(--p)' : 'var(--sl)'}"></i>`).join('')}</div>
+  <div><div class="t1">Qual é seu objetivo?</div><div class="mu">O Trainer monta séries, repetições e descanso para ele.</div></div>
+  <div class="g2">${[['dumbbell', 'var(--p)', 'Hipertrofia', 'Ganhar músculo', 1], ['trophy', 'var(--r)', 'Força', 'Levantar mais peso', 0], ['flame', 'var(--o)', 'Emagrecer', 'Perder gordura', 0], ['heart', 'var(--g)', 'Condicionamento', 'Fôlego e saúde', 0]].map(([n, c, t, s, on]) => `<div class="cd col" style="gap:6px;position:relative;${on ? `border:2px solid ${c};background:color-mix(in srgb, ${c} 8%, var(--sc))` : 'border:2px solid transparent'}">${ic(n, c, 34, 18)}<b style="font-size:13px">${t}</b><span class="mu xs">${s}</span>${on ? `<span class="ic" style="position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:${c}">${I('check', 11, '#fff')}</span>` : ''}</div>`).join('')}</div>
+  <b class="t3">Seu nível</b>
+  <div class="row" style="background:var(--sl);border-radius:12px;padding:3px;gap:3px">${['Iniciante', 'Intermediário', 'Avançado'].map((t, i) => `<span class="f1 ctr" style="padding:8px 0;border-radius:10px;font-size:11.5px;font-weight:700;${i === 0 ? 'background:var(--sc);box-shadow:0 1px 3px rgba(0,0,0,.1)' : 'color:var(--sm)'}">${t}</span>`).join('')}</div>
+  <span class="mu xs">Menos de 6 meses de academia. Começamos com 3 treinos por semana e vídeos de postura.</span>
+  <span class="btn p" style="margin-top:auto">Continuar ${I('chev', 13, '#fff')}</span>
+`, { tab: 2 }) });
+
+V.push({ sec: 'trainer', id: 'r5', name: 'Ajustes do coach', tag: 'Transparência', desc: 'Um histórico do que o Trainer mudou e por quê, com opção de desfazer. A pessoa vê o plano evoluindo a partir do próprio desempenho e volta para conferir o próximo ajuste.', html: () => screen(`
+  ${hdr('Ajustes automáticos', icSoft('spark', 'var(--v)', 32, 16), 'Semana 3 · 4 mudanças')}
+  <div class="row" style="gap:6px">${['Todos', 'Carga', 'Volume', 'Trocas'].map((t, i) => `<span class="pill" style="padding:6px 10px;${i === 0 ? 'background:var(--st);color:var(--sbg)' : ''}">${t}</span>`).join('')}</div>
+  ${[['trend', 'var(--g)', 'Supino reto', '+2,5 kg', '80 → 82,5 kg. Você fez 3×10 com 2-3 reps sobrando.', 'Ontem'], ['minus', 'var(--o)', 'Agachamento', 'mantido', '100 kg de novo: a última série chegou à falha.', 'Ontem'], ['swap', 'var(--c)', 'Remada curvada', 'trocado', 'Agora remada no cabo, porque você relatou dor lombar.', 'Seg'], ['plus', 'var(--v)', 'Ombros', '+2 séries', 'Foco escolhido: 12 → 14 séries por semana.', 'Dom']].map(([n, c, t, tag, s, d]) => `<div class="cd tight row" style="align-items:flex-start">${icSoft(n, c, 30, 15)}<div class="f1"><div class="row sp"><b style="font-size:12.5px">${t}</b><span class="mu xs">${d}</span></div><span class="pill" style="background:color-mix(in srgb, ${c} 18%, transparent);color:${c};margin:2px 0">${tag}</span><div class="mu xs" style="line-height:1.35">${s}</div></div></div>`).join('')}
+  <div class="row sp" style="margin-top:auto"><span class="row mu xs" style="gap:5px">${I('undo', 13, 'var(--p)')}<b style="color:var(--p)">Desfazer</b></span><span class="row mu xs" style="gap:5px">${I('shield', 13, 'var(--sm)')}Máx. +5% por semana</span></div>
+`, { tab: 2 }) });
+
+V.push({ sec: 'trainer', id: 'r6', name: 'Ondas do ciclo', tag: 'Periodização', desc: 'Volume em barras e intensidade em linha, semana a semana, com o deload marcado. O avançado vê onde está na onda e sabe que a semana pesada vem a seguir.', html: () => screen(`
+  ${hdr('Periodização', `<span class="pill" style="background:color-mix(in srgb, var(--p) 22%, transparent);color:var(--p)">Semana 3</span>`, 'Ciclo de força · 7 semanas')}
+  <div class="cd col" style="gap:8px">
+    <div class="row" style="gap:12px"><span class="row xs" style="gap:5px"><i style="width:10px;height:10px;border-radius:3px;background:var(--p)"></i>Volume (séries)</span><span class="row xs" style="gap:5px"><i style="width:12px;height:3px;border-radius:2px;background:var(--o)"></i>Intensidade (%1RM)</span></div>
+    <div style="position:relative">${bars([62, 70, 78, 66, 72, 58, 34], 'var(--p)', 110, ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'DL'], 2)}<div style="position:absolute;left:0;right:0;top:0">${line([68, 71, 74, 78, 81, 86, 62], 'var(--o)', 250, 104, false, false)}</div></div>
+    <div class="row sp"><span class="mu xs">Agora: 78 séries · 74%</span><span class="pill" style="background:color-mix(in srgb, var(--g) 22%, transparent);color:var(--g);white-space:nowrap">pico de volume</span></div>
+  </div>
+  <div class="col" style="gap:6px">${[['Acumulação', 'S1 a S3', 'mais séries, carga moderada', 'var(--p)', 1], ['Intensificação', 'S4 a S6', 'menos séries, mais peso', 'var(--o)', 0], ['Deload', 'S7', '40% menos volume para recuperar', 'var(--g)', 0]].map(([t, w, s, c, on]) => `<div class="cd tight row" style="${on ? `border:1.5px solid ${c}` : ''}"><i style="width:4px;align-self:stretch;border-radius:2px;background:${c}"></i><div class="f1"><div class="row sp"><b style="font-size:12.5px">${t}</b><span class="mu xs">${w}</span></div><span class="mu xs">${s}</span></div>${on ? I('play', 12, c) : ''}</div>`).join('')}</div>
+  <div class="cd tight row">${I('target', 18, 'var(--y)')}<span class="f1 xs"><b style="font-size:12px">Teste de 1RM na semana 6</b><br>Projeção: agachamento 140 kg</span></div>
+`, { tab: 2, dark: true }) });
+
+V.push({ sec: 'trainer', id: 'r7', name: 'Check-in do dia', tag: 'Prontidão', desc: 'Três controles rápidos (sono, dor e energia) antes de treinar, e o Trainer adapta o treino na hora. Um ritual de 10 segundos que vira hábito diário e evita treinar errado.', html: () => screen(`
+  <div><div class="mu">Antes de começar</div><div class="t1">Como você está hoje?</div></div>
+  <div class="cd col" style="gap:10px">
+    ${rt_slider('Sono', 'moon', 'var(--v)', 35, '5h30', 'mal', 'ótimo')}
+    ${rt_slider('Dor muscular', 'body', 'var(--r)', 70, 'pernas doloridas', 'nenhuma', 'muita')}
+    ${rt_slider('Energia', 'bolt', 'var(--y)', 60, 'normal', 'baixa', 'alta')}
+  </div>
+  <div class="cd row" style="gap:12px">${ring(0.58, 'var(--o)', 58, 6, `<b style="font:900 18px var(--display)">58</b>`)}<div class="f1"><b class="t3">Prontidão moderada</b><div class="mu xs">Abaixo da sua média de 74 nos últimos 14 dias</div></div></div>
+  <div class="cd col" style="background:color-mix(in srgb, var(--p) 10%, var(--sc));gap:5px"><span class="row" style="gap:6px">${I('spark', 15, 'var(--p)')}<b>Treino ajustado</b></span>${[['Pernas A → Superiores B', 'poupa as pernas doloridas'], ['-1 série por exercício', 'por causa do sono curto'], ['Peso mantido', 'sem tentativa de recorde']].map(([a, b]) => `<div class="row" style="gap:6px">${I('check', 13, 'var(--g)')}<span class="xs"><b style="font-size:11.5px">${a}</b> · <span class="mu xs">${b}</span></span></div>`).join('')}</div>
+  <div class="row" style="margin-top:auto;gap:8px"><span class="btn ghost sm" style="padding:10px">Manter original</span><span class="btn p f1" style="white-space:nowrap">${I('play', 12, '#fff')} Treinar 42 min</span></div>
+`, { tab: 2 }) });
+
+V.push({ sec: 'trainer', id: 'r8', name: 'Árvore de habilidades', tag: 'Progressões', desc: 'Exercícios como habilidades de jogo: dominar a flexão libera a diamante, que libera a archer. Cada meta próxima mostra quanto falta e dá um motivo concreto para o próximo treino.', html: () => screen(`
+  <div class="row sp"><div><div class="mu">Calistenia · Empurrar</div><div class="t2">Árvore da flexão</div></div><span class="pill">${I('star', 11, 'var(--y)')} 4 / 9</span></div>
+  <div class="cd" style="position:relative;padding:12px 6px;flex:1;display:flex;flex-direction:column;justify-content:space-between;align-items:center">
+    <svg viewBox="0 0 254 330" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"><path d="M127 40 V100 M127 100 V160 M127 160 L60 220 M127 160 L194 220 M60 220 V285 M194 220 V285" fill="none" stroke="var(--sl)" stroke-width="4" stroke-linecap="round"/><path d="M127 40 V160 L60 220" fill="none" stroke="var(--g)" stroke-width="4" stroke-linecap="round"/></svg>
+    <div style="position:relative">${rt_node('check', 'var(--g)', 38, 'Flexão inclinada', '3×15 feito', 'ok')}</div>
+    <div style="position:relative">${rt_node('check', 'var(--g)', 38, 'Flexão', '3×20 feito', 'ok')}</div>
+    <div class="row" style="position:relative;width:100%;justify-content:space-around">${rt_node('play', 'var(--p)', 46, 'Flexão diamante', '3×8 · faltam 2 reps', 'now')}${rt_node('lock', 'var(--v)', 38, 'Pike push-up', 'requer 3×12 flexão', 'lock')}</div>
+    <div class="row" style="position:relative;width:100%;justify-content:space-around">${rt_node('lock', 'var(--o)', 38, 'Archer push-up', 'requer diamante 3×10', 'lock')}${rt_node('lock', 'var(--r)', 38, 'Parada de mão', 'requer pike 3×8', 'lock')}</div>
+  </div>
+  <div class="cd tight row">${icSoft('target', 'var(--p)', 32, 16)}<div class="f1"><b style="font-size:12.5px">Flexão diamante 8/10 reps</b><div class="bar" style="margin-top:4px"><b style="width:80%"></b></div></div>${xp('+300')}</div>
+`, { tab: 2, dark: true }) });
+
+V.push({ sec: 'trainer', id: 'r9', name: 'Montar a semana', tag: 'Agenda', desc: 'Marque os dias livres e arraste os treinos para eles; o Trainer avisa se dois treinos pesados ficam colados. Planejar a semana no domingo cria um compromisso para voltar.', html: () => screen(`
+  ${hdr('Minha semana', `<span class="mu" style="color:var(--p);font-weight:700">Salvar</span>`, '16 a 22 de nov. · 4 treinos')}
+  <div class="col" style="gap:6px"><b class="xs" style="color:var(--sm)">DIAS DISPONÍVEIS</b><div class="row sp" style="gap:0">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((d, i) => { const on = [0, 1, 3, 4, 5].includes(i); return `<span class="ic" style="width:31px;height:31px;border-radius:50%;font-weight:800;font-size:12px;background:${on ? 'var(--p)' : 'var(--sc)'};color:${on ? '#fff' : 'var(--sm)'};border:1.5px solid ${on ? 'var(--p)' : 'var(--sl)'}">${d}</span>`; }).join('')}</div></div>
+  <div class="col" style="gap:7px">${[['Seg', 'Push A', '52 min', 'var(--r)', 0], ['Ter', 'Pull A', '50 min', 'var(--v)', 0], ['Qua', 'Descanso', '', 'var(--sl)', 3], ['Qui', 'Pernas A', '55 min', 'var(--o)', 1], ['Sex', 'Full Body', '45 min', 'var(--p)', 0], ['Sáb', 'Livre', 'arraste um treino aqui', 'var(--sl)', 2]].map(([d, t, m, c, st]) => st === 2 ? `<div class="row" style="gap:8px;padding:9px 10px;border-radius:14px;border:1.5px dashed var(--sl)"><b class="xs" style="width:26px;color:var(--sm)">${d}</b><span class="mu xs f1">${m}</span>${I('plus', 14, 'var(--sm)')}</div>` : st === 3 ? `<div class="row" style="gap:8px;padding:2px 10px"><b class="xs" style="width:26px;color:var(--sm)">${d}</b>${I('moon', 13, 'var(--sm)')}<span class="mu xs">Descanso</span></div>` : `<div class="cd tight row" style="gap:8px;${st === 1 ? 'transform:rotate(-1.2deg);margin:0 6px;box-shadow:0 10px 24px -8px rgba(10,30,60,.35);border:1.5px solid var(--p)' : ''}">${rt_grip(st === 1 ? 'var(--p)' : 'var(--sm)')}<b class="xs" style="width:24px;color:var(--sm)">${d}</b><i style="width:3px;height:26px;border-radius:2px;background:${c}"></i><div class="f1"><b style="font-size:12.5px">${t}</b><div class="mu xs">${m}</div></div></div>`).join('')}</div>
+  <div class="cd tight row" style="background:color-mix(in srgb, var(--y) 16%, var(--sc))">${I('bell', 16, '#C98A00')}<span class="f1 xs">Pernas na quinta e Full Body na sexta: considere passar o Full Body para sábado.</span></div>
+`, { tab: 2 }) });
+
+V.push({ sec: 'trainer', id: 'r10', name: 'Meta com projeção', tag: 'Objetivo', desc: 'A meta de força com a linha do histórico e a projeção até o alvo, recalculada a cada treino. Ver a data ficar mais perto depois de um bom treino é o melhor motivo para voltar.', html: () => screen(`
+  ${hdr('Minha meta', icSoft('edit', 'var(--sm)', 32, 16))}
+  <div class="cd col" style="gap:6px"><div class="row" style="gap:10px">${ic('target', 'var(--g)', 40, 20)}<div class="f1"><b class="t2">Agachamento 140 kg</b><div class="mu">previsto em <b style="color:var(--g)">9 semanas</b> · 14 de jan.</div></div></div>${rt_proj()}<div class="row sp"><span class="mu xs">ago.</span><span class="mu xs">nov.</span><span class="mu xs">jan.</span></div></div>
+  <div class="g3">${[['Atual', '122,5', 'kg (1RM)', 'var(--p)'], ['Ritmo', '+2,1', 'kg / semana', 'var(--g)'], ['Faltam', '17,5', 'kg', 'var(--o)']].map(([l, v, u, c]) => `<div class="cd tight col" style="gap:2px"><span class="mu xs">${l}</span><b class="mid" style="font-size:17px;color:${c}">${v}</b><span class="mu xs">${u}</span></div>`).join('')}</div>
+  <div class="cd col" style="gap:7px"><b>Marcos</b>${[['125 kg', 'semana 2', 1], ['130 kg', 'semana 4', 0], ['135 kg', 'semana 7', 0]].map(([k, w, d]) => `<div class="row">${d ? `<span class="ic" style="width:22px;height:22px;border-radius:50%;background:var(--g)">${I('check', 12, '#fff')}</span>` : `<span style="width:22px;height:22px;border-radius:50%;border:2px solid var(--sl)"></span>`}<b class="f1" style="font-size:12.5px;${d ? 'color:var(--sm)' : ''}">${k}</b><span class="mu xs">${w}</span>${d ? '' : xp('+150')}</div>`).join('')}</div>
+  <div class="cd tight row">${I('trend', 18, 'var(--g)')}<span class="f1 xs">Último treino adiantou a meta em <b>4 dias</b>.</span></div>
+`, { tab: 2 }) });
+
+// ===================== PERFIL =====================
+const pf_lvl = ['#2A303B', 'color-mix(in srgb, var(--p) 45%, #2A303B)', 'var(--p)', 'var(--o)', 'var(--r)'];
+const pf_bandCols = ['#B9C2CF', 'var(--c)', 'var(--g)', 'var(--v)', 'var(--y)'];
+const pf_band = (pct) => `<div style="position:relative;margin-top:7px"><div style="display:flex;gap:2px;height:8px">${pf_bandCols.map((c) => `<i style="flex:1;background:${c};border-radius:2px"></i>`).join('')}</div><i style="position:absolute;left:${pct}%;top:-4px;width:4px;height:16px;border-radius:2px;background:var(--st);transform:translateX(-50%);box-shadow:0 0 0 2px var(--sc)"></i></div>`;
+const pf_row = (n, c, t, right = '', red = false) => `<div class="row" style="padding:7px 0">${icSoft(n, c, 28, 14)}<span class="f1 t3" style="font-weight:600;${red ? 'color:var(--r)' : ''}">${t}</span>${right}${I('chev', 14, 'var(--sm)')}</div>`;
+
+V.push({ sec: 'perfil', id: 'p1', name: 'Herói do perfil', tag: 'Nível', desc: 'Banner com nível, barra de XP e medalhas logo no topo. Sempre mostra quanto falta para o próximo nível, o que puxa o próximo treino.', html: () => screen(`
+  <div class="cd col" style="background:linear-gradient(150deg,#0A84FF,#8E5CF6);color:#fff;gap:8px;padding:12px">
+    <div class="row sp"><span class="pill" style="background:rgba(255,255,255,.2);color:#fff">${I('crown', 11, '#fff')} Nível 12</span>${I('gear', 18, '#fff')}</div>
+    <div class="row" style="gap:12px">${ring(0.68, '#fff', 66, 6, `<span class="av" style="width:48px;height:48px;font-size:20px;background:rgba(255,255,255,.22)">R</span>`)}<div class="f1"><div class="t2" style="font-size:19px">Rodrigo Maynard</div><div style="font-size:11.5px;opacity:.85">Atleta de Ferro · desde mar 2026</div></div></div>
+    <div><div class="row sp" style="font-size:11px;opacity:.9"><span>680 / 1.000 XP</span><span>nível 13 em ~2 treinos</span></div><div class="bar" style="background:rgba(255,255,255,.25);margin-top:4px"><b style="width:68%;background:#fff"></b></div></div>
+  </div>
+  <div class="cd col"><div class="row sp"><b>Medalhas</b><span class="mu" style="color:var(--p)">14 de 40</span></div>
+    <div class="row sp">${[['flame', 'var(--o)'], ['trophy', 'var(--y)'], ['medal', 'var(--p)'], ['bolt', 'var(--v)'], ['lock', '']].map(([n, c]) => `<span class="ic" style="width:40px;height:40px;border-radius:50%;background:${c || 'var(--sl)'}">${I(n, 19, c ? '#fff' : 'var(--sm)')}</span>`).join('')}</div></div>
+  <div class="g3">${[['dumbbell', 'var(--p)', '36', 'treinos'], ['chart', 'var(--g)', '412 t', 'volume'], ['trophy', 'var(--y)', '28', 'recordes']].map(([n, c, v, l]) => `<div class="cd tight col ctr" style="gap:3px">${I(n, 16, c)}<b class="mid" style="font-size:17px">${v}</b><span class="mu xs">${l}</span></div>`).join('')}</div>
+  <div class="cd col"><b>Recordes recentes</b>${[['Supino reto', '100 kg × 3', '9 nov'], ['Levantamento terra', '180 kg × 1', '2 nov']].map(([e, v, d]) => `<div class="row sp"><span class="row">${I('trophy', 14, 'var(--y)')}<span>${e}</span></span><span class="row"><b class="xs">${v}</b><span class="mu xs">${d}</span></span></div>`).join('')}</div>
+  <div class="cd tight row" style="background:color-mix(in srgb, var(--v) 12%, var(--sc))">${ic('gift', 'var(--v)', 30, 15)}<span class="f1" style="font-size:12px"><b>Nível 13</b> libera o tema Ouro</span>${xp('+320')}</div>
+`, { tab: 4 }) });
+
+V.push({ sec: 'perfil', id: 'p2', name: 'Estante de troféus', tag: 'Coleção', desc: 'Grade de troféus: os ganhos em cor, os bloqueados em cinza com a barra do quanto falta. Completar a coleção vira um objetivo próprio.', html: () => screen(`
+  ${hdr('Troféus', `<span class="pill" style="background:color-mix(in srgb, var(--y) 22%, transparent);color:#8A6200">${I('trophy', 11, '#C98A00')} 18 / 40</span>`, '4 novos neste mês')}
+  <div class="row" style="gap:6px">${['Todos', 'Força', 'Hábito', 'Social'].map((t, i) => `<span class="pill" style="padding:6px 10px;${i === 0 ? 'background:var(--st);color:var(--sbg)' : ''}">${t}</span>`).join('')}</div>
+  <div class="g3">${[
+    ['flame', 'var(--o)', '30 dias', 'out 2026', 0], ['trophy', 'var(--y)', 'Supino 100', 'nov 2026', 0], ['medal', 'var(--p)', '25 treinos', 'set 2026', 0],
+    ['bolt', 'var(--v)', '10 t num dia', 'out 2026', 0], ['sun', 'var(--c)', 'Madrugador', 'ago 2026', 0], ['users', 'var(--r)', '1º amigo', 'jun 2026', 0],
+    ['crown', '', '50 treinos', '36/50', 72], ['shield', '', '60 dias', '31/60', 52], ['dumbbell', '', 'Terra 200', '180/200', 90],
+  ].map(([n, c, t, s, p]) => `<div class="cd tight col ctr" style="gap:4px;padding:10px 6px;${p ? 'background:var(--sbg);border:1.5px dashed var(--sl)' : ''}"><span class="ic" style="width:40px;height:40px;border-radius:50%;background:${c || 'var(--sl)'};${c ? `box-shadow:0 4px 0 color-mix(in srgb, ${c} 55%, #000)` : ''}">${I(p ? 'lock' : n, 18, c ? '#fff' : 'var(--sm)')}</span><b style="font-size:11px;${p ? 'color:var(--sm)' : ''}">${t}</b>${p ? `<div class="bar" style="width:100%;height:5px"><b style="width:${p}%;background:var(--sm)"></b></div><span class="mu xs">${s}</span>` : `<span class="mu xs">${s}</span>`}</div>`).join('')}</div>
+  <div class="cd row" style="border:1.5px solid color-mix(in srgb, var(--y) 55%, transparent)">${icSoft('dumbbell', 'var(--y)', 34, 17)}<div class="f1"><b>Quase lá: Terra 200 kg</b><div class="mu xs">Faltam 20 kg · o Trainer já subiu sua carga</div></div></div>
+`, { tab: 4 }) });
+
+V.push({ sec: 'perfil', id: 'p3', name: 'Card de jogador', tag: 'Atributos', desc: 'Seu perfil vira um card colecionável com nota geral e quatro atributos que sobem com o treino. Dá vontade de subir um ponto e compartilhar.', html: () => screen(`
+  ${hdr('Seu card', icSoft('share', 'var(--y)', 32, 16), 'Temporada nov 2026')}
+  <div style="border-radius:20px;padding:2px;background:linear-gradient(160deg,#F5D27A,#9C6F1E 50%,#F5D27A)"><div class="col" style="border-radius:18px;background:linear-gradient(170deg,#2B2512,#14161C 62%);padding:14px;color:#F6E7B8;gap:10px">
+    <div class="row sp" style="align-items:flex-start"><div class="col" style="gap:2px"><span style="font:900 42px/1 var(--display);color:#F5D27A">84</span><b style="font-size:10px;letter-spacing:.12em">GERAL</b><span class="pill" style="background:rgba(245,210,122,.16);color:#F5D27A;margin-top:6px">${I('dumbbell', 11, '#F5D27A')} FORÇA</span></div>
+      <span class="ic" style="width:104px;height:104px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#4A4024,#1E1B12);border:2px solid rgba(245,210,122,.5)"><span style="font:900 38px var(--display);color:#F5D27A">RM</span></span></div>
+    <div class="ctr col" style="gap:0"><b style="font:800 18px var(--display);letter-spacing:.08em">RODRIGO</b><span style="font-size:10.5px;opacity:.7">Nível 12 · Hipertrofia · 82 kg</span></div>
+    <div style="height:1px;background:rgba(245,210,122,.3)"></div>
+    <div class="g2" style="gap:8px 14px">${[['88', 'Força', 88], ['76', 'Resistência', 76], ['91', 'Consistência', 91], ['79', 'Técnica', 79]].map(([v, l, p]) => `<div class="col" style="gap:3px"><div class="row" style="gap:6px"><b style="font:800 18px var(--display);color:#F5D27A">${v}</b><span style="font-size:11px">${l}</span></div><div class="bar" style="height:4px;background:rgba(245,210,122,.15)"><b style="width:${p}%;background:#F5D27A"></b></div></div>`).join('')}</div>
+  </div></div>
+  <div class="cd row">${icSoft('trend', 'var(--g)', 32, 16)}<div class="f1"><b>Para chegar a 85</b><div class="mu xs">+3 em Técnica: grave 2 séries com vídeo esta semana</div></div></div>
+  <div class="g2"><span class="btn" style="background:#F5D27A;color:#14161C">${I('share', 13, '#14161C')} Compartilhar</span><span class="btn ghost">${I('users', 13, 'var(--st)')} Comparar</span></div>
+`, { tab: 4, dark: true }) });
+
+V.push({ sec: 'perfil', id: 'p4', name: 'Linha do tempo', tag: 'Memória', desc: 'Os marcos da sua história em ordem, com data: primeiro treino, recordes, sequências. Mostra o quanto você evoluiu e qual é o próximo marco.', html: () => screen(`
+  ${hdr('Sua jornada', icSoft('cal', 'var(--p)', 32, 16), '14 marcos desde 15 mar 2026')}
+  <div class="cd row" style="background:color-mix(in srgb, var(--p) 10%, var(--sc))">${ring(0.72, 'var(--p)', 46, 5, `<b class="xs">72%</b>`)}<div class="f1"><span class="mu xs">Próximo marco</span><div class="t3">50 treinos concluídos</div><div class="mu xs">36 de 50 · uns 4 semanas no seu ritmo</div></div></div>
+  <div style="position:relative;display:flex;flex-direction:column;gap:8px"><i style="position:absolute;left:64px;top:14px;bottom:14px;width:2px;background:var(--sl)"></i>
+    ${[['9 nov', 'trophy', 'var(--y)', 'Supino 100 kg', 'Recorde pessoal · +2,5 kg'], ['28 out', 'flame', 'var(--o)', '30 dias seguidos', 'Medalha de sequência Prata'], ['12 out', 'crown', 'var(--v)', 'Chegou ao nível 10', 'Desbloqueou o tema Noite'], ['20 set', 'medal', 'var(--p)', '25 treinos', 'Metade do caminho para 50'], ['2 ago', 'bolt', 'var(--r)', 'Primeiro recorde no terra', '150 kg × 1'], ['15 mar', 'play', 'var(--g)', 'Primeiro treino', 'Corpo inteiro · 32 min']].map(([d, n, c, t, s]) => `<div class="row" style="position:relative"><span class="xs mu" style="width:44px;text-align:right;font-weight:700">${d}</span><span class="ic" style="width:26px;height:26px;border-radius:50%;background:${c};box-shadow:0 0 0 3px var(--sbg)">${I(n, 13, '#fff')}</span><div class="cd tight f1" style="padding:7px 10px"><b style="font-size:12px">${t}</b><div class="mu xs">${s}</div></div></div>`).join('')}
+  </div>
+`, { tab: 4 }) });
+
+V.push({ sec: 'perfil', id: 'p5', name: 'Perfil limpo', tag: 'Minimalista', desc: 'Sem jogo: foto, dados essenciais e ajustes organizados em grupos. O relatório do mês com selo "novo" é o motivo discreto para voltar.', html: () => screen(`
+  ${hdr('Perfil', `<span class="mu" style="color:var(--p);font-weight:700">Editar</span>`)}
+  <div class="row" style="gap:12px"><span class="av" style="width:56px;height:56px;font-size:22px;background:var(--st);color:var(--sbg)">R</span><div class="f1"><b class="t2">Rodrigo Maynard</b><div class="mu">36 treinos · 82,4 kg · São Paulo</div></div></div>
+  <div class="cd" style="padding:4px 12px">
+    ${pf_row('chart', 'var(--p)', 'Relatório de novembro', `<span class="pill" style="background:var(--p);color:#fff">novo</span>`)}<div class="hr"></div>
+    ${pf_row('ruler', 'var(--g)', 'Medidas', `<span class="mu">há 6 dias</span>`)}<div class="hr"></div>
+    ${pf_row('photo', 'var(--v)', 'Fotos de progresso', `<span class="mu">8</span>`)}
+  </div>
+  <div class="cd" style="padding:4px 12px">
+    ${pf_row('scale', 'var(--sm)', 'Unidades', `<span class="mu">kg</span>`)}<div class="hr"></div>
+    ${pf_row('moon', 'var(--sm)', 'Tema', `<span class="mu">Automático</span>`)}<div class="hr"></div>
+    ${pf_row('bell', 'var(--sm)', 'Lembretes', `<span class="mu">Seg, Qua, Sex</span>`)}<div class="hr"></div>
+    ${pf_row('share', 'var(--sm)', 'Exportar dados', '')}
+  </div>
+  <div class="cd" style="padding:4px 12px">${pf_row('msg', 'var(--sm)', 'Ajuda e contato', '')}</div>
+  <span class="mu ctr" style="color:var(--r);font-weight:700;font-size:12.5px">Sair da conta</span>
+`, { tab: 4 }) });
+
+V.push({ sec: 'perfil', id: 'p6', name: 'Mapa do corpo', tag: 'Músculos', desc: 'Um boneco colorido pelo quanto cada músculo foi treinado nos últimos 30 dias. O músculo "frio" aparece na hora e vira o treino sugerido.', html: () => {
+  const L = { delt: 3, chest: 4, bi: 3, fore: 1, abs: 2, quad: 2, calf: 0, trap: 2 };
+  const f = (k) => pf_lvl[L[k]];
+  const fig = `<svg viewBox="0 0 120 240" width="112" height="224" aria-hidden="true">
+    <circle cx="60" cy="18" r="13" fill="#3A4150"/><rect x="54" y="30" width="12" height="9" rx="3" fill="#3A4150"/>
+    <path d="M42 40 Q60 34 78 40 L74 46 Q60 42 46 46Z" fill="${f('trap')}"/>
+    <ellipse cx="35" cy="52" rx="11" ry="10" fill="${f('delt')}"/><ellipse cx="85" cy="52" rx="11" ry="10" fill="${f('delt')}"/>
+    <rect x="38" y="46" width="21" height="22" rx="7" fill="${f('chest')}"/><rect x="61" y="46" width="21" height="22" rx="7" fill="${f('chest')}"/>
+    <rect x="46" y="71" width="28" height="40" rx="7" fill="${f('abs')}"/><path d="M60 73V109M47 84H73M47 97H73" stroke="#0D0F14" stroke-width="1.5" opacity=".5"/>
+    <rect x="21" y="62" width="12" height="32" rx="6" fill="${f('bi')}"/><rect x="87" y="62" width="12" height="32" rx="6" fill="${f('bi')}"/>
+    <rect x="17" y="96" width="11" height="34" rx="5" fill="${f('fore')}"/><rect x="92" y="96" width="11" height="34" rx="5" fill="${f('fore')}"/>
+    <path d="M44 111 H76 L74 120 H46Z" fill="#3A4150"/>
+    <rect x="39" y="118" width="20" height="56" rx="9" fill="${f('quad')}"/><rect x="61" y="118" width="20" height="56" rx="9" fill="${f('quad')}"/>
+    <rect x="41" y="178" width="15" height="46" rx="7" fill="${f('calf')}" stroke="var(--r)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="64" y="178" width="15" height="46" rx="7" fill="${f('calf')}" stroke="var(--r)" stroke-width="1.5" stroke-dasharray="3 3"/>
+  </svg>`;
+  return screen(`
+  ${hdr('Mapa muscular', `<span class="pill" style="padding:5px 9px">${I('swap', 11, 'var(--st)')} Frente</span>`, 'Séries nos últimos 30 dias')}
+  <div class="cd row" style="gap:6px;align-items:center">${fig}<div class="col f1" style="gap:7px">${[['Peito', 46, 4], ['Ombros', 34, 3], ['Bíceps', 31, 3], ['Abdômen', 22, 2], ['Quadríceps', 20, 2], ['Antebraço', 9, 1], ['Panturrilha', 0, 0]].map(([m, v, l]) => `<div class="row" style="gap:6px"><i style="width:9px;height:9px;border-radius:3px;background:${pf_lvl[l]};${l ? '' : 'box-shadow:0 0 0 1px var(--r)'}"></i><span class="f1" style="font-size:11.5px">${m}</span><b class="xs" style="${l ? '' : 'color:var(--r)'}">${v}</b></div>`).join('')}</div></div>
+  <div class="row" style="gap:6px"><span class="mu xs">Pouco</span><div class="f1" style="display:flex;gap:2px;height:7px">${pf_lvl.map((c) => `<i style="flex:1;border-radius:2px;background:${c}"></i>`).join('')}</div><span class="mu xs">Muito</span></div>
+  <div class="cd row" style="border:1px solid color-mix(in srgb, var(--r) 45%, transparent)">${icSoft('target', 'var(--r)', 34, 17)}<div class="f1"><b>Panturrilha está fria</b><div class="mu xs">Nenhuma série em 30 dias. Pernas B inclui 4.</div></div></div>
+  <span class="btn p">${I('play', 12, '#fff')} Treinar Pernas B</span>
+`, { tab: 4, dark: true });
+} });
+
+V.push({ sec: 'perfil', id: 'p7', name: 'Ano em quadradinhos', tag: 'Constância', desc: 'Mapa de calor do ano com totais e o melhor mês. Pintar mais um quadradinho é um empurrão diário, e a retrospectiva de dezembro dá um encontro marcado.', html: () => screen(`
+  <div class="row sp"><div><div class="mu">Seu 2026</div><div class="row" style="gap:6px;align-items:baseline"><span class="big">118</span><span class="mu">treinos</span></div></div><span class="pill" style="background:color-mix(in srgb, var(--g) 18%, transparent);color:var(--g)">${I('trend', 11, 'var(--g)')} +38% vs 2025</span></div>
+  <div class="cd col"><div class="row sp mu xs" style="font-weight:700"><span>ago</span><span>set</span><span>out</span><span>nov</span></div>${heat(16, 11, 'var(--g)')}<div class="row sp"><span class="mu xs">Últimas 16 semanas</span><span class="row mu xs" style="gap:3px">Menos${[0, .4, .7, 1].map((l) => `<i style="width:9px;height:9px;border-radius:2px;background:${l ? `color-mix(in srgb, var(--g) ${l * 100}%, transparent)` : 'var(--sl)'}"></i>`).join('')}Mais</span></div></div>
+  <div class="g2">${[['chart', 'var(--p)', '412 t', 'volume levantado'], ['clock', 'var(--v)', '96 h', 'de treino'], ['flame', 'var(--o)', '31 dias', 'maior sequência'], ['trophy', 'var(--y)', '28', 'recordes']].map(([n, c, v, l]) => `<div class="cd tight row">${icSoft(n, c, 30, 15)}<div><b style="font-size:14px">${v}</b><div class="mu xs">${l}</div></div></div>`).join('')}</div>
+  <div class="cd col"><div class="row sp"><b>Treinos por mês</b><span class="mu xs">melhor: out</span></div>${bars([8, 10, 12, 11, 9, 13, 14, 15, 22, 4], 'var(--g)', 26, ['M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'], 8)}</div>
+  <div class="cd tight row" style="background:color-mix(in srgb, var(--v) 12%, var(--sc))">${ic('gift', 'var(--v)', 30, 15)}<span class="f1" style="font-size:12px"><b>Retrospectiva 2026</b> chega em 28 de dezembro</span></div>
+`, { tab: 4 }) });
+
+V.push({ sec: 'perfil', id: 'p8', name: 'Perfil social', tag: 'Comunidade', desc: 'Seguidores, treinos publicados em grade e sugestões de quem seguir. Curtidas e novos seguidores trazem a pessoa de volta.', html: () => screen(`
+  <div class="row" style="gap:12px"><span class="av" style="width:60px;height:60px;font-size:24px;background:linear-gradient(135deg,var(--p),var(--v))">R</span><div class="g3 f1" style="gap:2px">${[['118', 'treinos'], ['342', 'seguidores'], ['186', 'seguindo']].map(([v, l]) => `<div class="col ctr" style="gap:0"><b style="font-size:16px">${v}</b><span class="mu xs">${l}</span></div>`).join('')}</div></div>
+  <div><b>Rodrigo Maynard</b> <span class="mu">@rodrigo.reps</span><div style="font-size:12px">Supino 100 kg em novembro. Rumo aos 120. Treino às 18h30.</div></div>
+  <div class="g2"><span class="btn ghost sm">${I('edit', 12, 'var(--st)')} Editar perfil</span><span class="btn ghost sm">${I('share', 12, 'var(--st)')} Compartilhar</span></div>
+  <div class="row" style="border-bottom:1px solid var(--sl)">${['Treinos', 'Recordes', 'Fotos'].map((t, i) => `<span class="f1 ctr" style="padding:6px 0;font-weight:700;font-size:12px;${i === 0 ? 'color:var(--p);border-bottom:2px solid var(--p)' : 'color:var(--sm)'}">${t}</span>`).join('')}</div>
+  <div class="g2">${[['Push A', 'ontem', '7,8 t', 'var(--r)', [6, 8, 7, 9, 10], 24], ['Pernas', 'seg', '11,2 t', 'var(--o)', [7, 6, 9, 8, 11], 31], ['Pull B', 'sáb', '6,4 t', 'var(--v)', [5, 7, 6, 8, 7], 18], ['Upper', 'qui', '8,1 t', 'var(--p)', [6, 7, 8, 7, 9], 27]].map(([t, d, v, c, b, lk]) => `<div class="cd tight col" style="gap:5px"><div style="background:color-mix(in srgb, ${c} 14%, transparent);border-radius:10px;padding:6px">${bars(b, c, 22)}</div><div class="row sp"><b style="font-size:12px">${t}</b><span class="mu xs">${d}</span></div><div class="row sp"><span class="mu xs">${v}</span><span class="row xs mu" style="gap:3px">${I('heart', 11, 'var(--r)')}${lk}</span></div></div>`).join('')}</div>
+  <div class="cd tight row"><span class="av" style="width:30px;height:30px;font-size:12px;background:var(--g)">C</span><div class="f1"><b style="font-size:12px">Camila Duarte</b><div class="mu xs">treina na sua academia</div></div><span class="btn p sm">Seguir</span></div>
+`, { tab: 4 }) });
+
+V.push({ sec: 'perfil', id: 'p9', name: 'Padrões de força', tag: 'Benchmark', desc: 'Cada exercício numa faixa de Iniciante a Elite, comparado a pessoas do mesmo peso. Mostra exatamente quantos kg faltam para o próximo nível.', html: () => screen(`
+  ${hdr('Padrões de força', icSoft('scale', 'var(--p)', 32, 16), 'Homens de 82 kg · melhor série estimada')}
+  <div class="row sp">${['Iniciante', 'Novato', 'Interm.', 'Avançado', 'Elite'].map((l, i) => `<span class="row" style="gap:3px;font-weight:600;font-size:9px"><i style="width:7px;height:7px;border-radius:2px;background:${pf_bandCols[i]}"></i>${l}</span>`).join('')}</div>
+  ${[['Supino reto', '100 kg', 'Avançado', 'var(--v)', 66], ['Agachamento', '130 kg', 'Intermediário', 'var(--g)', 55], ['Levantamento terra', '180 kg', 'Avançado', 'var(--v)', 72], ['Desenvolvimento', '60 kg', 'Intermediário', 'var(--g)', 48], ['Barra fixa', '+20 kg', 'Avançado', 'var(--v)', 63]].map(([e, v, l, c, p]) => `<div class="cd tight"><div class="row sp"><span><b style="font-size:12.5px">${e}</b> <span class="mu">${v}</span></span><span class="pill" style="background:color-mix(in srgb, ${c} 18%, transparent);color:${c}">${l}</span></div>${pf_band(p)}</div>`).join('')}
+  <div class="cd row" style="background:color-mix(in srgb, var(--g) 12%, var(--sc))">${icSoft('target', 'var(--g)', 34, 17)}<div class="f1"><b>Mais perto do próximo nível</b><div class="mu xs">Agachamento 142,5 kg = Avançado. Faltam 12,5 kg.</div></div></div>
+`, { tab: 4 }) });
+
+V.push({ sec: 'perfil', id: 'p10', name: 'Identidade e metas', tag: 'Propósito', desc: 'Quem você é ("Atleta de força"), as metas em andamento, os escudos de sequência e o selo Pro. Ver a meta a 9% do fim é o motivo para voltar amanhã.', html: () => screen(`
+  <div class="cd col" style="background:linear-gradient(150deg,#1B2A44,#14161C);border:1px solid #2A3A58;gap:8px">
+    <div class="row sp"><span class="pill" style="background:rgba(10,132,255,.18);color:#6CB4FF">${I('dumbbell', 11, '#6CB4FF')} Minha identidade</span><span class="pill" style="background:linear-gradient(90deg,#F5D27A,#E0A93A);color:#14161C">${I('crown', 11, '#14161C')} PRO</span></div>
+    <div class="row">${ic('bolt', 'var(--p)', 44, 22)}<div class="f1"><div class="t2" style="font-size:19px">Atleta de força</div><div class="mu">Foco em cargas altas, 4x por semana</div></div></div>
+  </div>
+  <div class="cd col" style="gap:9px"><div class="row sp"><b>Metas em andamento</b><span class="mu" style="color:var(--p)">+ Nova</span></div>
+    ${[['trophy', 'var(--y)', 'Supino 110 kg', '100 / 110 kg', 91], ['cal', 'var(--g)', '4 treinos por semana', '3 / 4 nesta semana', 75], ['scale', 'var(--c)', 'Chegar a 80 kg', '82,4 kg · faltam 2,4', 40]].map(([n, c, t, s, p]) => `<div class="row">${icSoft(n, c, 30, 15)}<div class="f1"><div class="row sp"><b style="font-size:12px">${t}</b><b class="xs" style="color:${c}">${p}%</b></div><div class="bar" style="height:5px;margin:3px 0"><b style="width:${p}%;background:${c}"></b></div><span class="mu xs">${s}</span></div></div>`).join('')}
+  </div>
+  <div class="cd col"><div class="row sp"><b>Escudos de sequência</b><span class="row xs" style="gap:3px;color:var(--o);font-weight:700">${I('flame', 12, 'var(--o)')} 31 dias</span></div>
+    <div class="row sp">${[['7 dias', '#C98A5A', 1], ['30 dias', '#A7B0BE', 1], ['60 dias', 'var(--y)', 0], ['100 dias', 'var(--c)', 0]].map(([l, c, on]) => `<div class="col ctr" style="gap:3px">${I('shield', 34, on ? c : 'var(--sl)', true)}<span class="xs" style="${on ? 'font-weight:700' : 'color:var(--sm)'}">${l}</span></div>`).join('')}</div>
+  </div>
+  <div class="cd tight row" style="border:1px solid rgba(245,210,122,.35)">${I('crown', 20, '#F5D27A')}<div class="f1"><b style="font-size:12px">Reps Pro desde set 2026</b><div class="mu xs">Trainer completo · renova em 12 dez</div></div>${I('chev', 14, 'var(--sm)')}</div>
+`, { tab: 4, dark: true }) });
+
+// ===================== PROGRESSO =====================
+const st_seg = (opts, on = 0) => `<div class="row" style="background:var(--sl);border-radius:10px;padding:3px;gap:2px">${opts.map((o, i) => `<span class="f1 ctr" style="padding:4px 0;border-radius:8px;font-size:10.5px;font-weight:700;${i === on ? 'background:var(--sc);box-shadow:0 1px 3px rgba(0,0,0,.12)' : 'color:var(--sm)'}">${o}</span>`).join('')}</div>`;
+const st_delta = (txt, good) => `<span class="pill" style="background:color-mix(in srgb, ${good ? 'var(--g)' : 'var(--r)'} 18%, transparent);color:${good ? 'var(--g)' : 'var(--r)'}">${txt}</span>`;
+const st_tile = (n, c, label, val, sub, viz) => `<div class="cd tight col" style="gap:5px"><div class="row sp">${icSoft(n, c, 26, 14)}${I('chev', 13, 'var(--sm)')}</div><b style="font-size:12px">${label}</b><div class="row sp" style="align-items:flex-end;gap:6px"><div><b class="mid" style="font-size:17px">${val}</b><div class="mu xs">${sub}</div></div><div style="width:56px">${viz}</div></div></div>`;
+const st_mini = (lv, col) => `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">${lv.map((v) => `<i style="height:7px;border-radius:2px;background:${v ? `color-mix(in srgb, ${col} ${v * 100}%, transparent)` : 'var(--sl)'}"></i>`).join('')}</div>`;
+const st_back = (c = 'currentColor') => `<span style="display:inline-flex;transform:rotate(180deg)">${I('chev', 18, c)}</span>`;
+const st_sil = (col, waist) => { const l = 50 - waist / 2, r = 50 + waist / 2; return `<svg viewBox="0 0 100 160" style="height:100%;display:block;margin:0 auto"><circle cx="50" cy="20" r="11" fill="${col}"/><path d="M42 33 Q50 37 58 33 L80 41 Q86 45 85 58 L82 90 Q${r} 98 ${r} 110 L${r + 3} 160 L53 160 L50 122 L47 160 L${l - 3} 160 L${l} 110 Q${l} 98 18 90 L15 58 Q14 45 20 41 Z" fill="${col}"/></svg>`; };
+const st_stack = (weeks, cols, labels, h = 104) => { const m = Math.max(...weeks.map((w) => w.reduce((a, b) => a + b, 0))); return `<div style="display:flex;align-items:flex-end;gap:9px;height:${h + 14}px">${weeks.map((w, i) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;display:flex;flex-direction:column-reverse;gap:2px;opacity:${i === weeks.length - 1 ? 1 : .8}">${w.map((v, j) => `<i style="display:block;height:${(v / m) * (h - 10)}px;border-radius:4px;background:${cols[j]}"></i>`).join('')}</div><span class="xs ${i === weeks.length - 1 ? '' : 'mu'}" style="${i === weeks.length - 1 ? 'font-weight:800' : ''}">${labels[i]}</span></div>`).join('')}</div>`; };
+
+V.push({ sec: 'stats', id: 's1', name: 'Central de progresso', tag: 'Hub', desc: 'Uma grade com as seis portas da aba (calendário, medidas, exercícios, fotos, recordes e relatórios), cada uma já mostrando um número vivo. Sempre tem algo novo para tocar.', html: () => screen(`
+  ${hdr('Progresso', xp('Nível 12'), 'Novembro · 14 treinos no mês')}
+  <div class="cd row" style="background:linear-gradient(135deg,#0A84FF,#5B5BF6);color:#fff;gap:12px">${ring(0.72, '#fff', 50, 6, `<b style="font:900 13px var(--display);color:#fff">72%</b>`)}<div class="f1"><b style="font-size:13.5px">Novembro em dia</b><div style="font-size:11px;opacity:.88">Mais 4 treinos e este vira o seu melhor mês do ano.</div></div></div>
+  <div class="g2">
+    ${st_tile('cal', 'var(--g)', 'Calendário', '12', 'dias seguidos', st_mini([0, .7, 1, 0, .4, 1, .7, 0, 1, .7, 1, 0, 0, 0], 'var(--g)'))}
+    ${st_tile('scale', 'var(--c)', 'Medidas', '82,4', 'kg · -3,1', line([85.5, 85.1, 84.6, 84.8, 83.9, 83.2, 82.4], 'var(--c)', 56, 30, true, true))}
+    ${st_tile('dumbbell', 'var(--v)', 'Exercícios', '48', 'já feitos', bars([3, 5, 4, 6, 8], 'var(--v)', 28))}
+    ${st_tile('photo', 'var(--o)', 'Fotos', '12', 'há 4 dias', `<div class="row" style="gap:3px;justify-content:flex-end"><span style="width:24px;height:30px;border-radius:5px;background:color-mix(in srgb, var(--o) 30%, var(--sl))"></span><span style="width:24px;height:30px;border-radius:5px;background:color-mix(in srgb, var(--o) 60%, var(--sl))"></span></div>`)}
+    ${st_tile('trophy', 'var(--y)', 'Recordes', '47', '3 nesta semana', `<div class="row" style="gap:1px;justify-content:flex-end">${I('trophy', 15, 'var(--y)')}${I('trophy', 15, 'var(--y)')}${I('trophy', 15, 'var(--y)')}</div>`)}
+    ${st_tile('chart', 'var(--r)', 'Relatórios', 'S46', 'pronto hoje', `<span class="pill" style="background:var(--r);color:#fff;float:right">Novo</span>`)}
+  </div>
+`, { tab: 3 }) });
+
+const st_calGrid = () => {
+  const lv = { 2: .7, 3: 1, 5: .45, 6: 1, 7: .7, 9: 1, 10: .7, 11: 1 }, rest = [1, 4, 8], plan = [13, 14, 16, 17];
+  let out = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d) => `<span class="xs mu ctr" style="font-weight:700;display:block">${d}</span>`).join('');
+  for (let d = 1; d <= 30; d++) {
+    let st = 'background:transparent;color:var(--sm)', extra = '';
+    if (lv[d]) st = `background:color-mix(in srgb, var(--g) ${lv[d] * 100}%, transparent);color:${lv[d] > .6 ? '#fff' : 'var(--st)'}`;
+    if (rest.includes(d)) { st = 'background:var(--sl);color:var(--sm)'; extra = `<span style="position:absolute;bottom:2px;display:flex">${I('moon', 8, 'var(--sm)')}</span>`; }
+    if (plan.includes(d)) extra = `<i style="position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--p)"></i>`;
+    if (d === 11) st = 'background:var(--p);color:#fff;box-shadow:0 4px 10px -4px var(--p)';
+    if (d === 12) st = 'background:var(--sc);color:var(--p);box-shadow:inset 0 0 0 2px var(--p)';
+    out += `<span style="position:relative;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11.5px;${st}">${d}${extra}</span>`;
+  }
+  return `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${out}</div>`;
+};
+
+V.push({ sec: 'stats', id: 's2', name: 'Calendário de calor', tag: 'Hábito', desc: 'O mês pintado pela intensidade de cada treino, com descanso planejado que não quebra a sequência. Tocar num dia abre a prévia do treino; ver o mês ficando verde puxa a próxima sessão.', html: () => screen(`
+  <div class="row sp">${st_back('var(--sm)')}<div class="ctr col" style="gap:0"><b class="t2">Novembro 2026</b><span class="mu xs">14 treinos · 3 descansos</span></div>${I('chev', 18, 'var(--sm)')}</div>
+  <div class="g3">${[['flame', 'var(--o)', '12', 'dias seguidos'], ['dumbbell', 'var(--g)', '8', 'treinos'], ['moon', 'var(--v)', '3', 'descansos']].map(([n, c, v, l]) => `<div class="cd tight col" style="gap:2px"><span class="row" style="gap:5px">${I(n, 14, c)}<b class="mid" style="font-size:17px">${v}</b></span><span class="mu xs">${l}</span></div>`).join('')}</div>
+  <div class="cd col" style="gap:8px">${st_calGrid()}<div class="row" style="gap:10px;justify-content:center">${[['color-mix(in srgb, var(--g) 70%, transparent)', 'Treino'], ['var(--sl)', 'Descanso'], ['var(--p)', 'Planejado']].map(([c, l]) => `<span class="row xs mu" style="gap:4px"><i style="width:9px;height:9px;border-radius:3px;background:${c}"></i>${l}</span>`).join('')}</div></div>
+  <div class="cd col" style="gap:7px;border-left:4px solid var(--p)"><div class="row sp"><div><span class="mu xs">Qua, 11 de novembro</span><div class="t3">Pull A · Costas e bíceps</div></div>${I('chev', 16, 'var(--sm)')}</div><div class="row sp">${[['52 min', 'duração'], ['14,2 t', 'volume'], ['2', 'recordes']].map(([v, l]) => `<div><b style="font-size:13px">${v}</b><div class="mu xs">${l}</div></div>`).join('')}</div></div>
+`, { tab: 3 }) });
+
+V.push({ sec: 'stats', id: 's3', name: 'Corpo em números', tag: 'Medidas', desc: 'Gráfico do peso com períodos e a lista de circunferências com a diferença de cada uma, colorida pelo que é bom para a sua meta. O botão Registrar e o lembrete trazem a pessoa de volta toda semana.', html: () => screen(`
+  ${hdr('Medidas', `<span class="btn p sm">${I('plus', 11, '#fff')} Registrar</span>`, 'Última medição há 4 dias')}
+  <div class="cd col" style="gap:8px"><div class="row sp" style="align-items:flex-end"><div><span class="mu">Peso corporal</span><div class="row" style="gap:4px;align-items:baseline"><span class="big" style="font-size:30px">82,4</span><span class="mu">kg</span></div></div>${st_delta('-3,1 kg em 90 dias', true)}</div>${st_seg(['30 dias', '90 dias', '1 ano'], 1)}${line([85.5, 85.3, 85.6, 85.0, 84.7, 84.9, 84.2, 83.8, 83.9, 83.3, 82.9, 82.4], 'var(--c)', 250, 66)}<div class="row sp mu xs"><span>ago</span><span>set</span><span>out</span><span>nov</span></div></div>
+  <div class="g2">${[['Gordura', '18,2%', '-1,4', true], ['Massa magra', '67,4 kg', '+0,6', true]].map(([l, v, d, g]) => `<div class="cd tight col" style="gap:3px"><span class="mu xs">${l}</span><div class="row sp"><b class="mid" style="font-size:16px">${v}</b>${st_delta(d, g)}</div></div>`).join('')}</div>
+  <div class="cd col" style="gap:8px"><div class="row sp"><b>Circunferências</b><span class="mu xs">cm</span></div>${[['Cintura', '84,0', '-4,0', true], ['Peito', '104,5', '+1,5', true], ['Braço direito', '38,5', '+1,0', true], ['Quadril', '98,0', '-2,0', true]].map(([n, v, d, g], i) => `${i ? '<div class="hr"></div>' : ''}<div class="row">${I('ruler', 14, 'var(--sm)')}<span class="f1">${n}</span><b style="width:42px;text-align:right">${v}</b><span style="width:44px;text-align:right">${st_delta(d, g)}</span></div>`).join('')}</div>
+`, { tab: 3 }) });
+
+V.push({ sec: 'stats', id: 's4', name: 'Raio-X do exercício', tag: 'Avançado', desc: 'Detalhe de um exercício com 1RM estimado ao longo do tempo, as três melhores marcas e a linha do tempo de recordes. A meta com barra mostra o quanto falta para o próximo marco.', html: () => screen(`
+  <div class="row">${st_back('var(--st)')}<div class="f1"><b class="t2">Supino reto</b><div class="mu xs">Barra · Peito, tríceps, ombro</div></div>${icSoft('share', 'var(--p)', 30, 15)}</div>
+  <div class="row" style="gap:14px;border-bottom:1px solid var(--sl)">${['Resumo', 'Histórico', 'Como fazer', 'Ranking'].map((t, i) => `<span style="padding-bottom:6px;font-size:11.5px;font-weight:700;${i === 0 ? 'color:var(--p);box-shadow:inset 0 -2px 0 var(--p)' : 'color:var(--sm)'}">${t}</span>`).join('')}</div>
+  <div class="cd col" style="gap:6px"><div class="row sp" style="align-items:flex-end"><div><span class="mu">1RM estimado</span><div class="row" style="gap:4px;align-items:baseline"><span class="big" style="font-size:30px">112,5</span><span class="mu">kg</span></div></div>${st_delta('+6% em 90 dias', true)}</div>${line([101, 102.5, 102, 104, 105.5, 105, 107, 108.5, 110, 109.5, 112.5], 'var(--p)', 250, 54)}<div class="row sp mu xs"><span>ago</span><span>set</span><span>out</span><span>nov</span></div></div>
+  <div class="g3">${[['Mais pesado', '102,5', 'kg × 3'], ['Melhor série', '95 × 6', '1RM 114'], ['Mais volume', '3.240', 'kg numa sessão']].map(([l, v, s]) => `<div class="cd tight col" style="gap:2px"><span class="mu xs">${l}</span><b style="font:800 15px var(--display)">${v}</b><span class="mu xs">${s}</span></div>`).join('')}</div>
+  <div class="cd col" style="gap:7px"><b>Linha dos recordes</b>${[['ontem', '102,5 kg × 3', '+2,5 kg', 1], ['28 out', '100 kg × 3', '+1 rep', 0], ['9 out', '100 kg × 2', '+2,5 kg', 0]].map(([d, v, x, n]) => `<div class="row">${n ? `<span class="ic" style="width:24px;height:24px;border-radius:50%;background:var(--y);box-shadow:0 0 12px var(--y)">${I('trophy', 12, '#fff')}</span>` : `<span class="ic" style="width:24px;height:24px;border-radius:50%;background:var(--sl)">${I('trophy', 12, 'var(--sm)')}</span>`}<span class="mu xs" style="width:42px">${d}</span><b class="f1" style="font-size:12px">${v}</b>${st_delta(x, true)}</div>`).join('')}</div>
+  <div class="cd tight row">${icSoft('target', 'var(--g)', 30, 15)}<div class="f1"><div class="row sp"><b style="font-size:12px">Meta: 115 kg</b><span class="mu xs">faltam 2,5 kg</span></div><div class="bar" style="margin-top:5px"><b style="width:86%;background:var(--g)"></b></div></div></div>
+`, { tab: 3, dark: true }) });
+
+V.push({ sec: 'stats', id: 's5', name: 'Radar de equilíbrio', tag: 'Equilíbrio', desc: 'Radar das séries de cada grupo comparadas à meta (a borda), com um alerta claro de desequilíbrio e um botão que já corrige a semana. Quem vê a ponta murcha quer completar o desenho.', html: () => screen(`
+  ${hdr('Equilíbrio', `<span class="pill">${I('cal', 11, 'var(--sm)')} 30 dias</span>`, 'Séries por grupo comparadas à sua meta')}
+  <div class="cd col ctr" style="gap:4px;padding:8px 12px">${radar([0.95, 0.82, 0.7, 0.86, 0.34, 0.52], ['Peito', 'Costas', 'Ombros', 'Braços', 'Pernas', 'Core'], 'var(--v)', 188)}<div class="row" style="gap:12px"><span class="row xs mu" style="gap:4px"><i style="width:9px;height:9px;border-radius:3px;background:color-mix(in srgb, var(--v) 40%, transparent);border:1.5px solid var(--v)"></i>Você</span><span class="row xs mu" style="gap:4px"><i style="width:9px;height:9px;border-radius:3px;border:1.5px solid var(--sm)"></i>Meta</span><span class="xs" style="font-weight:800;color:var(--v)">Nota 71/100</span></div></div>
+  <div class="cd col" style="gap:7px;background:color-mix(in srgb, var(--o) 13%, var(--sc));border:1px solid color-mix(in srgb, var(--o) 40%, transparent)"><div class="row">${ic('bolt', 'var(--o)', 30, 15)}<div class="f1"><b>Pernas ficaram para trás</b><div class="mu xs">6 séries por semana contra 18 de peito</div></div></div><span style="font-size:11.5px">Um treino de pernas a mais por semana deixa o radar redondo em cerca de 4 semanas.</span><span class="btn p sm">${I('plus', 11, '#fff')} Adicionar Pernas à semana</span></div>
+  <div class="g2">${[['Empurrar : Puxar', '1,3 : 1', 'ideal perto de 1 : 1', false], ['Superior : Inferior', '2,8 : 1', 'ideal perto de 1,5 : 1', false]].map(([l, v, s]) => `<div class="cd tight col" style="gap:2px"><span class="mu xs">${l}</span><b class="mid" style="font-size:17px">${v}</b><span class="xs" style="color:var(--o);font-weight:600">${s}</span></div>`).join('')}</div>
+`, { tab: 3 }) });
+
+V.push({ sec: 'stats', id: 's6', name: 'Antes e depois', tag: 'Fotos', desc: 'Duas fotos sobrepostas com um controle deslizante para comparar, datas e peso de cada dia, e a diferença em números. A pose-guia e a próxima foto agendada fazem voltar a cada 15 dias.', html: () => screen(`
+  ${hdr('Fotos', `<span class="btn p sm">${I('camera', 12, '#fff')} Nova</span>`, '12 fotos desde 12 de agosto')}
+  ${st_seg(['Frente', 'Lado', 'Costas'], 0)}
+  <div style="position:relative;height:236px;border-radius:18px;overflow:hidden;background:#252B37;flex:none">
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,#2E3442,#1F2430);padding:22px 0 0">${st_sil('#4A5366', 44)}</div>
+    <div style="position:absolute;inset:0;clip-path:inset(0 0 0 50%);background:linear-gradient(180deg,#28406A,#1B2A47);padding:22px 0 0">${st_sil('#5F86C9', 34)}</div>
+    <i style="position:absolute;top:0;bottom:0;left:50%;width:2px;margin-left:-1px;background:#fff"></i>
+    <span class="ic" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(0,0,0,.4)">${I('swap', 16, '#0E1116')}</span>
+    <span class="pill" style="position:absolute;left:8px;top:8px;background:rgba(0,0,0,.45);color:#fff">Antes</span><span class="pill" style="position:absolute;right:8px;top:8px;background:var(--p);color:#fff">Depois</span>
+    <div style="position:absolute;left:10px;bottom:8px;color:#fff;font-size:10.5px;line-height:1.25"><b>12 ago</b><br><span style="opacity:.75">86,1 kg</span></div><div style="position:absolute;right:10px;bottom:8px;color:#fff;font-size:10.5px;line-height:1.25;text-align:right"><b>10 nov</b><br><span style="opacity:.75">82,4 kg</span></div>
+  </div>
+  <div class="g3">${[['90', 'dias'], ['-3,7', 'kg'], ['-4 cm', 'cintura']].map(([v, l]) => `<div class="cd tight col ctr" style="gap:1px"><b class="mid" style="font-size:16px;color:var(--g)">${v}</b><span class="mu xs">${l}</span></div>`).join('')}</div>
+  <div class="row" style="gap:6px">${['12 ago', '28 ago', '13 set', '29 set', '15 out', '10 nov'].map((d, i) => `<div class="col ctr f1" style="gap:2px"><span style="width:100%;height:36px;border-radius:8px;background:${i === 0 || i === 5 ? 'var(--p)' : 'var(--sl)'};opacity:${i === 0 || i === 5 ? 1 : .9};display:flex;align-items:center;justify-content:center">${I('body', 14, i === 0 || i === 5 ? '#fff' : 'var(--sm)')}</span><span class="xs mu" style="font-size:8.5px">${d}</span></div>`).join('')}</div>
+  <div class="cd tight row">${icSoft('bell', 'var(--o)', 28, 14)}<span class="f1 xs"><b style="font-size:11.5px">Próxima foto em 6 dias</b><br>Mesma luz e a pose-guia por cima da câmera.</span></div>
+`, { tab: 3, dark: true }) });
+
+V.push({ sec: 'stats', id: 's7', name: 'Mural de recordes', tag: 'Conquista', desc: 'Um cartão por exercício com a melhor marca; o recorde mais novo brilha no topo. O próximo alvo, a uma repetição de distância, dá motivo para o treino seguinte.', html: () => screen(`
+  ${hdr('Recordes', `<span class="pill" style="background:color-mix(in srgb, var(--y) 22%, transparent);color:var(--y)">${I('trophy', 11, 'var(--y)')} 47</span>`, 'Seu mural de conquistas')}
+  <div class="cd row" style="background:linear-gradient(135deg,#F5B70A,#FF7A1A);color:#1A1205;box-shadow:0 0 0 1px rgba(255,200,60,.6),0 12px 30px -8px rgba(245,183,10,.75);gap:12px">
+    <div class="f1 col" style="gap:3px"><div class="row" style="gap:6px"><b style="font-size:13px">Supino reto</b><span class="pill" style="background:rgba(0,0,0,.18);color:#1A1205">${I('spark', 10, '#1A1205')} NOVO · ontem</span></div><span class="big" style="font-size:26px">102,5 kg × 3</span><span style="font-size:11px;font-weight:600;opacity:.8">+2,5 kg sobre a marca de 28 out</span></div>
+    ${I('trophy', 40, '#1A1205')}
+  </div>
+  <div class="g2">${[['Agachamento', '140 kg × 5', '3 nov', 'var(--o)', [120, 125, 130, 135, 140]], ['Levantamento terra', '180 kg × 1', '21 out', 'var(--r)', [160, 165, 170, 175, 180]], ['Barra fixa', '+20 kg × 6', '7 nov', 'var(--p)', [5, 10, 12, 15, 20]], ['Desenvolvimento', '62,5 kg × 5', '30 out', 'var(--v)', [52, 55, 57, 60, 62]], ['Remada curvada', '90 kg × 8', '11 nov', 'var(--g)', [75, 80, 82, 85, 90]], ['Leg press 45°', '280 kg × 10', '18 out', 'var(--c)', [220, 240, 250, 270, 280]]].map(([n, v, d, c, h]) => `<div class="cd tight col" style="gap:2px;border-top:3px solid ${c}"><b style="font-size:11.5px">${n}</b><b style="font:800 14.5px var(--display)">${v}</b><div class="row sp" style="align-items:flex-end"><span class="mu xs">${d}</span><div style="width:44px">${bars(h, c, 16)}</div></div></div>`).join('')}</div>
+  <div class="cd tight row" style="border:1px dashed color-mix(in srgb, var(--y) 60%, transparent)">${icSoft('target', 'var(--y)', 30, 15)}<div class="f1"><b style="font-size:12px">Próximo alvo: agachamento 145 kg</b><div class="mu xs">Pelo seu ritmo, falta 1 repetição. Pernas é amanhã.</div></div></div>
+`, { tab: 3, dark: true }) });
+
+V.push({ sec: 'stats', id: 's8', name: 'Semana em stories', tag: 'Relatório', desc: 'O relatório semanal vira uma sequência de cartões estilo stories: volume, recordes, sequência e o desafio da próxima semana. Chega todo domingo e é feito para compartilhar.', html: () => screen(`
+  <div class="row sp"><div><b class="t2">Sua semana 46</b><div class="mu xs">9 a 15 de novembro</div></div>${I('x', 18, 'var(--sm)')}</div>
+  <div class="row" style="gap:4px">${[1, 1, 0, 0, 0].map((f, i) => `<i style="flex:1;height:4px;border-radius:2px;background:${f ? 'var(--p)' : 'var(--sl)'};${i === 1 ? 'background:linear-gradient(90deg,var(--p) 60%,var(--sl) 60%)' : ''}"></i>`).join('')}</div>
+  <div style="display:flex;gap:8px;flex:1;min-height:0">
+    <div class="col" style="flex:none;width:228px;border-radius:22px;padding:18px 16px;color:#fff;background:linear-gradient(165deg,#5B5BF6 0%,#0A84FF 60%,#1E9BD7 100%);gap:8px;position:relative;overflow:hidden">
+      <i style="position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.1)"></i>
+      <span style="font-size:11px;font-weight:700;opacity:.8;letter-spacing:.06em">2 DE 5 · VOLUME</span>
+      <span style="font-size:15px;font-weight:600">Você levantou</span>
+      <span class="big" style="font-size:52px">18,4 t</span>
+      <span style="font-size:12.5px;opacity:.9">o mesmo que 12 carros populares empilhados</span>
+      <div style="margin-top:auto" class="col">${bars([3.1, 0, 4.2, 3.6, 0, 4.8, 2.7], '#fff', 62, ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'], 5).replace(/class="xs mu"/g, 'class="xs" style="color:rgba(255,255,255,.8)"')}</div>
+      <span class="pill" style="background:rgba(255,255,255,.2);color:#fff;align-self:flex-start">${I('trend', 11, '#fff')} +12% sobre a semana 45</span>
+    </div>
+    <div class="col" style="flex:none;width:228px;border-radius:22px;padding:18px 16px;background:linear-gradient(165deg,#F5B70A,#FF7A1A)">${I('trophy', 30, '#fff')}</div>
+  </div>
+  <div class="row" style="justify-content:center;gap:5px">${[0, 1, 0, 0, 0].map((a) => `<i style="height:6px;width:${a ? 18 : 6}px;border-radius:3px;background:${a ? 'var(--p)' : 'var(--sl)'}"></i>`).join('')}</div>
+  <div class="row"><span class="btn ghost f1">${I('share', 13)} Compartilhar</span><span class="btn p f1">Próximo ${I('chev', 13, '#fff')}</span></div>
+`, { tab: 3 }) });
+
+V.push({ sec: 'stats', id: 's9', name: 'Volume e recuperação', tag: 'Recuperação', desc: 'Barras empilhadas mostram as séries de cada músculo por semana, e a lista de recuperação diz quem já está pronto e quem ainda precisa de horas. Abrir antes do treino vira costume.', html: () => screen(`
+  ${hdr('Volume', st_seg(['Séries', 'kg'], 0).replace('padding:3px', 'padding:3px;width:96px'), 'Séries por músculo nas últimas 6 semanas')}
+  <div class="cd col" style="gap:8px">${st_stack([[12, 14, 10, 8, 9], [14, 15, 8, 9, 10], [10, 13, 12, 8, 8], [15, 16, 6, 10, 11], [13, 17, 9, 9, 10], [16, 18, 6, 11, 12]], ['var(--r)', 'var(--p)', 'var(--o)', 'var(--v)', 'var(--c)'], ['S41', 'S42', 'S43', 'S44', 'S45', 'S46'], 100)}<div class="row" style="flex-wrap:wrap;gap:4px 10px;justify-content:center">${[['var(--r)', 'Peito'], ['var(--p)', 'Costas'], ['var(--o)', 'Pernas'], ['var(--v)', 'Ombros'], ['var(--c)', 'Braços']].map(([c, l]) => `<span class="row xs mu" style="gap:4px"><i style="width:8px;height:8px;border-radius:50%;background:${c}"></i>${l}</span>`).join('')}</div></div>
+  <div class="cd col" style="gap:8px"><div class="row sp"><b>Recuperação agora</b><span class="mu xs">atualiza a cada treino</span></div>${[['Peito', 100, 'Recuperado', 'var(--g)'], ['Ombros', 92, 'Recuperado', 'var(--g)'], ['Costas', 58, 'Pronto amanhã', 'var(--o)'], ['Pernas', 34, 'Mais 30 h', 'var(--r)']].map(([m, p, s, c]) => `<div class="row"><span style="width:50px;font-weight:600;font-size:12px">${m}</span><div class="bar f1"><b style="width:${p}%;background:${c}"></b></div><span class="pill" style="width:88px;justify-content:center;background:color-mix(in srgb, ${c} 16%, transparent);color:${c}">${s}</span></div>`).join('')}</div>
+  <div class="cd tight row">${icSoft('bolt', 'var(--g)', 30, 15)}<div class="f1"><b style="font-size:12px">Pronto hoje: Peito e Ombros</b><div class="mu xs">Push A leva 50 min</div></div><span class="btn p sm">${I('play', 10, '#fff')} Ir</span></div>
+`, { tab: 3 }) });
+
+V.push({ sec: 'stats', id: 's10', name: 'Descobertas automáticas', tag: 'Insights', desc: 'Um feed de frases escritas a partir dos treinos: o que melhorou, o melhor horário, o ponto fraco e previsões de quando o próximo marco chega. Cada semana traz descobertas novas para ler.', html: () => screen(`
+  ${hdr('Descobertas', `<span class="pill" style="background:var(--p);color:#fff">3 novas</span>`, 'Escritas a partir dos seus 36 treinos')}
+  <div class="cd col" style="gap:6px"><div class="row">${icSoft('trend', 'var(--g)', 30, 15)}<b class="f1" style="font-size:13px">Seu supino subiu 8% em 30 dias</b></div><div class="row" style="gap:10px"><span class="mu xs f1">De 104 para 112,5 kg de 1RM estimado. Mais rápido que 80% de quem treina há um ano.</span><div style="width:70px">${line([104, 105, 105.5, 107, 108.5, 110, 112.5], 'var(--g)', 70, 34)}</div></div></div>
+  <div class="cd col" style="gap:6px"><div class="row">${icSoft('sun', 'var(--y)', 30, 15)}<b class="f1" style="font-size:13px">Você treina melhor às 7h</b>${st_delta('+11% volume', true)}</div>${bars([62, 100, 54, 70, 48], 'var(--y)', 30, ['6h', '7h', '12h', '18h', '21h'], 1)}</div>
+  <div class="cd col" style="gap:7px;background:linear-gradient(135deg,color-mix(in srgb, var(--v) 16%, var(--sc)),var(--sc))"><div class="row">${ic('spark', 'var(--v)', 30, 15)}<div class="f1"><span class="mu xs">Previsão</span><div class="t3">Agachamento 145 kg × 5</div></div><b style="font:800 15px var(--display);color:var(--v)">~3 sem.</b></div><div class="bar"><b style="width:82%;background:var(--v)"></b></div><span class="mu xs">Mantendo 2 treinos de pernas por semana.</span></div>
+  <div class="cd tight row">${icSoft('cal', 'var(--r)', 30, 15)}<div class="f1"><b style="font-size:12px">Sexta é seu ponto fraco</b><div class="mu xs">Pulou 4 das últimas 6</div></div><span class="btn ghost sm">Mudar dia</span></div>
+`, { tab: 3 }) });
+
+// ===================== Galeria: seções, favoritos, edição, duplicar, lixeira, zoom =====================
+const SECS = [
+  { k: 'home', h: 'inicio', t: 'Início', d: 'A primeira tela do app. Cada versão aposta num motivo diferente para a pessoa abrir o Reps todo dia: sequência, nível, jornada, coach, liga.' },
+  { k: 'treino', h: 'treino', t: 'Treino', d: 'Onde a pessoa registra as séries. Do modo clássico em tabela ao modo jogo com combo de XP, passando pelo guiado para iniciantes.' },
+  { k: 'trainer', h: 'trainer', t: 'Trainer', d: 'O programa personalizado. Versões que mostram o plano, explicam o porquê e recompensam quem segue o ciclo até o fim.' },
+  { k: 'perfil', h: 'perfil', t: 'Perfil', d: 'Quem a pessoa é no app: nível, conquistas, força por exercício e metas. Do perfil gamer ao minimalista.' },
+  { k: 'stats', h: 'progresso', t: 'Progresso', d: 'Aba nova só para números: calendário, medidas, exercícios, fotos, recordes e relatórios. Onde o avanço fica visível e vira motivo para voltar.' },
+  { k: 'fav', h: 'favoritos', t: 'Favoritos', d: 'As versões que você marcou com estrela, de todas as seções.' },
+  { k: 'trash', h: 'lixeira', t: 'Lixeira', d: 'Versões apagadas. Restaure ou apague de vez.' },
+];
+const KEY = 'reps-lab-v1';
+let S = { zoom: 0.9, fav: [], del: [], gone: [], notes: {}, edits: {}, copies: [] };
+try { const raw = localStorage.getItem(KEY); if (raw) S = { ...S, ...JSON.parse(raw) }; } catch (e) { /* sem armazenamento: tudo vale só nesta visita */ }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignora */ } };
+
+const all = () => [...V, ...S.copies.map((c) => ({ ...c, html: () => c.snap }))];
+const find = (id) => all().find((v) => v.id === id);
+const num = (v) => { const list = all().filter((x) => x.sec === v.sec); return list.indexOf(v) + 1; };
+const htmlOf = (v) => S.edits[v.id] ?? v.html();
+let cur = 'home', editing = null, lastDel = null;
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function renderTabs() {
+  $('#tabs').innerHTML = SECS.map((s) => {
+    const n = s.k === 'fav' ? S.fav.filter((id) => find(id) && !S.del.includes(id)).length : s.k === 'trash' ? S.del.filter(find).length : all().filter((v) => v.sec === s.k && !S.del.includes(v.id) && !S.gone.includes(v.id)).length;
+    return `<button class="tab" role="tab" aria-selected="${cur === s.k}" data-k="${s.k}">${s.t}<span class="n">${n}</span></button>`;
+  }).join('');
+}
+
+function card(v) {
+  const inTrash = S.del.includes(v.id), fav = S.fav.includes(v.id), ed = editing === v.id;
+  const sec = SECS.find((s) => s.k === v.sec);
+  const acts = inTrash
+    ? `<button class="act" data-a="restore" data-id="${v.id}">${I('undo', 14)}Restaurar</button><button class="act danger" data-a="purge" data-id="${v.id}">${I('trash', 14)}Apagar de vez</button>`
+    : `<button class="act${fav ? ' on' : ''}" data-a="fav" data-id="${v.id}" aria-pressed="${fav}">${I('star', 14, fav ? '#111' : 'currentColor', fav)}${fav ? 'Favorita' : 'Favoritar'}</button>
+       <button class="act${ed ? ' edit-on' : ''}" data-a="edit" data-id="${v.id}">${I(ed ? 'check' : 'edit', 14)}${ed ? 'Salvar' : 'Modificar'}</button>
+       <button class="act" data-a="zoom" data-id="${v.id}">${I('expand', 14)}Ampliar</button>
+       <button class="act" data-a="dup" data-id="${v.id}">${I('copy', 14)}Duplicar</button>
+       ${S.edits[v.id] ? `<button class="act" data-a="reset" data-id="${v.id}">${I('undo', 14)}Original</button>` : ''}
+       <button class="act danger" data-a="del" data-id="${v.id}">${I('trash', 14)}Apagar</button>`;
+  return `<article class="card${fav ? ' fav' : ''}${ed ? ' editing' : ''}" id="c-${v.id}">
+    <div class="meta"><div><div class="tag">${esc(v.tag)}${cur === 'fav' || cur === 'trash' ? ` · ${sec.t}` : ''}${v.copy ? ' · cópia' : ''}</div><h3>${esc(v.name)}</h3><p class="desc">${esc(v.desc)}</p></div><span class="num">${sec.t[0]}${num(v)}</span></div>
+    <div class="stage"><div class="phone-box"><div class="phone" data-screen="${v.id}">${htmlOf(v)}</div></div></div>
+    ${ed ? `<p class="desc" style="margin:0">Toque nos textos da tela para mudar. Depois toque em Salvar.</p>` : ''}
+    <div class="actions">${acts}</div>
+    ${inTrash ? '' : `<textarea class="note" id="note-${v.id}" data-note="${v.id}" placeholder="Anotações: o que gostou, o que mudaria...">${esc(S.notes[v.id] ?? '')}</textarea>`}
+  </article>`;
+}
+
+function render() {
+  const sec = SECS.find((s) => s.k === cur);
+  let list;
+  if (cur === 'fav') list = S.fav.map(find).filter((v) => v && !S.del.includes(v.id));
+  else if (cur === 'trash') list = S.del.map(find).filter(Boolean);
+  else list = all().filter((v) => v.sec === cur && !S.del.includes(v.id) && !S.gone.includes(v.id));
+  $('#intro').innerHTML = `<h2>${sec.t}</h2><p>${sec.d}</p>`;
+  $('#grid').innerHTML = list.length ? list.map(card).join('') : `<div class="empty">${cur === 'fav' ? 'Nenhuma favorita ainda. Toque na estrela de uma versão para guardar aqui.' : cur === 'trash' ? 'A lixeira está vazia.' : 'Todas as versões desta seção foram apagadas. Veja a Lixeira para restaurar.'}</div>`;
+  if (editing) { const el = $(`[data-screen="${editing}"] .scr`); if (el) el.querySelectorAll('.bd *').forEach((n) => { if (n.children.length === 0 && n.textContent.trim()) n.contentEditable = 'true'; }); }
+  renderTabs();
+}
+
+function toast(msg, undo) {
+  const t = $('#toast');
+  t.innerHTML = `<span>${msg}</span>${undo ? '<button id="undo">Desfazer</button>' : ''}`;
+  t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 4000);
+  if (undo) $('#undo').onclick = () => { undo(); t.hidden = true; };
+}
+
+function stopEdit() {
+  if (!editing) return;
+  const el = $(`[data-screen="${editing}"]`);
+  if (el) { el.querySelectorAll('[contenteditable]').forEach((n) => n.removeAttribute('contenteditable')); S.edits[editing] = el.innerHTML; save(); }
+  editing = null;
+}
+
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab');
+  if (tab) { stopEdit(); go(tab.dataset.k); return; }
+  const b = e.target.closest('.act'); if (!b) return;
+  const id = b.dataset.id, a = b.dataset.a, v = find(id);
+  if (a === 'fav') { S.fav = S.fav.includes(id) ? S.fav.filter((x) => x !== id) : [...S.fav, id]; save(); render(); }
+  if (a === 'edit') { if (editing === id) { stopEdit(); toast('Modificação salva'); } else { stopEdit(); editing = id; } render(); }
+  if (a === 'reset') { delete S.edits[id]; save(); render(); toast('Voltou ao original'); }
+  if (a === 'dup') {
+    stopEdit();
+    const cid = `${id.split('-c')[0]}-c${Date.now().toString(36)}`;
+    S.copies.push({ id: cid, sec: v.sec, name: `${v.name} (cópia)`, tag: v.tag, desc: v.desc, copy: true, snap: htmlOf(v) });
+    save(); render(); toast('Cópia criada no fim da seção'); $(`#c-${cid}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  if (a === 'del') { stopEdit(); S.del = [...S.del, id]; lastDel = id; save(); render(); toast(`"${esc(v.name)}" foi para a Lixeira`, () => { S.del = S.del.filter((x) => x !== lastDel); save(); render(); }); }
+  if (a === 'restore') { S.del = S.del.filter((x) => x !== id); save(); render(); toast('Restaurada'); }
+  if (a === 'purge') { S.del = S.del.filter((x) => x !== id); S.copies = S.copies.filter((c) => c.id !== id); if (!v.copy) S.gone = [...S.gone, id]; S.fav = S.fav.filter((x) => x !== id); save(); render(); toast('Apagada de vez'); }
+  if (a === 'zoom') openLb(id);
+});
+document.addEventListener('input', (e) => { const id = e.target.dataset?.note; if (id) { S.notes[id] = e.target.value; save(); } });
+
+// Ampliar
+let lbZ = 1.6, lbId = null;
+function openLb(id) {
+  lbId = id; const v = find(id), list = all().filter((x) => x.sec === v.sec && !S.del.includes(x.id) && !S.gone.includes(x.id));
+  const i = list.indexOf(v);
+  $('#lb').hidden = false;
+  $('#lb').innerHTML = `<div class="bar"><b>${esc(v.name)}</b><button data-lb="prev"${i <= 0 ? ' disabled' : ''}>Anterior</button><button data-lb="out">Menos zoom</button><span>${Math.round(lbZ * 100)}%</span><button data-lb="in">Mais zoom</button><button data-lb="next"${i >= list.length - 1 ? ' disabled' : ''}>Próxima</button><button data-lb="close">Fechar</button></div>
+    <div class="view"><div class="phone-box" style="--z:${lbZ}"><div class="phone">${htmlOf(v)}</div></div></div>`;
+  $('#lb').dataset.prev = list[i - 1]?.id ?? ''; $('#lb').dataset.next = list[i + 1]?.id ?? '';
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-lb]'); if (!b) return;
+  const k = b.dataset.lb, lb = $('#lb');
+  if (k === 'close') lb.hidden = true;
+  if (k === 'in') { lbZ = Math.min(3, lbZ + 0.2); openLb(lbId); }
+  if (k === 'out') { lbZ = Math.max(0.6, lbZ - 0.2); openLb(lbId); }
+  if (k === 'prev' && lb.dataset.prev) openLb(lb.dataset.prev);
+  if (k === 'next' && lb.dataset.next) openLb(lb.dataset.next);
+});
+document.addEventListener('keydown', (e) => {
+  if ($('#lb').hidden) return;
+  if (e.key === 'Escape') $('#lb').hidden = true;
+  if (e.key === 'ArrowRight' && $('#lb').dataset.next) openLb($('#lb').dataset.next);
+  if (e.key === 'ArrowLeft' && $('#lb').dataset.prev) openLb($('#lb').dataset.prev);
+});
+
+// Zoom geral, favoritos, restaurar tudo
+const zr = $('#zoom');
+const applyZoom = () => { document.documentElement.style.setProperty('--z', S.zoom); $('#zv').textContent = `${Math.round(S.zoom * 100)}%`; zr.value = S.zoom; };
+zr.addEventListener('input', () => { S.zoom = Number(zr.value); applyZoom(); save(); });
+$('#reset-all').addEventListener('click', () => {
+  if (!$('#reset-all').dataset.armed) { $('#reset-all').dataset.armed = '1'; $('#reset-all').lastChild.textContent = 'Toque de novo para confirmar'; setTimeout(() => { delete $('#reset-all').dataset.armed; $('#reset-all').lastChild.textContent = 'Restaurar tudo'; }, 3000); return; }
+  delete $('#reset-all').dataset.armed; $('#reset-all').lastChild.textContent = 'Restaurar tudo';
+  S = { zoom: S.zoom, fav: [], del: [], gone: [], notes: {}, edits: {}, copies: [] }; editing = null; save(); render(); toast('Tudo voltou ao original');
+});
+
+function go(k) { cur = k; const h = SECS.find((s) => s.k === k).h; if (location.hash !== `#${h}`) history.replaceState(null, '', `#${h}`); render(); window.scrollTo({ top: 0 }); }
+const fromHash = () => SECS.find((s) => `#${s.h}` === location.hash)?.k ?? 'home';
+window.addEventListener('hashchange', () => { cur = fromHash(); render(); });
+applyZoom(); cur = fromHash(); render();
+
+</script>
+
+</body></html>

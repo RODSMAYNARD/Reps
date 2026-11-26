@@ -10,7 +10,7 @@ import { colors } from '../lib/theme';
 type Doc = { updated: string; intro: string; sections: { title: string; body: string[] }[] };
 
 const EN: Doc = {
-  updated: 'Last updated: November 22, 2026',
+  updated: 'Last updated: November 23, 2026',
   intro: `This policy explains what information Reps collects, why, who it is shared with and the choices you have. Reps is developed by Rodrigo Maynard, who is responsible for your data. Contact: ${SUPPORT_EMAIL}.`,
   sections: [
     { title: 'Information you give us', body: [
@@ -20,17 +20,18 @@ const EN: Doc = {
       'Training data: workouts, sets, weights, reps, times, distances, notes, routines, exercises you create and your Trainer settings, including injuries you choose to enter, which are only used to avoid exercises in your plan.',
       'Body measurements and progress photos. Photos are kept in private storage that only your account can access.',
       'Messages you send us (feedback, feature requests, reports).',
+      'Coach: the conversation stays on your device. What you ask the coach to remember (for example an injury), your tone and your goal are saved with your preferences. Free questions use AI only if you allow it (Settings > Coach Reps): then your question, the last messages of the conversation and a short summary of your training (planned workout, recent workouts, weekly numbers and, if a watch is connected, last night’s sleep, heart rate, HRV, steps and recovery score) are sent to Anthropic, which generates the answer. Your email is not sent. We keep only how many AI questions you asked each day, to apply the daily limit. You can turn this off at any time.',
     ] },
     { title: 'Information collected automatically', body: [
       'Product analytics (PostHog): screens you open and actions such as starting or finishing a workout, linked to a random account ID, not to your email.',
       'Crash reports (Sentry): technical details when the app fails (device model, system and app version, error trace), linked to the same random ID.',
       'Subscriptions (RevenueCat): subscription status and purchase receipts from the App Store or Google Play. We never receive your card details.',
       'On your device: the workout in progress, preferences, a copy of your data for offline use and workouts waiting to upload.',
-      'Health data (optional): if you connect Apple Health or Health Connect, Reps reads sleep, heart rate, heart rate variability, steps, activity, body weight and similar data, and can save finished workouts there. This data stays only on your device: it is never sent to our servers or to analytics, never shared or sold and never used for advertising. You can disconnect at any time in Settings > Watches & Health or in your phone settings.',
+      'Health data (optional): if you connect Apple Health or Health Connect, Reps reads sleep, heart rate, heart rate variability, steps, activity, body weight and similar data, and can save finished workouts there. This data stays on your device: it is never stored on our servers or sent to analytics, never shared or sold and never used for advertising. The only exception is the short summary that goes with a Coach question when you allow AI answers (see Coach above). You can disconnect at any time in Settings > Watches & Health or in your phone settings.',
       'We do not sell your personal information and we do not use it for third-party advertising.',
     ] },
     { title: 'Who we share it with', body: [
-      'Only with the providers that run the app, which process data on our behalf: Supabase (database, login and storage, São Paulo region), PostHog (analytics), Sentry (crash reports), RevenueCat (subscriptions), Resend (account emails) and Apple or Google (distribution, payments and notifications). Some of them are in the United States, so your data may be processed outside your country under the safeguards these providers offer.',
+      'Only with the providers that run the app, which process data on our behalf: Supabase (database, login and storage, São Paulo region), PostHog (analytics), Sentry (crash reports), RevenueCat (subscriptions), Resend (account emails), Anthropic (Coach AI answers, only if you allow them) and Apple or Google (distribution, payments and notifications). Some of them are in the United States, so your data may be processed outside your country under the safeguards these providers offer.',
       'We may also disclose information when required by law.',
     ] },
     { title: 'How long we keep it', body: [
@@ -48,7 +49,7 @@ const EN: Doc = {
 };
 
 const PT: Doc = {
-  updated: 'Última atualização: 22 de novembro de 2026',
+  updated: 'Última atualização: 23 de novembro de 2026',
   intro: `Esta política explica quais informações o Reps coleta, por quê, com quem são compartilhadas e quais são as suas escolhas. O Reps é desenvolvido por Rodrigo Maynard, responsável pelos seus dados. Contato: ${SUPPORT_EMAIL}.`,
   sections: [
     { title: 'Informações que você nos dá', body: [
@@ -58,17 +59,18 @@ const PT: Doc = {
       'Dados de treino: treinos, séries, pesos, repetições, tempos, distâncias, notas, rotinas, exercícios que você cria e os ajustes do Trainer, incluindo lesões que você escolher informar, usadas só para evitar exercícios no seu plano.',
       'Medidas do corpo e fotos de progresso. As fotos ficam num armazenamento privado que só a sua conta acessa.',
       'Mensagens que você nos envia (sugestões, pedidos de recurso, denúncias).',
+      'Coach: a conversa fica no seu aparelho. O que você pede para o Coach lembrar (por exemplo uma lesão), o tom e o objetivo ficam salvos com as suas preferências. Perguntas livres usam IA só se você permitir (Ajustes > Coach Reps): nesse caso a sua pergunta, as últimas mensagens da conversa e um resumo curto dos seus treinos (treino planejado, treinos recentes, números da semana e, se houver relógio conectado, sono da última noite, frequência cardíaca, VFC, passos e nota de recuperação) vão para a Anthropic, que gera a resposta. Seu e-mail não vai. Guardamos só quantas perguntas de IA você fez em cada dia, para aplicar o limite diário. Dá para desligar quando quiser.',
     ] },
     { title: 'Informações coletadas automaticamente', body: [
       'Análise de uso (PostHog): telas abertas e ações como começar ou terminar um treino, ligadas a um identificador aleatório da conta, não ao seu e-mail.',
       'Relatórios de erro (Sentry): detalhes técnicos quando o app falha (modelo do aparelho, versão do sistema e do app, rastro do erro), ligados ao mesmo identificador.',
       'Assinaturas (RevenueCat): situação da assinatura e recibos de compra da App Store ou do Google Play. Nunca recebemos os dados do seu cartão.',
       'No seu aparelho: o treino em andamento, preferências, uma cópia dos seus dados para uso sem internet e treinos esperando envio.',
-      'Dados de saúde (opcional): se você conectar o Apple Saúde ou o Health Connect, o Reps lê sono, frequência cardíaca, variabilidade da frequência cardíaca, passos, atividade, peso e dados parecidos, e pode gravar lá os treinos concluídos. Esses dados ficam só no seu aparelho: nunca vão para nossos servidores nem para a análise de uso, nunca são compartilhados ou vendidos e nunca são usados para publicidade. Você pode desconectar quando quiser em Settings > Watches & Health ou nos ajustes do celular.',
+      'Dados de saúde (opcional): se você conectar o Apple Saúde ou o Health Connect, o Reps lê sono, frequência cardíaca, variabilidade da frequência cardíaca, passos, atividade, peso e dados parecidos, e pode gravar lá os treinos concluídos. Esses dados ficam no seu aparelho: nunca são guardados nos nossos servidores nem vão para a análise de uso, nunca são compartilhados ou vendidos e nunca são usados para publicidade. A única exceção é o resumo curto que acompanha uma pergunta ao Coach quando você permite as respostas com IA (veja Coach acima). Você pode desconectar quando quiser em Settings > Watches & Health ou nos ajustes do celular.',
       'Não vendemos suas informações pessoais e não as usamos para publicidade de terceiros.',
     ] },
     { title: 'Com quem compartilhamos', body: [
-      'Só com os provedores que fazem o app funcionar e tratam os dados em nosso nome: Supabase (banco de dados, login e arquivos, região de São Paulo), PostHog (análise de uso), Sentry (erros), RevenueCat (assinaturas), Resend (e-mails da conta) e Apple ou Google (distribuição, pagamentos e notificações). Alguns ficam nos Estados Unidos, então seus dados podem ser tratados fora do seu país, com as garantias que esses provedores oferecem.',
+      'Só com os provedores que fazem o app funcionar e tratam os dados em nosso nome: Supabase (banco de dados, login e arquivos, região de São Paulo), PostHog (análise de uso), Sentry (erros), RevenueCat (assinaturas), Resend (e-mails da conta), Anthropic (respostas com IA do Coach, só se você permitir) e Apple ou Google (distribuição, pagamentos e notificações). Alguns ficam nos Estados Unidos, então seus dados podem ser tratados fora do seu país, com as garantias que esses provedores oferecem.',
       'Também podemos divulgar informações quando a lei exigir.',
     ] },
     { title: 'Por quanto tempo guardamos', body: [

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { tr } from '../../lib/i18n';
 import { Text, TextInput } from '../../components/Text';
 import { ExerciseLabel } from '../../components/ExerciseLabel';
 import { NumInput } from '../../components/NumInput';
@@ -18,8 +19,9 @@ import { RoutineExercise, SetRow } from '../../lib/types';
 
 
 export default function EditRoutine() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
-  const { routines, findExercise, profile, saveRoutine, showToast, routinePins, setRoutinePins } = useStore();
+  // folder: rotina nova criada pelo menu ⋯ de uma pasta da aba Workout entra nessa pasta
+  const { id, folder } = useLocalSearchParams<{ id?: string; folder?: string }>();
+  const { routines, findExercise, profile, saveRoutine, showToast, routinePins, setRoutinePins, wprefs, setWprefs } = useStore();
   const existing = routines.find((r) => r.id === id);
   const [title, setTitle] = useState(existing?.title ?? '');
   const [items, setItems] = useState<RoutineExercise[]>(existing?.exercises ?? []);
@@ -45,6 +47,9 @@ export default function EditRoutine() {
     const r = await saveRoutine({ id: existing?.id, title, notes: existing?.notes ?? '', exercises: items });
     setSaving(false);
     if (!r) return;
+    if (!existing && folder && wprefs.routineFolders.some((f) => f.id === folder)) {
+      setWprefs({ routineFolders: wprefs.routineFolders.map((f) => (f.id === folder ? { ...f, ids: [...f.ids, r.id] } : f)) });
+    }
     // cada linha é uma nota fixada (antes as várias notas voltavam juntas como uma só)
     if (existing) items.forEach((e) => setRoutinePins(existing.id, e.exerciseId, (pins[e.exerciseId] ?? '').split('\n').filter((x) => x.trim())));
     showToast('Routine saved'); router.back();
@@ -58,7 +63,16 @@ export default function EditRoutine() {
       <Header left="cancel" onLeft={() => (dirty ? setCancelAsk(true) : router.back())} title={existing ? 'Edit routine' : 'Create routine'} right={<HeaderAction label="Save" primary disabled={!valid || saving} onPress={save} />} />
       {hint && <Banner text="You're creating a routine. Tap for help..." onPress={() => router.push('/routines/help')} onClose={() => setHint(false)} />}
       <ScrollView automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-        <TextInput value={title} onChangeText={setTitle} placeholder="Routine title" placeholderTextColor={colors.faint} style={{ fontSize: 22, fontWeight: '600', padding: 16, color: colors.text }} testID="routine-title" />
+        {/* × limpa o título (como no Hevy); só aparece com texto */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <TextInput value={title} onChangeText={setTitle} placeholder="Routine title" placeholderTextColor={colors.faint} style={{ flex: 1, fontSize: 22, fontWeight: '600', paddingVertical: 16, color: colors.text }} testID="routine-title" />
+          {!!title && (
+            <Pressable onPress={() => setTitle('')} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('Clear title')} testID="routine-title-clear"
+              style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', marginLeft: 8 }}>
+              <Ionicons name="close" size={16} color={colors.muted} />
+            </Pressable>
+          )}
+        </View>
         {items.length === 0 && (
           <View style={{ alignItems: 'center', padding: 24, gap: 14 }}>
             <Ionicons name="barbell-outline" size={44} color={colors.faint} />

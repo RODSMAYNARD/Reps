@@ -6,7 +6,6 @@ import { useFonts } from 'expo-font';
 import { APP_FONTS, Text } from '../components/Text';
 import { refreshStyles } from '../components/ui';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ChallengeWatcher } from '../components/ChallengeWatcher';
 import { ReminderSync } from '../components/ReminderSync';
 import { Telemetry } from '../components/Telemetry';
 import { WorkoutNotifier } from '../components/WorkoutNotifier';
@@ -93,7 +92,7 @@ function RootLayout() {
         <Routes />
         <WorkoutNotifier />
         <ReminderSync />
-        <ChallengeWatcher />
+        {/* Desafios fora do app (2026-11-23): sem o aviso de desafio concluído. Código guardado em lib/challenges e app/challenges */}
         <Telemetry />
       </StoreProvider>
     </SafeAreaProvider>

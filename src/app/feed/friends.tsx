@@ -1,12 +1,14 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Share, View } from 'react-native';
+import { View } from 'react-native';
+import { useShare } from '../../lib/useShare';
 import { Text } from '../../components/Text';
 import { Avatar, Btn, Card, Screen, SearchBar, Section } from '../../components/ui';
 import { colors } from '../../lib/theme';
 
 export default function Friends() {
   const [q, setQ] = useState('');
+  const share = useShare();
   return (
     <Screen>
       <SearchBar value={q} onChangeText={setQ} placeholder="Search friends" onBack={() => router.back()} />
@@ -20,7 +22,7 @@ export default function Friends() {
       <Section title="Invite your contacts" />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 }}>
         <Avatar /><Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>Invite a friend</Text>
-        <Text onPress={() => Share.share({ message: 'Come train with me on Reps!' })} style={{ color: colors.primary, fontSize: 16 }}>Invite</Text>
+        <Text onPress={() => share.text('Come train with me on Reps!')} style={{ color: colors.primary, fontSize: 16 }}>Invite</Text>
       </View>
     </Screen>
   );

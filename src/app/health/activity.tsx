@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { ActivityRings, CumulativeLine, fmtNum, HCard, HealthNotice, HTitle, KpiGrid, KpiTile, MC, RangeTabs, TrendChart, WeekRings, type IconName } from '../../components/HealthKit';
 import { Text } from '../../components/Text';
+import { weekdayShort } from '../../components/WeekStrip';
 import { Btn, Empty, Header, Screen } from '../../components/ui';
 import { toDisplayDist } from '../../lib/format';
 import { dayKey, setSample, sync, todayKey, useHealth, type DayHealth } from '../../lib/health';
@@ -148,7 +149,7 @@ export default function Activity() {
   ];
   // Semana em mini-anéis: últimos 7 dias terminando hoje (hoje destacado no fim); some se a semana não tiver nada
   const weekDays = Array.from({ length: 7 }, (_, i) => daysAgo(6 - i));
-  const week = weekDays.map((d) => ({ label: d.toLocaleDateString(locale(), { weekday: 'narrow' }).toUpperCase(), rings: ringsOf(byDate.get(dayKey(d))) }));
+  const week = weekDays.map((d) => ({ label: weekdayShort(d), day: d.getDate(), rings: ringsOf(byDate.get(dayKey(d))) }));
   const hasWeek = weekDays.some((d) => {
     const x = byDate.get(dayKey(d));
     return !!x && [x.activeKcal, x.exerciseMin, x.steps].some((v) => v != null);
@@ -216,9 +217,9 @@ export default function Activity() {
         />
         <HCard style={{ gap: 14 }}>
           {hasToday && today ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <ActivityRings size={128} rings={ringsOf(today)} />
-              <View style={{ flex: 1, minWidth: 0, gap: 10 }}>
+            <View style={{ gap: 14 }}>
+              <View style={{ alignItems: 'center' }}><ActivityRings size={240} icons={['flame', 'stopwatch', 'footsteps']} rings={ringsOf(today)} /></View>
+              <View style={{ gap: 10 }}>
                 <RingStat label="Move" color={MC.move} value={today.activeKcal} goal={goals.moveKcal} unit="kcal" />
                 <RingStat label="Exercise" color={MC.exercise} value={today.exerciseMin} goal={goals.exerciseMin} unit="min" />
                 <RingStat label="Steps" color={MC.steps} value={today.steps} goal={goals.steps} />

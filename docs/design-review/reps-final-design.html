@@ -1,0 +1,232 @@
+<title>Reps Final Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: uma coluna de leitura (máx. 760px); placar no topo, prioridades, depois as decisões com escolha + nota salva. */
+:root{
+  --bg:#F6F7F9; --surface:#FFFFFF; --line:#E3E6EB; --fg:#14171C; --muted:#5B6371;
+  --accent:#0066D6; --accent-soft:#E6F0FC; --orange:#E8590C;
+  --p0:#C92A2A; --p1:#D9480F; --p2:#5F6B7A; --ok:#2B8A3E;
+  --display:"Space Grotesk", "Inter", system-ui, sans-serif;
+  --body:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1116; --surface:#171B22; --line:#2A303A; --fg:#E9ECF1; --muted:#9AA3B2;
+  --accent:#4C9DFF; --accent-soft:#16263B; --orange:#FF8A3D;
+  --p0:#FF6B6B; --p1:#FF922B; --p2:#9AA3B2; --ok:#51CF66; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1116; --surface:#171B22; --line:#2A303A; --fg:#E9ECF1; --muted:#9AA3B2;
+  --accent:#4C9DFF; --accent-soft:#16263B; --orange:#FF8A3D;
+  --p0:#FF6B6B; --p1:#FF922B; --p2:#9AA3B2; --ok:#51CF66; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:30px;font-weight:700}
+h2{font-size:19px;font-weight:700}
+h3{font-size:16px;font-weight:600}
+p{margin:0}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+section{display:flex;flex-direction:column;gap:12px}
+.head{display:flex;flex-direction:column;gap:8px}
+.score{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.big{font-family:var(--display);font-size:52px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.big small{font-size:20px;color:var(--muted);font-weight:500}
+.bars{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;min-width:0}
+.bar{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bar i{display:block;width:100%;height:44px;background:var(--line);border-radius:4px;position:relative;overflow:hidden}
+.bar i b{position:absolute;left:0;right:0;bottom:0;background:var(--accent)}
+.bar.low i b{background:var(--p1)}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.item{display:grid;grid-template-columns:44px 1fr;gap:12px;padding:14px 16px;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.tag{font-family:var(--display);font-weight:700;font-size:13px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff}
+.t0{background:var(--p0)}.t1{background:var(--p1)}.t2{background:var(--p2)}
+.item div{min-width:0;display:flex;flex-direction:column;gap:3px}
+.item code,.minor code{font-size:12.5px;background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;word-break:break-word}
+.minor{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.q[data-done="1"]{border-color:var(--accent)}
+.qhead{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.state{font-size:12px;color:var(--muted);white-space:nowrap}
+.q[data-done="1"] .state{color:var(--ok)}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:grid;grid-template-columns:20px 1fr;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.opt:hover{border-color:var(--accent)}
+.opt input{margin:3px 0 0;accent-color:var(--accent)}
+.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opt span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.opt strong{font-weight:600}
+.opt em{font-style:normal;color:var(--muted);font-size:13.5px}
+textarea{width:100%;min-height:64px;resize:vertical;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea:focus,.opt:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.banner{font-size:13.5px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--fg)}
+.foot{font-size:13px;color:var(--muted)}
+.hub{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.hubcard{display:flex;flex-direction:column;gap:3px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);text-decoration:none;min-width:0}
+.hubcard:hover{border-color:var(--accent)}
+.hubcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hubcard strong{font-family:var(--display);font-size:16px}
+.hubcard em{font-style:normal;color:var(--muted);font-size:13px;line-height:1.4}
+@media (max-width:620px){.hub{grid-template-columns:1fr}}
+@media (max-width:520px){.score{grid-template-columns:1fr}.bars{gap:4px}h1{font-size:25px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <span class="eyebrow">Reps · sessão Final Design · crítica de 22/11/2026</span>
+    <h1>Design final do Reps</h1>
+    <p class="muted">Tudo do design do Reps num lugar: a crítica geral do app, as decisões para responder, o Screen Lab e a Chuva de academia. As respostas ficam salvas aqui e o Claude lê depois.</p>
+  </header>
+
+  <nav class="hub" aria-label="Páginas do design do Reps">
+    <a href="#decisoes" class="hubcard"><span class="eyebrow">Responder</span><strong>Suas decisões</strong><em>7 perguntas da crítica, salvas aqui</em></a>
+    <a href="screen-lab.html" class="hubcard"><span class="eyebrow">Explorar</span><strong>Screen Lab</strong><em>50 versões de tela: favoritar, editar, duplicar</em></a>
+    <a href="chuva-de-academia.html" class="hubcard"><span class="eyebrow">Animação</span><strong>Chuva de academia</strong><em>5 jeitos da comemoração do treino concluído</em></a>
+  </nav>
+
+  <section>
+    <div class="score">
+      <div><div class="big">24<small>/40</small></div><p class="muted">Aceitável: base boa, falta acabamento antes de lançar</p></div>
+      <div class="bars" id="bars"></div>
+    </div>
+    <p class="muted" style="font-size:13px">Heurísticas de Nielsen, 0 a 4. A mais fraca é a 4 (consistência).</p>
+  </section>
+
+  <section>
+    <h2>Veredito de identidade</h2>
+    <p>Hoje o Reps é um clone competente do Hevy, sem cara própria: azul padrão do iOS, fonte do sistema em 15–16 pt em quase tudo e nenhum motivo visual da marca. O que já é seu: a semana laranja da H2, os ícones 3D, o modo foco do descanso, os desafios e os cartões de treino concluído.</p>
+  </section>
+
+  <section>
+    <h2>Prioridades</h2>
+    <div class="list">
+      <div class="item"><span class="tag t0">P0</span><div><h3>8 abas, incluindo abas de teste</h3><p class="muted">"H2" e "G" são nomes de teste, "Exercícios" corta para "Exercí", rótulos de 10 px. Proposta: 4–5 abas (Início, Treino, Coach, Perfil). <code>(tabs)/_layout.tsx</code></p></div></div>
+      <div class="item"><span class="tag t0">P0</span><div><h3>Acessibilidade e contraste</h3><p class="muted">4 marcações para leitor de tela no app todo (160+ botões). Azul da marca com 3,65:1, cinza de placeholder com 2,1:1. Proposta: papéis e rótulos em <code>ui.tsx</code>, azul ~#0066D6, cinza claro mais escuro.</p></div></div>
+      <div class="item"><span class="tag t1">P1</span><div><h3>Um único "treino de hoje"</h3><p class="muted">H2, G, Trainer e Coach sugerem treinos diferentes; meta semanal 6/4 numa tela e 2/5 em outra. Proposta: uma fonte só em <code>lib/today.ts</code>.</p></div></div>
+      <div class="item"><span class="tag t1">P1</span><div><h3>Inglês vazando no português</h3><p class="muted">"Próximo: Legs", "Pinned", "Add 1 exercise(s)", "Build Muscle Stamina · Day 1". Proposta: <code>pt.ts</code> + <code>tr()</code> com plural.</p></div></div>
+      <div class="item"><span class="tag t2">P2</span><div><h3>Seletor de exercícios sem Recentes</h3><p class="muted">Abre em "Abdominal" entre 1.324 itens. Proposta: seção Recentes no topo de <code>exercises/pick.tsx</code>.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Detalhes menores</h2>
+    <ul class="minor">
+      <li>Título da H2 cortado ("Pronto para tr…").</li>
+      <li>Linha vermelha do deslizar-para-apagar aparecendo na borda da série; linha "Pinned" vazia no treino ativo.</li>
+      <li>Aba Ranking cortada no detalhe do exercício; gráfico vazio mostra "0–0 kg".</li>
+      <li>"Volume 0 kg" em treinos de tempo no feed.</li>
+      <li>Diálogo "Cancelar treino? Continuar / Descartar" ambíguo; melhor "Descartar treino?" com "Voltar ao treino / Descartar".</li>
+      <li>No escuro: foto da H2 clara ofusca; cartão preto do Trainer perde destaque.</li>
+      <li>Dois ícones de brilho com sentidos diferentes (Coach e Trainer).</li>
+      <li>Treino de teste "Gogohjjhou" aparecendo no Início.</li>
+      <li>Finalizar, relógio e ⋮ nos cantos de cima, longe do polegar; "Adicionar série" quebra em 2 linhas.</li>
+    </ul>
+  </section>
+
+  <section id="decisoes">
+    <h2>Suas decisões</h2>
+    <p id="status" class="banner">Carregando respostas salvas…</p>
+    <div id="questions" style="display:flex;flex-direction:column;gap:14px"></div>
+    <p class="foot">Cada escolha salva na hora; a nota salva quando você para de digitar.</p>
+  </section>
+</div>
+
+<script>
+const SCORES=[["Status",3],["Mundo real",2],["Controle",3],["Consistência",1],["Erros",3],["Reconhecer",2],["Eficiência",3],["Visual",2],["Recuperar",3],["Ajuda",2]];
+document.getElementById("bars").innerHTML=SCORES.map(([n,s],i)=>`<div class="bar${s<=1?" low":""}" title="${i+1}. ${n}: ${s}/4"><i><b style="height:${s*25}%"></b></i>${i+1}</div>`).join("");
+
+const QS=[
+ {id:"prioridade",t:"Qual área atacamos primeiro?",o:[
+   ["abas","Navegação (abas)","Reduzir de 8 para 4–5 abas e decidir onde ficam H2, G, Trainer e Exercícios"],
+   ["acessibilidade","Acessibilidade e contraste","Escurecer o azul e o cinza claro, rótulos maiores, papéis de botão nos componentes base"],
+   ["hoje","Treino de hoje único","Uma fonte só para a sugestão do dia e para a meta semanal"],
+   ["textos","Textos e traduções","Tirar o inglês do português e corrigir os plurais"]]},
+ {id:"identidade",t:"Que cara o Reps deve ter no design final?",o:[
+   ["refinar","Manter e só refinar","Fica próximo do Hevy, ganha precisão e acabamento"],
+   ["leve","Identidade própria leve","Cor de marca própria, números com mais personalidade, fluxos iguais"],
+   ["forte","Identidade forte","Redesenho visual completo, mantendo funções e fluxos"]]},
+ {id:"escopo",t:"Quanto pegamos agora?",o:[
+   ["top3","Os 3 primeiros","Abas, acessibilidade e treino de hoje"],
+   ["prioritarios","Todos os prioritários","Os 5 problemas P0 a P2"],
+   ["tudo","Tudo","Os 5 prioritários e os detalhes menores"]]},
+ {id:"abas",t:"Quais abas ficam no app final?",o:[
+   ["4","4 abas","Início, Treino, Coach, Perfil (Exercícios e Trainer dentro de Treino)"],
+   ["5","5 abas","Início, Treino, Exercícios, Coach, Perfil"],
+   ["5t","5 abas com Trainer","Início, Treino, Trainer, Coach, Perfil"]]},
+ {id:"hoje",t:"Quem decide o \"treino de hoje\"?",o:[
+   ["trainer","Trainer","O programa do Trainer manda; os planos de 30 dias viram uma opção dele"],
+   ["planos","Planos de 30 dias (G)","Os planos da aba G mandam; Trainer fica para quem quer personalizar"],
+   ["coach","Coach","O Coach sugere a partir de tudo; as outras telas mostram o mesmo"]]},
+ {id:"intocaveis",t:"Alguma tela não pode ser mexida?",multi:true,o:[
+   ["ativo","Treino ativo","Proporções já medidas contra o Hevy"],
+   ["cartoes","Cartões de treino concluído","Padrão rods-share-card"],
+   ["foco","Modo foco do descanso","Já aprovado"],
+   ["nada","Nada é intocável","Pode mexer em tudo"]]},
+ {id:"foto",t:"A foto no topo da H2 fica?",o:[
+   ["fica","Fica","É decisão de marca"],
+   ["troca","Trocar","Por uma imagem própria (ilustração ou foto nossa)"],
+   ["sai","Sai","Cartão sem foto, só com os números do atleta"]]}
+];
+
+const state={}; // id -> {choice|choices, note}
+let db=null;
+
+function render(){
+  document.getElementById("questions").innerHTML=QS.map(q=>{
+    const a=state[q.id]||{}; const done=(q.multi?(a.choices||[]).length:a.choice)?1:0;
+    const type=q.multi?"checkbox":"radio";
+    return `<div class="q" data-done="${done}" id="q-${q.id}">
+      <div class="qhead"><h3>${q.t}</h3><span class="state">${done?"Respondida":"Em aberto"}</span></div>
+      <div class="opts" role="${q.multi?"group":"radiogroup"}" aria-label="${q.t}">${q.o.map(([v,l,d])=>{
+        const on=q.multi?(a.choices||[]).includes(v):a.choice===v;
+        return `<label class="opt"><input type="${type}" id="${q.id}-${v}" name="${q.id}" value="${v}" ${on?"checked":""}><span><strong>${l}</strong><em>${d}</em></span></label>`}).join("")}</div>
+      <textarea id="note-${q.id}" data-q="${q.id}" placeholder="Nota (opcional): algo que o Claude precisa saber">${(a.note||"").replace(/</g,"&lt;")}</textarea>
+    </div>`}).join("");
+}
+
+function setStatus(t){document.getElementById("status").textContent=t}
+
+async function save(id){
+  if(!db){return}
+  try{await db.collection("answers").doc(id).set({...state[id],updatedAt:new Date().toISOString()});setStatus("Salvo.")}
+  catch(e){setStatus(e&&e.code==="invalid_argument"?"Só o dono pode responder aqui (você está como leitor).":"Não consegui salvar agora. Tente de novo em instantes.")}
+}
+
+document.addEventListener("change",e=>{
+  const el=e.target; if(!el.name) return; const q=QS.find(x=>x.id===el.name); if(!q) return;
+  const a=state[q.id]||(state[q.id]={});
+  if(q.multi){a.choices=[...document.querySelectorAll(`input[name="${q.id}"]:checked`)].map(i=>i.value)} else a.choice=el.value;
+  const box=document.getElementById("q-"+q.id); const done=(q.multi?a.choices.length:a.choice)?1:0;
+  box.dataset.done=done; box.querySelector(".state").textContent=done?"Respondida":"Em aberto";
+  save(q.id);
+});
+const timers={};
+document.addEventListener("input",e=>{
+  const id=e.target.dataset&&e.target.dataset.q; if(!id) return;
+  (state[id]||(state[id]={})).note=e.target.value;
+  clearTimeout(timers[id]); timers[id]=setTimeout(()=>save(id),900);
+});
+
+render();
+(async()=>{
+  try{ db=await window.claude?.use?.("db") }catch{ db=null }
+  if(!db){setStatus("Respostas não podem ser salvas nesta visualização. Abra o artefato pelo claude.ai logado.");return}
+  const timer=setTimeout(()=>setStatus("Ainda não consegui ler as respostas salvas."),10000);
+  db.collection("answers").onSnapshot(snap=>{
+    if(!snap.metadata.fromCache) clearTimeout(timer);
+    let changed=false;
+    snap.docs.forEach(d=>{const v=d.data()||{}; const cur=state[d.id];
+      if(!cur||JSON.stringify({choice:cur.choice,choices:cur.choices,note:cur.note})!==JSON.stringify({choice:v.choice,choices:v.choices,note:v.note})){
+        if(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.q===d.id) return;
+        state[d.id]={choice:v.choice,choices:v.choices,note:v.note}; changed=true}});
+    const n=QS.filter(q=>{const a=state[q.id]||{};return q.multi?(a.choices||[]).length:a.choice}).length;
+    if(changed) render();
+    setStatus(`${n} de ${QS.length} respondidas. Pode parar e voltar quando quiser.`);
+  },()=>{clearTimeout(timer);setStatus("Não consegui ler as respostas salvas.")});
+})();
+</script>

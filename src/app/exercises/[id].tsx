@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, Share, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { onReps, useShare } from '../../lib/useShare';
 import { Text } from '../../components/Text';
 import { NoteInput } from '../../components/NoteInput';
 import { ExerciseGif } from '../../components/ExerciseThumb';
@@ -29,6 +30,7 @@ const HOWTO = ['Set up with a neutral posture and a braced core.', 'Move with co
 export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { findExercise, workouts, profile, removeExercise, pinnedNotes, setPinnedNotes } = useStore();
+  const share = useShare();
   const [pins, setPins] = useState<string[] | null>(null);
   const [focusPin, setFocusPin] = useState<number | null>(null);
   const [tab, setTab] = useState('summary');
@@ -55,7 +57,7 @@ export default function ExerciseDetail() {
 
   return (
     <Screen>
-      <Header title={ex.name} right={<><IconButton name="share-outline" onPress={() => Share.share({ message: `${ex.name} on Reps` })} /><IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} /></>} />
+      <Header title={ex.name} right={<><IconButton name="share-outline" onPress={() => share.text(onReps(ex.name))} testID="exercise-share" /><IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} /></>} />
       <TopTabs value={tab} onChange={setTab} items={[{ id: 'summary', label: 'Summary' }, { id: 'history', label: 'History' }, { id: 'how', label: 'How to' }]} />
       <ScrollView>
         {tab === 'summary' && (

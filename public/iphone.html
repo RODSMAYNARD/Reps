@@ -7,23 +7,22 @@
 <style>
   :root { --w: 393px; --h: 852px; --bezel: 14px; --r: 62px; --sb: 54px; }
   html, body { height: 100%; margin: 0; }
-  body { display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 20%, #2b3a33, #0d1210 70%); font-family: system-ui, sans-serif; overflow: auto; }
-  .scale { transform-origin: center; }
-  .phone { position: relative; width: calc(var(--w) + var(--bezel) * 2); height: calc(var(--h) + var(--bezel) * 2); border-radius: calc(var(--r) + var(--bezel)); background: linear-gradient(145deg, #3a3d3c, #151716 40%, #2c2f2e); padding: var(--bezel); box-sizing: border-box; box-shadow: 0 0 0 2px #5a5e5c inset, 0 0 0 1px #0a0c0b, 0 40px 90px rgba(0,0,0,.6); }
+  body { display: flex; align-items: safe center; justify-content: safe center; background: radial-gradient(circle at 30% 20%, #2b3a33, #0d1210 70%); font-family: system-ui, sans-serif; overflow: auto; }
+  .scale { transform-origin: center; position: relative; z-index: 5; pointer-events: none; }
+  .phone { pointer-events: auto; position: relative; width: calc(var(--w) + var(--bezel) * 2); height: calc(var(--h) + var(--bezel) * 2); border-radius: calc(var(--r) + var(--bezel)); background: linear-gradient(145deg, #3a3d3c, #151716 40%, #2c2f2e); padding: var(--bezel); box-sizing: border-box; box-shadow: 0 0 0 2px #5a5e5c inset, 0 0 0 1px #0a0c0b, 0 40px 90px rgba(0,0,0,.6); }
   .btn { position: absolute; width: 4px; background: #2a2d2c; border-radius: 2px; }
   .b1 { left: -4px; top: 150px; height: 34px; }
   .b2 { left: -4px; top: 210px; height: 62px; }
   .b3 { left: -4px; top: 285px; height: 62px; }
   .b4 { right: -4px; top: 235px; height: 100px; }
   .screen { position: relative; width: var(--w); height: var(--h); border-radius: var(--r); overflow: hidden; background: #000; }
-  iframe { position: absolute; left: 0; top: var(--sb); width: var(--w); height: calc(var(--h) - var(--sb)); border: 0; display: block; background: #fff; }
+  iframe { position: absolute; left: 0; top: var(--sb); width: var(--w); height: calc(var(--h) - var(--sb)); border: 0; display: block; background: #fff; transition: height .25s ease; }
   .status { position: absolute; left: 0; right: 0; top: 0; height: var(--sb); z-index: 2; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 30px 9px 38px; box-sizing: border-box; font-weight: 600; font-size: 16px; letter-spacing: -.2px; color: #000; transition: background .3s, color .3s; }
   .status .r { display: flex; align-items: center; gap: 6px; }
   .status svg { display: block; fill: currentColor; }
   .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 122px; height: 35px; border-radius: 20px; background: #000; z-index: 3; pointer-events: none; }
   .home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 140px; height: 5px; border-radius: 3px; background: rgba(0,0,0,.85); z-index: 3; pointer-events: none; }
   /* Simulated iOS keyboard: slides up when a text field in the app is focused, and the app shrinks above it like on a real phone. */
-  iframe { transition: height .25s ease; }
   .kb { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; background: #d1d3d9; padding: 8px 4px 30px; box-sizing: border-box; transform: translateY(102%); transition: transform .25s ease; user-select: none; font-family: -apple-system, system-ui, sans-serif; }
   .kb.on { transform: none; }
   .kb.dark { background: #1c1c1e; }
@@ -40,9 +39,27 @@
   .kb.num button { max-width: none; height: 46px; font-size: 26px; border-radius: 6px; }
   .kb.num button small { display: block; font-size: 9px; letter-spacing: 2px; margin-top: -4px; opacity: .6; }
   .kb.num button.blank { background: transparent; box-shadow: none; cursor: default; }
-  /* Device picker: iPhone (default), Android (punch-hole camera, gesture bar) or no frame. */
-  .picker { position: fixed; top: 10px; left: 10px; z-index: 20; display: flex; gap: 8px; align-items: center; color: #cfd8d3; font-size: 12px; }
-  .picker select { background: #1b211e; color: #fff; border: 1px solid #3a4540; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+
+  /* Toolbar: icon buttons only (frame, language, photo, recording). Frame and language open a small menu that closes on choice. */
+  .tools { position: fixed; top: 8px; left: 8px; z-index: 30; display: flex; flex-direction: column; gap: 6px; align-items: stretch; font-family: -apple-system, system-ui, sans-serif; }
+  .tools .ic { width: 100%; }
+  .tools .ic #langTag { font-size: 10px; }
+  .tools #lang { flex-direction: column; gap: 1px; height: auto; padding: 5px 4px; }
+  .tools .ic { position: relative; height: 34px; min-width: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 8px; box-sizing: border-box; background: #1b211e; color: #e6ece9; border: 1px solid #3a4540; border-radius: 10px; cursor: pointer; font: 600 12px system-ui; }
+  .tools .ic:hover, .tools .ic[aria-expanded="true"] { background: #26302c; border-color: #56645e; }
+  .tools .ic:focus-visible, .tools .menu button:focus-visible { outline: 2px solid #4c9dff; outline-offset: 2px; }
+  .tools .ic svg { display: block; }
+  .tools .dd { position: relative; }
+  .tools .menu { position: absolute; top: 0; left: calc(100% + 6px); min-width: 230px; background: #1b211e; border: 1px solid #3a4540; border-radius: 12px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,.45); display: flex; flex-direction: column; gap: 2px; }
+  .tools .menu[hidden] { display: none; }
+  .tools .menu button { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; color: #e6ece9; text-align: left; font-size: 13px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+  .tools .menu button:hover { background: #26302c; }
+  .tools .menu .ck { width: 14px; color: #4c9dff; visibility: hidden; }
+  .tools .menu button[aria-checked="true"] .ck { visibility: visible; }
+  .tools .menu small { display: block; color: #93a19a; font-size: 11.5px; }
+  body.recording .tools #rec { border-color: #ef4444; }
+  body.solo .tools { display: none; }
+
   body[data-device="android"] { --w: 412px; --h: 892px; --bezel: 9px; --r: 30px; --sb: 38px; }
   body[data-device="android"] .island { top: 11px; width: 15px; height: 15px; border-radius: 50%; }
   body[data-device="android"] .status { padding: 0 22px 9px 26px; }
@@ -57,12 +74,46 @@
   body[data-device="full"] .btn, body[data-device="full"] .island, body[data-device="full"] .home, body[data-device="full"] .status { display: none; }
   body[data-device="none"] .phone, body[data-device="full"] .phone { background: none; box-shadow: none; }
   body[data-device="full"] { display: block; overflow: hidden; }
-  body[data-device="full"] .picker { top: auto; bottom: 8px; left: auto; right: 8px; opacity: .45; }
+  body[data-device="full"] .tools { top: auto; bottom: 8px; left: auto; right: 8px; }
+  body[data-device="full"] .tools .menu { top: auto; bottom: 0; left: auto; right: calc(100% + 6px); }
+  /* While recording, the pointer is drawn inside the phone (the browser capture leaves the real cursor out): a soft dot that shrinks when pressed, like a finger. */
+  #touch { position: absolute; left: 0; top: 0; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; background: rgba(255,255,255,.55); border: 2px solid rgba(60,70,80,.55); box-shadow: 0 2px 10px rgba(0,0,0,.25); z-index: 9; pointer-events: none; opacity: 0; transition: opacity .12s, scale .1s; }
+  body.recording #touch.on { opacity: 1; }
+  #touch.down { scale: .7; background: rgba(255,255,255,.8); }
 </style>
 </head>
 <body data-device="iphone">
-  <div class="picker"><label for="device">Aparelho</label>
-    <select id="device"><option value="iphone">iPhone 15 Pro</option><option value="android">Android (Pixel)</option><option value="none">Sem moldura (largura de celular)</option><option value="full">Sem moldura 2 (tela inteira, como antes)</option></select>
+  <div class="tools">
+    <div class="dd">
+      <button type="button" class="ic" id="device" aria-haspopup="menu" aria-expanded="false" aria-controls="deviceMenu" aria-label="Escolher moldura" title="Moldura">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10.5 18.5h3"/></svg>
+      </button>
+      <div class="menu" role="menu" id="deviceMenu" hidden>
+        <button type="button" role="menuitemradio" data-v="iphone"><span class="ck">✓</span><span>iPhone 15 Pro</span></button>
+        <button type="button" role="menuitemradio" data-v="android"><span class="ck">✓</span><span>Android (Pixel)</span></button>
+        <button type="button" role="menuitemradio" data-v="none"><span class="ck">✓</span><span>Sem moldura<small>Largura de celular</small></span></button>
+        <button type="button" role="menuitemradio" data-v="full"><span class="ck">✓</span><span>Sem moldura 2<small>Tela inteira</small></span></button>
+      </div>
+    </div>
+    <div class="dd">
+      <button type="button" class="ic" id="lang" aria-haspopup="menu" aria-expanded="false" aria-controls="langMenu" aria-label="Idioma do app" title="Idioma">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></svg><span id="langTag">AUTO</span>
+      </button>
+      <div class="menu" role="menu" id="langMenu" hidden>
+        <button type="button" role="menuitemradio" data-v="system"><span class="ck">✓</span><span>Automático<small>Idioma do navegador</small></span></button>
+        <button type="button" role="menuitemradio" data-v="pt"><span class="ck">✓</span><span>Português (Brasil)</span></button>
+        <button type="button" role="menuitemradio" data-v="en"><span class="ck">✓</span><span>English</span></button>
+      </div>
+    </div>
+    <button type="button" class="ic" id="shot" aria-label="Copiar foto da tela" title="Copiar a foto da tela (Ctrl+V cola). Shift: com a moldura">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+    </button>
+    <button type="button" class="ic" id="rec" aria-label="Gravar a tela" title="Gravar a tela (clique de novo para parar; Shift: com a moldura)">
+      <svg id="recdot" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="#EF4444"/></svg><span id="rect" hidden></span>
+    </button>
+    <button type="button" class="ic" id="longshot" aria-label="Copiar a tela inteira (rolagem)" title="Screenshot longo: copia a tela inteira do app, com tudo o que está abaixo da rolagem (Ctrl+V cola)">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2.5" width="12" height="13" rx="2"/><path d="M12 18.5v3.5M9.5 19.5 12 22l2.5-2.5"/></svg>
+    </button>
   </div>
   <div class="scale" id="scale">
     <div class="phone">
@@ -80,39 +131,91 @@
         <iframe id="app" src="/" title="Reps"></iframe>
         <div class="kb" id="kb"></div>
         <div class="home"></div>
+        <i id="touch"></i>
       </div>
     </div>
   </div>
 <script>
-  // Fit the phone to the window (sizes come from the device's own CSS variables).
+  const frame = document.getElementById('app');
+  const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
+
+  // Fit the phone to the window (sizes come from the device's own CSS variables); Ctrl + wheel zooms on top of that.
+  let zoom = Math.min(2.5, Math.max(0.4, parseFloat(store.get('p1-zoom')) || 1));
   const fit = () => {
     const ph = document.querySelector('.phone'), bare = document.body.dataset.device === 'none' || document.body.dataset.device === 'full';
-    const k = bare ? 1 : Math.min(1, (innerHeight - 24) / (ph.offsetHeight + 4), (innerWidth - 24) / (ph.offsetWidth + 4));
-    document.getElementById('scale').style.transform = 'scale(' + k + ')';
+    // The toolbar is a column on the left: keep the phone clear of it on both sides so it stays centred.
+    const side = bare ? 0 : 56;
+    document.body.style.paddingTop = ''; document.body.style.boxSizing = 'border-box';
+    const k = bare ? 1 : Math.min(1, (innerHeight - 16) / (ph.offsetHeight + 4), (innerWidth - side * 2 - 8) / (ph.offsetWidth + 4)) * zoom;
+    const sc = document.getElementById('scale'), ex = Math.max(0, (k - 1) / 2);
+    sc.style.transform = 'scale(' + k + ')';
+    // The scaled phone grows past its layout box: margins make room for it, so the page scrolls instead of cropping it.
+    sc.style.margin = (ex * ph.offsetHeight) + 'px ' + (ex * ph.offsetWidth) + 'px';
   };
   addEventListener('resize', fit);
-  // Device picker: remembered between visits.
-  const pick = document.getElementById('device');
-  const useDevice = d => { document.body.dataset.device = d; pick.value = d; try { localStorage.setItem('p1-frame', d); } catch (e) { /* ignore */ } requestAnimationFrame(fit); };
-  pick.addEventListener('change', () => useDevice(pick.value));
-  let saved = 'iphone'; try { saved = localStorage.getItem('p1-frame') || 'iphone'; } catch (e) { /* ignore */ }
+  const setZoom = z => { zoom = Math.min(2.5, Math.max(0.4, Math.round(z * 100) / 100)); store.set('p1-zoom', String(zoom)); fit(); };
+  const onWheel = e => { if (!e.ctrlKey) return; e.preventDefault(); setZoom(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); };
+  const onKey = e => { if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); setZoom(1); } };
+  addEventListener('wheel', onWheel, { passive: false }); addEventListener('keydown', onKey);
+  frame.addEventListener('load', () => { try { const w = frame.contentWindow; w.addEventListener('wheel', onWheel, { passive: false }); w.addEventListener('keydown', onKey); } catch (e) { /* ignore */ } });
+
+  // Like a phone: no desktop scrollbars inside the app (the wheel and drag still scroll).
+  const hideBars = () => { try { const d = frame.contentDocument; if (!d || !d.head || d.getElementById('no-bars')) return; const s = d.createElement('style'); s.id = 'no-bars'; s.textContent = '*{scrollbar-width:none!important}*::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}'; d.head.appendChild(s); } catch (e) { /* not ready */ } };
+  frame.addEventListener('load', hideBars); setInterval(hideBars, 1000);
+
+  // The screen clips its content but a script can still scroll it (a focus, scrollIntoView): that hides the status bar. Any scroll goes back to zero.
+  const scr = document.querySelector('.screen');
+  scr.addEventListener('scroll', () => { scr.scrollTop = 0; scr.scrollLeft = 0; });
+
+  // Icon menus: click opens, a choice (or a click outside, or Esc) closes.
+  const menus = [];
+  const makeMenu = (btnId, menuId, onPick) => {
+    const btn = document.getElementById(btnId), menu = document.getElementById(menuId), items = [...menu.querySelectorAll('[role="menuitemradio"]')];
+    const open = on => { if (on) menus.forEach(m => m !== api && m.open(false)); menu.hidden = !on; btn.setAttribute('aria-expanded', String(on)); if (on) (items.find(i => i.getAttribute('aria-checked') === 'true') || items[0]).focus(); };
+    const mark = v => items.forEach(i => i.setAttribute('aria-checked', String(i.dataset.v === v)));
+    btn.addEventListener('click', e => { e.stopPropagation(); open(menu.hidden); });
+    items.forEach(i => i.addEventListener('click', e => { e.stopPropagation(); open(false); btn.focus(); onPick(i.dataset.v); }));
+    menu.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { open(false); btn.focus(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const k = items.indexOf(document.activeElement); items[(k + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus(); }
+    });
+    const api = { open, mark, menu }; menus.push(api); return api;
+  };
+  const closeAll = () => menus.forEach(m => m.open(false));
+  document.addEventListener('click', e => { if (!e.target.closest('.tools')) closeAll(); });
+  frame.addEventListener('load', () => { try { frame.contentWindow.addEventListener('mousedown', closeAll, true); } catch (e) { /* ignore */ } });
+
+  // Frame: remembered between visits.
+  const deviceMenu = makeMenu('device', 'deviceMenu', d => useDevice(d));
+  const useDevice = d => { document.body.dataset.device = d; deviceMenu.mark(d); store.set('p1-frame', d); requestAnimationFrame(fit); };
+  const saved = store.get('p1-frame');
   useDevice(['iphone', 'android', 'none', 'full'].includes(saved) ? saved : 'iphone'); fit();
+
+  // Language: the app keeps it in localStorage 'reps:lang' (same origin as this page); change it and reload the app. ?lang=pt|en forces it, ?solo hides the toolbar.
+  const q = new URLSearchParams(location.search);
+  if (q.has('solo')) document.body.classList.add('solo');
+  const tag = { system: 'AUTO', pt: 'PT', en: 'EN' };
+  const langMenu = makeMenu('lang', 'langMenu', v => { setLang(v); frame.src = '/'; });
+  const setLang = v => { store.set('reps:lang', v); langMenu.mark(v); document.getElementById('langTag').textContent = tag[v]; };
+  const forced = q.get('lang');
+  if (forced === 'pt' || forced === 'en') { setLang(forced); frame.src = '/'; }
+  else { const cur = store.get('reps:lang'); const v = cur === 'pt' || cur === 'en' ? cur : 'system'; langMenu.mark(v); document.getElementById('langTag').textContent = tag[v]; }
+
   // The status bar takes the app's own background (light or dark), and its text flips to stay readable.
   const clock = () => { const d = new Date(); document.getElementById('clock').textContent = d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); };
   const paint = () => {
     try {
-      const doc = document.getElementById('app').contentDocument, el = doc.querySelector('[data-testid]') || doc.body;
+      const doc = frame.contentDocument;
       let bg = 'rgba(0, 0, 0, 0)', n = doc.elementFromPoint(200, 4);
       while (n && bg === 'rgba(0, 0, 0, 0)') { bg = getComputedStyle(n).backgroundColor; n = n.parentElement; }
       const m = bg.match(/\d+/g) || [255, 255, 255], lum = (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]);
       const st = document.getElementById('status'); st.style.background = bg === 'rgba(0, 0, 0, 0)' ? '#fff' : bg; st.style.color = lum < 140 ? '#fff' : '#000';
-      void el;
     } catch (e) { /* not ready */ }
   };
   clock(); setInterval(clock, 20000); setInterval(paint, 800);
 
   // ---- Simulated iOS keyboard ----
-  const kb = document.getElementById('kb'), frame = document.getElementById('app');
+  const kb = document.getElementById('kb');
   let shift = false, hideTimer = 0, target = null;
   const doc = () => frame.contentDocument;
   const isField = e => e && (e.tagName === 'INPUT' || e.tagName === 'TEXTAREA');
@@ -140,19 +243,19 @@
   const hide = () => { clearTimeout(hideTimer); hideTimer = setTimeout(() => { const a = doc() && doc().activeElement; if (isField(a)) { show(a); return; } kb.classList.remove('on'); frame.style.height = ''; target = null; }, 150); };
   const attach = () => { try { const d = doc(); if (!d || d.__kbAttached) return; d.__kbAttached = true; d.addEventListener('focusin', ev => { if (isField(ev.target)) show(ev.target); }); d.addEventListener('focusout', hide); } catch (e) { /* not ready */ } };
   frame.addEventListener('load', attach); setInterval(attach, 1000);
+  setInterval(() => { try { const st = document.getElementById('status'); kb.classList.toggle('dark', st.style.color === 'rgb(255, 255, 255)' || st.style.color === '#fff'); } catch (e) { /* ignore */ } }, 800);
 
   // ---- Side swipe with a mouse ----
-  // On the phone a finger scrolls horizontal lists (date strip, carousels, containers). Here the wheel scrolls them sideways
-  // when the pointer is over one, and click-and-drag pulls them like a finger; a drag never counts as a tap.
+  // The wheel scrolls horizontal lists sideways when the pointer is over one, and click-and-drag pulls them like a finger; a drag never counts as a tap.
   const hScroller = (w, el) => { for (let e = el; e && e !== w.document.body; e = e.parentElement) { const o = w.getComputedStyle(e).overflowX; if ((o === 'auto' || o === 'scroll') && e.scrollWidth > e.clientWidth + 1) return e; } return null; };
   const attachSwipe = () => {
     try {
       const w = frame.contentWindow, d = w && w.document; if (!d || d.__swipeAttached || !d.body) return; d.__swipeAttached = true;
       d.addEventListener('wheel', ev => {
-        if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return; // trackpad already scrolls sideways
+        if (ev.ctrlKey || Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return;
         const s = hScroller(w, ev.target); if (!s) return;
         const max = s.scrollWidth - s.clientWidth, next = s.scrollLeft + ev.deltaY;
-        if ((ev.deltaY < 0 && s.scrollLeft <= 0) || (ev.deltaY > 0 && s.scrollLeft >= max - 1)) return; // at the end: let the page scroll
+        if ((ev.deltaY < 0 && s.scrollLeft <= 0) || (ev.deltaY > 0 && s.scrollLeft >= max - 1)) return;
         s.scrollLeft = Math.max(0, Math.min(max, next)); ev.preventDefault();
       }, { passive: false });
       let drag = null;
@@ -162,8 +265,166 @@
     } catch (e) { /* not ready */ }
   };
   frame.addEventListener('load', attachSwipe); setInterval(attachSwipe, 1000);
-  // Same light/dark as the app.
-  setInterval(() => { try { const st = document.getElementById('status'); kb.classList.toggle('dark', st.style.color === 'rgb(255, 255, 255)' || st.style.color === '#fff'); } catch (e) { /* ignore */ } }, 800);
+
+  // ---- Photo and recording of the phone screen ----
+  // This tab is captured at its real pixels (Chrome asks once per capture) and cropped to the screen. Shift keeps the frame. PNG with rounded corners; recording is WebM.
+  (() => {
+    const shot = document.getElementById('shot'), rec = document.getElementById('rec'), dot = document.getElementById('recdot'), clk = document.getElementById('rect');
+    const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return 'reps-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()); };
+    // Salvar = download normal (vai para Downloads). A janela "Salvar como" (showSaveFilePicker) foi testada no painel do app Claude e falha: cria arquivo vazio.
+    const save = async (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000); return 'download'; };
+    const pickEl = withFrame => document.querySelector(withFrame ? '.phone' : '.screen');
+    // Plano B (2026-11-23): o painel do navegador do app Claude recusa getDisplayMedia ("Permission denied").
+    // Aí a tela do app é desenhada direto do HTML do iframe (html2canvas-pro, mesma origem). Sempre só a tela, sem moldura.
+    const toast = msg => { let t = document.getElementById('captoast'); if (!t) { t = document.createElement('div'); t.id = 'captoast'; t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(17,17,17,.92);color:#fff;font:500 13px system-ui;padding:9px 14px;border-radius:10px;z-index:99;pointer-events:none;transition:opacity .2s'; document.body.appendChild(t); } t.textContent = msg; t.style.opacity = '1'; clearTimeout(t._h); t._h = setTimeout(() => { t.style.opacity = '0'; }, 2600); };
+    let h2c = null;
+    const loadH2c = () => h2c || (h2c = new Promise((ok, no) => { if (window.html2canvas) return ok(window.html2canvas); const sc = document.createElement('script'); sc.src = '/vendor/html2canvas-pro.min.js'; sc.onload = () => ok(window.html2canvas); sc.onerror = no; document.head.appendChild(sc); }));
+    const appFrame = () => document.getElementById('app');
+    async function drawApp(scale) {
+      const H = await loadH2c(), f = appFrame(), d = f.contentDocument, w = f.clientWidth, h = f.clientHeight, win = f.contentWindow;
+      return H(d.body, { scale, width: w, height: h, windowWidth: w, windowHeight: h, x: win.scrollX, y: win.scrollY, backgroundColor: getComputedStyle(d.body).backgroundColor || '#fff', useCORS: true, logging: false });
+    }
+    const rounded = (src, rpx) => { const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d'); g.beginPath(); g.roundRect(0, 0, c.width, c.height, rpx); g.clip(); g.drawImage(src, 0, 0); return c; };
+    const screenRadius = () => parseFloat(getComputedStyle(document.querySelector('.screen')).borderTopLeftRadius) || 0;
+    // Foto da tela (pedido do Rod, 2026-11-23): clicar no ícone COPIA a imagem para a área de transferência (Ctrl+V cola).
+    // O ClipboardItem recebe a promessa da imagem na hora do clique, para não perder a permissão do gesto.
+    const shotBlob = () => drawApp(3).then(c => new Promise(ok => rounded(c, screenRadius() * 3).toBlob(ok, 'image/png')));
+    function shotToClipboard() {
+      toast('Copiando a foto…');
+      const p = shotBlob();
+      let w;
+      try { w = navigator.clipboard.write([new ClipboardItem({ 'image/png': p })]); } catch (err) { w = Promise.reject(err); }
+      w.then(() => toast('Foto copiada: Ctrl+V para colar'), async err => {
+        console.warn('clipboard', err);
+        try { const b = await p; await save(b, stamp() + '.png'); toast('Não deu para copiar; a foto foi salva'); } catch (e2) { toast('Não deu para gerar a foto'); }
+      });
+    }
+    // Screenshot longo (pedido do Rod, 2026-11-23): a tela inteira do app, inclusive o que está abaixo da rolagem.
+    // Acha a área que rola (a maior com conteúdo escondido), e na cópia que o html2canvas desenha estica essa área e os pais até caber tudo.
+    function mainScroller(d) {
+      let best = null, gain = 0;
+      for (const el of d.querySelectorAll('div')) {
+        const extra = el.scrollHeight - el.clientHeight;
+        if (extra < 4 || el.clientHeight < 120) continue;
+        const oy = getComputedStyle(el).overflowY;
+        if (oy !== 'auto' && oy !== 'scroll') continue;
+        if (!el.getClientRects().length || el.closest('[aria-hidden="true"]')) continue;
+        if (extra * el.clientWidth > gain) { gain = extra * el.clientWidth; best = el; }
+      }
+      return best;
+    }
+    async function longShotBlob() {
+      const H = await loadH2c(), f = appFrame(), d = f.contentDocument, w = f.clientWidth, h = f.clientHeight;
+      const sc = mainScroller(d);
+      if (!sc) return { blob: await shotBlob(), long: false };
+      const extra = sc.scrollHeight - sc.clientHeight, top = sc.scrollTop, total = h + extra;
+      const hs = []; for (let p = sc.parentElement; p; p = p.parentElement) hs.push(p.clientHeight); // alturas ORIGINAIS dos pais (medir na cópia dobraria)
+      sc.setAttribute('data-longshot', '1');
+      try {
+        const c = await H(d.body, {
+          scale: 2, width: w, height: total, windowWidth: w, windowHeight: total, x: 0, y: 0, logging: false, useCORS: true,
+          backgroundColor: getComputedStyle(d.body).backgroundColor || '#fff',
+          onclone: cd => {
+            const el = cd.querySelector('[data-longshot]'); if (!el) return;
+            el.scrollTop = 0;
+            el.style.overflow = 'visible'; el.style.height = (sc.clientHeight + extra) + 'px'; el.style.maxHeight = 'none'; el.style.flex = 'none';
+            let i = 0; for (let p = el.parentElement; p; p = p.parentElement, i++) { p.style.overflow = 'visible'; p.style.maxHeight = 'none'; if (hs[i]) p.style.height = (hs[i] + extra) + 'px'; }
+            const inner = el.firstElementChild; if (inner) inner.style.transform = 'none';
+          },
+        });
+        const blob = await new Promise(ok => rounded(c, screenRadius() * 2).toBlob(ok, 'image/png'));
+        return { blob, long: true };
+      } finally { sc.removeAttribute('data-longshot'); sc.scrollTop = top; }
+    }
+    document.getElementById('longshot').onclick = () => {
+      closeAll();
+      toast('Montando a tela inteira…');
+      const job = longShotBlob();
+      const p = job.then(x => x.blob);
+      let wr;
+      try { wr = navigator.clipboard.write([new ClipboardItem({ 'image/png': p })]); } catch (err) { wr = Promise.reject(err); }
+      wr.then(async () => toast((await job).long ? 'Tela inteira copiada: Ctrl+V para colar' : 'Esta tela não rola; copiei a foto normal'), async err => {
+        console.warn('longshot clipboard', err);
+        try { await save(await p, stamp() + '-longa.png'); toast('Não deu para copiar; a imagem foi salva em Downloads'); } catch (e2) { toast('Não deu para gerar a imagem'); console.error(e2); }
+      });
+    };
+    let fb = null;
+    async function recFallback() {
+      if (fb) { fb.stop = true; return; }
+      try { await loadH2c(); } catch (err) { toast('Não deu para gravar'); return; }
+      const f = appFrame(), out = document.createElement('canvas'), sc = 2; out.width = f.clientWidth * sc; out.height = f.clientHeight * sc;
+      const g = out.getContext('2d'), stream = out.captureStream(0), track = stream.getVideoTracks()[0];
+      const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m)), chunks = [], t0 = Date.now();
+      const r = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12e6 });
+      r.ondataavailable = ev => { if (ev.data.size) chunks.push(ev.data); };
+      r.onstop = async () => { const x = await save(new Blob(chunks, { type: 'video/webm' }), stamp() + '.webm'); void x; toast('Vídeo salvo em Downloads'); };
+      fb = { stop: false };
+      document.body.classList.add('recording'); dot.innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2" fill="#EF4444"/>'; clk.hidden = false; clk.textContent = '0:00'; rec.setAttribute('aria-label', 'Parar a gravação');
+      timer = setInterval(() => { const sec = Math.floor((Date.now() - t0) / 1000); clk.textContent = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }, 500);
+      toast('Gravando (modo simples, poucos quadros por segundo). Clique de novo para parar.');
+      r.start(1000);
+      while (!fb.stop) {
+        try { const c = await drawApp(sc); g.clearRect(0, 0, out.width, out.height); g.drawImage(c, 0, 0, out.width, out.height); track.requestFrame && track.requestFrame(); } catch (err) { console.error(err); break; }
+        await new Promise(ok => setTimeout(ok, 30));
+      }
+      fb = null; r.stop(); clearInterval(timer); document.body.classList.remove('recording'); dot.innerHTML = '<circle cx="12" cy="12" r="7" fill="#EF4444"/>'; clk.hidden = true; rec.setAttribute('aria-label', 'Gravar a tela');
+    }
+    async function open(el) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return null;
+      let s;
+      try { s = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'never', frameRate: 60, width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: false, preferCurrentTab: true, selfBrowserSurface: 'include' }); } catch (e) { return null; }
+      const t = s.getVideoTracks()[0];
+      if (window.CropTarget && t.cropTo) { try { await t.cropTo(await CropTarget.fromElement(el)); } catch (e) { /* the whole tab is saved then */ } }
+      await new Promise(r => setTimeout(r, 350));
+      return s;
+    }
+    shot.onclick = async e => {
+      closeAll();
+      if (!e.shiftKey) return shotToClipboard();
+      const el = pickEl(e.shiftKey), box = el.getBoundingClientRect(), s = await open(el);
+      if (!s) return shotToClipboard();
+      const v = document.createElement('video'); v.muted = true; v.srcObject = s; await v.play();
+      await new Promise(r => v.requestVideoFrameCallback ? v.requestVideoFrameCallback(() => r()) : setTimeout(r, 200));
+      const w = v.videoWidth, h = v.videoHeight, c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d'), r = (parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0) * (w / box.width);
+      g.beginPath(); g.roundRect(0, 0, w, h, r); g.clip(); g.drawImage(v, 0, 0, w, h);
+      s.getTracks().forEach(t => t.stop());
+      c.toBlob(b => save(b, stamp() + '.png'), 'image/png');
+    };
+    let mr = null, timer = 0;
+    rec.onclick = async e => {
+      closeAll();
+      if (mr) { mr.stop(); return; }
+      if (fb) { fb.stop = true; return; }
+      const s = await open(pickEl(e.shiftKey));
+      if (!s) return recFallback();
+      const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m)), chunks = [], t0 = Date.now();
+      mr = new MediaRecorder(s, { mimeType: mime, videoBitsPerSecond: 24e6 });
+      mr.ondataavailable = ev => { if (ev.data.size) chunks.push(ev.data); };
+      mr.onstop = () => { document.body.classList.remove('recording'); clearInterval(timer); s.getTracks().forEach(t => t.stop()); save(new Blob(chunks, { type: 'video/webm' }), stamp() + '.webm'); mr = null; dot.innerHTML = '<circle cx="12" cy="12" r="7" fill="#EF4444"/>'; clk.hidden = true; rec.setAttribute('aria-label', 'Gravar a tela'); };
+      s.getVideoTracks()[0].onended = () => { if (mr && mr.state !== 'inactive') mr.stop(); };
+      document.body.classList.add('recording');
+      mr.start(1000);
+      dot.innerHTML = '<rect x="6" y="6" width="12" height="12" rx="2" fill="#EF4444"/>'; clk.hidden = false; clk.textContent = '0:00'; rec.setAttribute('aria-label', 'Parar a gravação');
+      timer = setInterval(() => { const sec = Math.floor((Date.now() - t0) / 1000); clk.textContent = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }, 500);
+    };
+  })();
+
+  // Pointer overlay for recordings: positions come from the app frame (same origin) and from the status area, in the phone's own unscaled pixels.
+  (() => {
+    const dot = document.getElementById('touch');
+    const put = (x, y) => { dot.style.left = x + 'px'; dot.style.top = y + 'px'; dot.classList.add('on'); };
+    const inFrame = e => put(e.clientX, e.clientY + parseFloat(getComputedStyle(frame).top || 0));
+    const wire = () => {
+      let w; try { w = frame.contentWindow; w.document; } catch (e) { return; }
+      if (!w || w.__touchWired) return; w.__touchWired = true;
+      w.addEventListener('mousemove', inFrame, true); w.addEventListener('mousedown', e => { inFrame(e); dot.classList.add('down'); }, true);
+      w.addEventListener('mouseup', () => dot.classList.remove('down'), true); w.document.documentElement.addEventListener('mouseleave', () => dot.classList.remove('on'));
+    };
+    frame.addEventListener('load', wire); setInterval(wire, 1500); wire();
+    scr.addEventListener('mousemove', e => { if (e.target === frame) return; const r = scr.getBoundingClientRect(), k = r.width / scr.offsetWidth; put((e.clientX - r.left) / k, (e.clientY - r.top) / k); });
+    scr.addEventListener('mouseleave', () => dot.classList.remove('on'));
+  })();
 </script>
 </body>
 </html>

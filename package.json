@@ -33,6 +33,8 @@
     "expo-splash-screen": "~58.0.13",
     "expo-status-bar": "~58.0.4",
     "expo-updates": "~58.0.21",
+    "expo-video": "~58.0.14",
+    "html2canvas-pro": "^2.6.4",
     "posthog-react-native": "^4.85.3",
     "react": "19.3.0",
     "react-dom": "19.3.0",

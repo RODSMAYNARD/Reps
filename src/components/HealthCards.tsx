@@ -11,10 +11,13 @@ const scoreColor = (s: number) => (s >= 75 ? colors.success : s >= 50 ? colors.w
 
 function Metric({ icon, label, value, color }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string; color: string }) {
   return (
-    <View style={{ flex: 1, gap: 2 }}>
-      <Ionicons name={icon} size={18} color={color} />
-      <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 16, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] }}>{value}</Text>
-      <Text numberOfLines={1} style={{ fontSize: 11, color: colors.muted }}>{label}</Text>
+    // Cada métrica num cartãozinho próprio (pedido do Rodrigo, 2026-11-23), em grade 2×2: com 4 por linha o rótulo cortava ("FC rep…").
+    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 12 }}>
+      <Ionicons name={icon} size={22} color={color} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] }}>{value}</Text>
+        <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted }}>{label}</Text>
+      </View>
     </View>
   );
 }
@@ -40,11 +43,15 @@ export function RecoveryCard({ style }: { style?: object }) {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.muted} />
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Metric icon="moon" label="Sleep" value={fmtSleep(today.sleepMin)} color="#8E7CF0" />
-        <Metric icon="heart" label="Resting HR" value={today.restingHr ? `${today.restingHr}` : '–'} color={colors.danger} />
-        <Metric icon="pulse" label="HRV" value={today.hrv ? `${today.hrv} ms` : '–'} color={colors.success} />
-        <Metric icon="footsteps" label="Steps" value={today.steps ? today.steps.toLocaleString() : '–'} color={colors.primary} />
+      <View style={{ gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Metric icon="moon" label="Sleep" value={fmtSleep(today.sleepMin)} color="#8E7CF0" />
+          <Metric icon="heart" label="Resting HR" value={today.restingHr ? `${today.restingHr} bpm` : '–'} color={colors.danger} />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Metric icon="pulse" label="HRV" value={today.hrv ? `${today.hrv} ms` : '–'} color={colors.success} />
+          <Metric icon="footsteps" label="Steps" value={today.steps ? today.steps.toLocaleString() : '–'} color={colors.primary} />
+        </View>
       </View>
     </Pressable>
   );

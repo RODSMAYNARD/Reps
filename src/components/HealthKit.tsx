@@ -6,14 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Line, Polyline, Rect } from 'react-native-svg';
-import { Text } from './Text';
+import { PlainText, Text } from './Text';
 import { locale, tr } from '../lib/i18n';
 import type { SleepSeg } from '../lib/health';
 import { colors, radius } from '../lib/theme';
 
 export const MC = {
   sleep: '#8E7CF0', deep: '#4B3FD6', rem: '#B49CFF', light: '#7FA8FF', awake: '#FF9F5A',
-  heart: '#FF375F', hrv: '#30D158', move: '#FA114F', exercise: '#92E82A', stand: '#1EEAEF',
+  // Mover e Exercício nas cores do Reps (2026-11-23): o trio vermelho/verde-limão/azul-claro era o dos Activity Rings da Apple
+  heart: '#FF375F', hrv: '#30D158', move: '#F97316', exercise: '#9B51E0', stand: '#1EEAEF',
   steps: '#0A84FF', calories: '#FF9F0A', distance: '#5AC8FA', floors: '#BF5AF2',
   spo2: '#64D2FF', resp: '#66D4CF', vo2: '#FF6482', weight: '#AC8E68', fat: '#FFD60A',
 } as const;
@@ -48,15 +49,18 @@ export function Ring({ value, size = 120, stroke = 12, color, track, children }:
   );
 }
 
-/** Três anéis concêntricos (Mover / Exercício / Passos), estilo relógio. */
-export function ActivityRings({ rings, size = 132 }: { rings: { value: number; color: string }[]; size?: number }) {
-  const stroke = Math.round(size * 0.1);
+/** Mover / Exercício / Passos: um anel pequeno para cada meta, LADO A LADO (opção AT2 do Rods-Design-Choices, 2026-11-23).
+ * Antes eram três anéis concêntricos nas cores da Apple (desenho dos Activity Rings, marca deles). `size` = largura total;
+ * `icons` põe o ícone de cada meta no meio do anel. */
+export function ActivityRings({ rings, size = 132, icons }: { rings: { value: number; color: string }[]; size?: number; icons?: IconName[] }) {
+  const d = Math.max(28, Math.floor((size - 2 * 6) / 3));
+  const stroke = Math.max(3, Math.round(d * 0.12));
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ width: size, flexDirection: 'row', justifyContent: 'space-between' }}>
       {rings.map((r, i) => (
-        <View key={i} style={{ position: 'absolute' }}>
-          <Ring value={r.value} color={r.color} size={size - i * (stroke + 4) * 2} stroke={stroke} />
-        </View>
+        <Ring key={i} value={r.value} color={r.color} size={d} stroke={stroke} track={colors.border}>
+          {icons?.[i] && <Ionicons name={icons[i]} size={Math.round(d * 0.36)} color={r.color} />}
+        </Ring>
       ))}
     </View>
   );
@@ -342,18 +346,26 @@ export function HealthNotice({ isSample, onPress }: { isSample: boolean; onPress
   );
 }
 
-/** Mini-anéis dos últimos dias (como o resumo semanal do relógio). `onPress(i)` escolhe o dia. */
+/** Dias da semana da Saúde (opção AS1, 2026-11-23): mesmo desenho da faixa da H2 (sigla em cima, número dentro de um anel azul),
+ * mas aqui o anel enche com a % da meta de passos (o último anel de `rings`). Escolhido = fundo azul claro. `onPress(i)` escolhe o dia. */
 export function WeekRings({ days, selected, onPress, size = 34 }: {
-  days: { label: string; rings: { value: number; color: string }[] }[]; selected?: number; onPress?: (i: number) => void; size?: number;
+  days: { label: string; day?: number; rings: { value: number; color: string }[] }[]; selected?: number; onPress?: (i: number) => void; size?: number;
 }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      {days.map((d, i) => (
-        <Pressable key={i} onPress={onPress ? () => onPress(i) : undefined} disabled={!onPress} style={{ alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 2, borderRadius: radius.sm, backgroundColor: selected === i ? colors.surfaceAlt : 'transparent' }}>
-          <ActivityRings rings={d.rings} size={size} />
-          <Text style={{ fontSize: 11, color: selected === i ? colors.text : colors.muted, fontWeight: selected === i ? '700' : '400' }}>{d.label}</Text>
-        </Pressable>
-      ))}
+      {days.map((d, i) => {
+        const on = selected === i;
+        const v = d.rings[d.rings.length - 1]?.value ?? 0;
+        return (
+          <Pressable key={i} onPress={onPress ? () => onPress(i) : undefined} disabled={!onPress} style={{ alignItems: 'center', gap: 5, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 16, backgroundColor: on ? colors.primarySoft : 'transparent' }}>
+            {/* PlainText: a sigla já vem no idioma do app (o dicionário trocaria "Sex" por "Sexo") */}
+            <PlainText style={{ fontSize: 11, lineHeight: 13, color: on ? colors.primary : colors.muted, fontWeight: on ? '800' : '600' }}>{d.label}</PlainText>
+            <Ring value={Math.min(1, v)} size={size} stroke={Math.max(2.4, size * 0.075)} color={colors.primary} track={colors.border}>
+              {d.day != null && <Text style={{ fontSize: Math.round(size * 0.38), lineHeight: Math.round(size * 0.46), fontWeight: on ? '800' : '600', color: colors.text }}>{d.day}</Text>}
+            </Ring>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

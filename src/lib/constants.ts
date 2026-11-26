@@ -72,6 +72,8 @@ export const FEATURES = { social: false, watch: false, integrations: false, coac
 
 /** E-mail de suporte (troque aqui quando houver um endereço próprio). */
 export const SUPPORT_EMAIL = 'rodrigo.maynard@gmail.com';
+/** Perguntas de IA por dia no Coach (o servidor decide pelo segredo COACH_DAILY_LIMIT; este valor é só para mostrar). */
+export const COACH_DAILY_LIMIT = 30;
 
 /** Termos de uso no iOS (App Store 3.1.2): o EULA padrão da Apple até existir um texto próprio publicado. Só vale para compras pela App Store. */
 export const TERMS_URL = 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';

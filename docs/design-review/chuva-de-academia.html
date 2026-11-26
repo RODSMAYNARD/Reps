@@ -1,0 +1,246 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body><a href="./" style="position:fixed;z-index:60;top:calc(10px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));font:600 13px system-ui,sans-serif;background:#0066D6;color:#fff;text-decoration:none;padding:8px 12px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.2)">← Reps Final Design</a>
+<title>Chuva de academia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+  /* Layout: três telas de celular lado a lado, cada uma com uma animação diferente rodando em loop. */
+  :root {
+    --bg: #F2F4F8;
+    --fg: #0E1524;
+    --muted: #556078;
+    --card: #FFFFFF;
+    --line: #DDE2EC;
+    --accent: #1A74E8;
+    --accent-fg: #FFFFFF;
+    --phone: #030A1E;
+    --phone-fg: #FFFFFF;
+    --phone-sub: #9AA6BF;
+    --phone-card: #0C1A3A;
+    --display: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif;
+    --body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0B111D; --fg: #EEF2FA; --muted: #9AA6BF; --card: #131B2C; --line: #25304A; --accent: #3D96FF; --accent-fg: #06101F;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B111D; --fg: #EEF2FA; --muted: #9AA6BF; --card: #131B2C; --line: #25304A; --accent: #3D96FF; --accent-fg: #06101F;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.5;
+    padding-block: 32px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 7vw, 56px); line-height: 1; letter-spacing: .01em; margin: 0 0 12px; text-transform: uppercase; text-wrap: balance; }
+  .lead { color: var(--muted); max-width: 62ch; margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; align-items: start; }
+  .opt { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .phone { position: relative; width: 100%; max-width: 250px; margin: 0 auto; aspect-ratio: 9 / 16; background: var(--phone); border-radius: 26px; overflow: hidden; border: 1px solid var(--line); }
+  .mock { position: absolute; inset: 0; padding: 38px 16px 16px; display: flex; flex-direction: column; gap: 6px; color: var(--phone-fg); }
+  .mock b { font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: .01em; line-height: 1; }
+  .mock span { font-size: 12px; color: var(--phone-sub); }
+  .mock .card { margin-top: 14px; flex: 1; background: var(--phone-card); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+  .mock .card i { font-style: normal; font-family: var(--display); font-size: 40px; line-height: 1; font-weight: 700; color: #3D96FF; font-variant-numeric: tabular-nums; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .tag { font-family: var(--display); font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h2 { font-family: var(--display); font-size: 26px; font-weight: 700; line-height: 1.05; margin: 0; text-transform: uppercase; }
+  .opt p { margin: 0; color: var(--muted); font-size: 15px; }
+  button { font: inherit; font-weight: 600; cursor: pointer; border: 0; border-radius: 10px; padding: 10px 14px; background: var(--accent); color: var(--accent-fg); min-height: 40px; }
+  button:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+  .foot { margin-top: 24px; color: var(--muted); font-size: 15px; max-width: 62ch; }
+</style>
+
+<div class="wrap">
+  <h1>Chuva de academia</h1>
+  <p class="lead">Na tela de treino concluído, no lugar dos confetes, caem bandas elásticas, halteres e anilhas. São cinco jeitos de cair; a 4 e a 5 usam peças pequenas e sóbrias. Cada tela abaixo repete a animação sozinha.</p>
+
+  <div class="grid">
+    <section class="opt">
+      <div class="phone"><div class="mock"><b>Good job!</b><span>This is your 12th workout</span><div class="card"><span>You lifted a total of</span><i>12.672 kg</i></div></div><canvas data-mode="rain" aria-hidden="true"></canvas></div>
+      <div class="tag">Opção 1</div>
+      <h2>Chuva suave</h2>
+      <p>Os itens descem balançando e girando devagar, de cima até sair da tela. É o mais parecido com os confetes de hoje.</p>
+      <button type="button" data-replay="rain">Ver de novo</button>
+    </section>
+
+    <section class="opt">
+      <div class="phone"><div class="mock"><b>Good job!</b><span>This is your 12th workout</span><div class="card"><span>You lifted a total of</span><i>12.672 kg</i></div></div><canvas data-mode="bounce" aria-hidden="true"></canvas></div>
+      <div class="tag">Opção 2</div>
+      <h2>Queda com quique</h2>
+      <p>Os itens caem rápido, quicam no chão e ficam empilhados por um instante, como equipamento jogado no piso. Depois somem.</p>
+      <button type="button" data-replay="bounce">Ver de novo</button>
+    </section>
+
+    <section class="opt">
+      <div class="phone"><div class="mock"><b>Good job!</b><span>This is your 12th workout</span><div class="card"><span>You lifted a total of</span><i>12.672 kg</i></div></div><canvas data-mode="fountain" aria-hidden="true"></canvas></div>
+      <div class="tag">Opção 3</div>
+      <h2>Explosão de baixo</h2>
+      <p>Dois disparos saem do pé da tela, sobem e caem abertos em leque. É a mais festiva, a que parece um canhão de comemoração.</p>
+      <button type="button" data-replay="fountain">Ver de novo</button>
+    </section>
+    <section class="opt">
+      <div class="phone"><div class="mock"><b>Good job!</b><span>This is your 12th workout</span><div class="card"><span>You lifted a total of</span><i>12.672 kg</i></div></div><canvas data-mode="rain" data-id="sober" data-sober="1" aria-hidden="true"></canvas></div>
+      <div class="tag">Opção 4</div>
+      <h2>Chuva sóbria</h2>
+      <p>Mesma descida suave da opção 1, com mais itens e bem menores. Os halteres são os menores de todos, e as cores se resumem a grafite, aço e um azul.</p>
+      <button type="button" data-replay="sober">Ver de novo</button>
+    </section>
+    <section class="opt">
+      <div class="phone"><div class="mock"><b>Good job!</b><span>This is your 12th workout</span><div class="card"><span>You lifted a total of</span><i>12.672 kg</i></div></div><canvas data-mode="fountain" data-id="sober-up" data-sober="1" aria-hidden="true"></canvas></div>
+      <div class="tag">Opção 5</div>
+      <h2>Explosão sóbria</h2>
+      <p>A explosão de baixo da opção 3, com as peças pequenas e sóbrias da opção 4: anilhas grafite, aço e azul, e halteres bem pequenos.</p>
+      <button type="button" data-replay="sober-up">Ver de novo</button>
+    </section>
+  </div>
+
+  <p class="foot">As anilhas usam as cores de competição (vermelha, azul, amarela e verde), e as bandas são anéis de elástico de cores variadas. Dá para misturar, por exemplo o quique da opção 2 com a quantidade da opção 3.</p>
+</div>
+
+<script>
+(function () {
+  var PLATES = [['#E5484D', '#B3262B'], ['#2D8CFF', '#1B5FBF'], ['#F5C400', '#C79A00'], ['#2FB46A', '#1E8248']];
+  var BANDS = ['#FF5A5F', '#FFA62B', '#37C871', '#3D96FF', '#9B6BFF'];
+  /* Versão sóbria: grafite, aço e um único azul. */
+  var SOBER_PLATES = [['#2A3347', '#59647B'], ['#8A94A8', '#586177'], ['#2D8CFF', '#1B5FBF']];
+  var SOBER_BANDS = ['#8A94A8', '#3D96FF'];
+  var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var rand = function (a, b) { return a + Math.random() * (b - a); };
+  var pick = function (arr) { return arr[Math.floor(Math.random() * arr.length)]; };
+
+  function rr(c, x, y, w, h, r) {
+    c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+  }
+
+  /* Cada desenho vira uma imagem pronta (64 px lógicos, 3x de resolução): a animação só carimba. */
+  function sprite(kind, variant, sober) {
+    var S = 64, k = 3, cv = document.createElement('canvas');
+    cv.width = cv.height = S * k;
+    var c = cv.getContext('2d'); c.scale(k, k); c.translate(S / 2, S / 2);
+    if (kind === 'plate') {
+      var pl = sober ? SOBER_PLATES : PLATES, col = pl[variant % pl.length];
+      c.beginPath(); c.arc(0, 0, S * 0.46, 0, 7); c.fillStyle = col[0]; c.fill();
+      c.beginPath(); c.arc(0, 0, S * 0.36, 0, 7); c.lineWidth = S * 0.05; c.strokeStyle = col[1]; c.stroke();
+      c.beginPath(); c.arc(0, 0, S * 0.17, 0, 7); c.fillStyle = col[1]; c.fill();
+      c.beginPath(); c.arc(0, 0, S * 0.46, Math.PI * 1.05, Math.PI * 1.55); c.lineWidth = S * 0.04; c.strokeStyle = 'rgba(255,255,255,.4)'; c.lineCap = 'round'; c.stroke();
+      c.globalCompositeOperation = 'destination-out';
+      c.beginPath(); c.arc(0, 0, S * 0.075, 0, 7); c.fill();
+    } else if (kind === 'dumbbell') {
+      var g = c.createLinearGradient(0, -S * 0.07, 0, S * 0.07); g.addColorStop(0, '#C3CBD9'); g.addColorStop(1, '#7B8599');
+      rr(c, -S * 0.26, -S * 0.065, S * 0.52, S * 0.13, S * 0.03); c.fillStyle = g; c.fill();
+      [-1, 1].forEach(function (sd) {
+        rr(c, sd * S * 0.3 - S * 0.09, -S * 0.27, S * 0.18, S * 0.54, S * 0.05); c.fillStyle = '#2B3447'; c.fill();
+        rr(c, sd * S * 0.3 - S * 0.03, -S * 0.23, S * 0.05, S * 0.46, S * 0.02); c.fillStyle = 'rgba(255,255,255,.22)'; c.fill();
+        rr(c, sd * S * 0.43 - S * 0.04, -S * 0.17, S * 0.08, S * 0.34, S * 0.03); c.fillStyle = variant % 2 && !sober ? '#3D96FF' : '#6B778C'; c.fill();
+      });
+    } else {
+      var bd = sober ? SOBER_BANDS : BANDS, col2 = bd[variant % bd.length];
+      rr(c, -S * 0.4, -S * 0.19, S * 0.8, S * 0.38, S * 0.19); c.lineWidth = S * 0.13; c.strokeStyle = col2; c.stroke();
+      c.save(); c.translate(0, -S * 0.022);
+      rr(c, -S * 0.4, -S * 0.19, S * 0.8, S * 0.38, S * 0.19); c.lineWidth = S * 0.035; c.strokeStyle = 'rgba(255,255,255,.38)'; c.stroke(); c.restore();
+    }
+    return cv;
+  }
+  var KINDS = ['plate', 'dumbbell', 'band'];
+  var SPRITES = [], SOBER = [];
+  KINDS.forEach(function (k) {
+    for (var v = 0; v < (k === 'plate' ? PLATES.length : k === 'band' ? BANDS.length : 2); v++) SPRITES.push({ cv: sprite(k, v, false), kind: k });
+    for (var w = 0; w < (k === 'plate' ? SOBER_PLATES.length : k === 'band' ? SOBER_BANDS.length : 1); w++) SOBER.push({ cv: sprite(k, w, true), kind: k });
+  });
+
+  function Scene(cv, mode, sober) {
+    var ctx = cv.getContext('2d'), W = 0, H = 0, dpr = 1;
+    var items = [], t = 0, last = 0, idle = 0, visible = true, raf = 0, fade = 1, settled = 0;
+
+    function resize() {
+      var r = cv.getBoundingClientRect(); if (!r.width) return;
+      dpr = Math.min(2, window.devicePixelRatio || 1); W = r.width; H = r.height;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    }
+    function mk(o) {
+      var sp = pick(sober ? SOBER : SPRITES);
+      /* Sóbria: tudo menor, e os halteres menores ainda. */
+      var s = sober ? W * rand(0.075, 0.115) * (sp.kind === 'dumbbell' ? 0.7 : 1) : W * rand(0.12, 0.19);
+      var base = { sp: sp.cv, s: s, rot: rand(0, 6.28), vr: rand(-3, 3), x: 0, y: 0, vx: 0, vy: 0, ph: rand(0, 6.28), amp: 0, rest: false, floor: 0, delay: 0 };
+      for (var k in o) base[k] = o[k];
+      return base;
+    }
+    function spawn() {
+      items = []; t = 0; idle = 0; fade = 1; settled = 0;
+      var i, n;
+      if (mode === 'rain') {
+        for (i = 0; i < (sober ? 44 : 30); i++) { var a = mk({}); a.x = rand(0.04, 0.96) * W; a.y = -a.s - rand(0, H * 0.95); a.vy = rand(0.2, 0.38) * H; a.vr = rand(-1.6, 1.6); a.amp = rand(8, 26); items.push(a); }
+      } else if (mode === 'bounce') {
+        for (i = 0; i < 22; i++) { var b = mk({}); b.x = rand(0.06, 0.94) * W; b.y = -b.s - rand(0, H * 0.9); b.vy = rand(0, 0.12) * H; b.vx = rand(-0.05, 0.05) * W; b.floor = H - b.s * 0.5 - rand(4, b.s * 0.8); items.push(b); }
+      } else {
+        for (n = 0; n < 2; n++) for (i = 0; i < (sober ? 22 : 15); i++) { var f = mk({ delay: n * 0.9 }); f.x = W * rand(0.42, 0.58); f.y = H + f.s; f.vy = -H * rand(1.05, 1.55); f.vx = W * rand(-0.55, 0.55); f.vr = rand(-6, 6); items.push(f); }
+      }
+    }
+    function step(dt) {
+      var done = true;
+      items.forEach(function (it) {
+        if (t < it.delay) { done = false; it.hidden = true; return; }
+        it.hidden = false;
+        if (mode === 'rain') {
+          it.y += it.vy * dt; it.x += Math.sin(t * 1.6 + it.ph) * it.amp * dt * 2.4; it.rot += it.vr * dt;
+          if (it.y < H + it.s) done = false;
+        } else if (mode === 'bounce') {
+          if (!it.rest) {
+            it.vy += H * 1.7 * dt; it.y += it.vy * dt; it.x += it.vx * dt; it.rot += it.vr * dt;
+            if (it.y >= it.floor) {
+              it.y = it.floor; it.vy = -it.vy * 0.42; it.vx *= 0.7; it.vr *= 0.6;
+              if (Math.abs(it.vy) < H * 0.14) { it.vy = 0; it.rest = true; }
+            }
+            done = false;
+          } else { it.rot += it.vr * dt; it.vr *= 0.94; it.x += it.vx * dt; it.vx *= 0.9; }
+        } else {
+          it.vy += H * 1.5 * dt; it.y += it.vy * dt; it.x += it.vx * dt; it.rot += it.vr * dt;
+          if (it.y < H + it.s * 1.2 || it.vy < 0) done = false;
+        }
+      });
+      if (mode === 'bounce') {
+        var all = items.every(function (i) { return i.rest; });
+        if (all) { settled += dt; if (settled > 1.1) { fade = Math.max(0, 1 - (settled - 1.1) / 0.6); if (fade <= 0) done = true; } }
+      }
+      return done;
+    }
+    function draw() {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+      ctx.globalAlpha = fade;
+      items.forEach(function (it) {
+        if (it.hidden) return;
+        ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(it.rot); ctx.drawImage(it.sp, -it.s / 2, -it.s / 2, it.s, it.s); ctx.restore();
+      });
+      ctx.globalAlpha = 1;
+    }
+    function frame(now) {
+      raf = 0; if (!visible) return;
+      var dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
+      var done = step(dt); draw();
+      if (done) { idle += dt; if (idle > 1.4) spawn(); }
+      raf = requestAnimationFrame(frame);
+    }
+    function start() { if (!raf && visible && !reduced) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+    function still() {
+      spawn();
+      items.forEach(function (it) { it.x = rand(0.08, 0.92) * W; it.y = rand(0.12, 0.92) * H; it.rot = rand(0, 6.28); it.hidden = false; });
+      draw();
+    }
+    this.replay = function () { resize(); if (reduced) { still(); } else { spawn(); start(); } };
+    resize(); this.replay();
+    if (window.ResizeObserver) new ResizeObserver(function () { resize(); if (reduced) still(); }).observe(cv);
+    if (window.IntersectionObserver) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; if (visible) start(); }).observe(cv);
+  }
+
+  var scenes = {};
+  document.querySelectorAll('canvas[data-mode]').forEach(function (cv) { scenes[cv.dataset.id || cv.dataset.mode] = new Scene(cv, cv.dataset.mode, !!cv.dataset.sober); });
+  document.querySelectorAll('button[data-replay]').forEach(function (b) { b.addEventListener('click', function () { scenes[b.dataset.replay].replay(); }); });
+})();
+</script>
+
+</body></html>

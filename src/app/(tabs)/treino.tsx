@@ -14,7 +14,7 @@ import { Routine, RoutineFolder } from '../../lib/types';
 const half = { flexDirection: 'row', justifyContent: 'center', paddingVertical: 11 } as const;
 
 export default function Treino() {
-  const { trainer, routines, workouts, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast, wprefs, setWprefs } = useStore();
+  const { routines, active, startWorkout, discardActive, deleteRoutine, saveRoutine, showToast, wprefs, setWprefs } = useStore();
   const [menu, setMenu] = useState<Routine | null>(null);
   const [confirm, setConfirm] = useState<{ title: string; message: string; label: string; run: () => void } | null>(null);
   const [ask, setAsk] = useState<'replace' | null>(null);
@@ -57,22 +57,16 @@ export default function Treino() {
     router.push('/active');
   };
 
-  // Quantas vezes cada rotina foi concluída (treinos salvos com routineId)
-  const doneCount = new Map<string, number>();
-  for (const w of workouts) if (w.routineId) doneCount.set(w.routineId, (doneCount.get(w.routineId) ?? 0) + 1);
-  // Cartão compacto (pedido do Rodrigo, 2026-11-23): só o nome, play azul redondo e ⋯
+  // Cartão compacto (pedido do Rodrigo, 2026-11-23): só o nome, play azul redondo e ⋯ (selo "N completed" removido a pedido).
+  // Fontes medidas contra o print do Hevy (mesmo aparelho): título 17 seminegrito (600; o 700 do Inter pesava demais), seções 17, pastas 15.
   const card = (r: Routine) => (
     <Card key={r.id} onPress={() => router.push({ pathname: '/routines/[id]', params: { id: r.id } })} testID="routine-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, marginBottom: 8 }}>
-      <View style={{ flex: 1, gap: 6, alignItems: 'flex-start' }}>
-        <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 17, lineHeight: 22, color: colors.text }}>{r.title}</Text>
-        <View testID="routine-done" style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 }}>
-          <Ionicons name="flame" size={13} color="#F97316" />
-          <Text style={{ fontSize: 13, lineHeight: 17, color: colors.muted }}>{(() => { const n = doneCount.get(r.id) ?? 0; return tr(n === 1 ? '1 completed' : '{n} completed').replace('{n}', String(n)); })()}</Text>
-        </View>
+      <View style={{ flex: 1 }}>
+        <Text numberOfLines={2} style={{ fontWeight: '600', fontSize: 17, lineHeight: 22, color: colors.text }}>{r.title}</Text>
       </View>
       <Pressable onPress={() => start(r)} hitSlop={6} accessibilityLabel={tr('Start Routine')} testID="routine-start"
-        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name="play" size={15} color="#fff" style={{ marginLeft: 2 }} />
+        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="play" size={14} color={colors.primary} style={{ marginLeft: 2 }} />
       </Pressable>
       <IconButton name="ellipsis-horizontal" size={20} onPress={() => setMenu(r)} />
     </Card>
@@ -83,20 +77,13 @@ export default function Treino() {
     <Screen edges={['top']}>
       <Header title="Workout" left="none" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-        <Pressable onPress={() => router.navigate('/plano')} testID="open-trainer" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.black, padding: 16, borderRadius: radius.md, marginBottom: 6 }}>
-          <Ionicons name="sparkles" size={26} color="#fff" />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 17, fontWeight: '700', color: '#fff' }}>Trainer</Text>
-            <Text style={{ color: '#C9CFD8' }}>{trainer ? `${tr('Next:')} ${trainer.workouts.find((w) => w.uid === trainer.nextUid)?.title ?? trainer.workouts[0]?.title}` : 'Your personalized program'}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={22} color="#fff" />
-        </Pressable>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Quick Start</Text>
+        {/* O cartão do Trainer saiu daqui (2026-11-23): o programa tem a própria aba, Programs */}
+        <Text style={{ fontSize: 17, fontWeight: '600', color: colors.text }}>Quick Start</Text>
         <Pressable onPress={() => start(null)} testID="start-empty" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, paddingHorizontal: 16, height: 48, borderRadius: radius.md }}>
-          <Text style={{ fontSize: 22, lineHeight: 26, color: colors.text }}>＋</Text><Text style={{ fontSize: 16, color: colors.text }}>Start Empty Workout</Text>
+          <Text style={{ fontSize: 22, lineHeight: 26, color: colors.text }}>＋</Text><Text style={{ fontSize: 15, color: colors.text }}>Start Empty Workout</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Routines</Text>
+          <Text style={{ fontSize: 17, fontWeight: '600', color: colors.text }}>Routines</Text>
           <Pressable onPress={() => askName({})} hitSlop={10} accessibilityRole="button" accessibilityLabel={tr('New Folder')} testID="new-folder">
             <MaterialCommunityIcons name="folder-plus-outline" size={26} color={colors.text} />
           </Pressable>
@@ -105,8 +92,15 @@ export default function Treino() {
           <Tile icon="clipboard-outline" label="New Routine" onPress={() => router.push('/routines/edit')} style={half} />
           <Tile icon="search-outline" label="Explore" onPress={() => router.push('/routines/explore')} style={half} />
         </View>
-        <Pressable onPress={() => router.push('/routines/generate')} testID="open-generate" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.primarySoft, padding: 16, borderRadius: radius.md }}>
-          <Text style={{ fontSize: 20 }}>✨</Text><View style={{ flex: 1 }}><Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Generate workout plan</Text><Text style={{ color: colors.muted }}>Pick a goal, days and equipment</Text></View>
+        {/* Gerar plano (2026-11-23): linha limpa no mesmo cinza dos botões acima, ícone azul e seta discreta */}
+        <Pressable onPress={() => router.push('/routines/generate')} testID="open-generate" accessibilityRole="button"
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, paddingVertical: 14, paddingHorizontal: 16, borderRadius: radius.md, opacity: pressed ? 0.7 : 1 })}>
+          <Ionicons name="sparkles-outline" size={22} color={colors.primary} />
+          <View style={{ flex: 1, gap: 1 }}>
+            <Text style={{ fontSize: 16, lineHeight: 21, fontWeight: '600', color: colors.text }}>Generate workout plan</Text>
+            <Text style={{ fontSize: 13, lineHeight: 18, color: colors.muted }}>Pick a goal, days and equipment</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
         </Pressable>
         {folders.map((f) => (
           <View key={f.id} testID={`folder-${f.name}`}>
@@ -120,9 +114,7 @@ export default function Treino() {
             {!closed.has('mine') && loose.map(card)}
           </View>
         )}
-        <Pressable onPress={() => router.push('/settings/guide')} style={{ backgroundColor: colors.primarySoft, padding: 16, borderRadius: radius.md, flexDirection: 'row', alignItems: 'center', marginTop: 18 }}>
-          <Text style={{ flex: 1, color: colors.text, fontSize: 16 }}>How to get started</Text><Text style={{ fontSize: 20 }}>→</Text>
-        </Pressable>
+        {/* "How to get started" mora em Settings > Guides (saiu daqui em 2026-11-23) */}
       </ScrollView>
       <ActiveBar />
       <Sheet visible={!!menu} onClose={() => setMenu(null)} title={menu?.title}>
@@ -180,7 +172,7 @@ function FolderHead({ title, open, onToggle, onMenu }: { title: string; open: bo
     <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44 }}>
       <Pressable onPress={onToggle} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10 }} accessibilityRole="button" accessibilityState={{ expanded: open }}>
         <Ionicons name={open ? 'caret-down' : 'caret-forward'} size={14} color={colors.muted} />
-        <Text style={{ fontSize: 16, color: colors.muted, flexShrink: 1 }} numberOfLines={1}>{title}</Text>
+        <Text style={{ fontSize: 15, color: colors.muted, flexShrink: 1 }} numberOfLines={1}>{title}</Text>
       </Pressable>
       {onMenu && <IconButton name="ellipsis-horizontal" onPress={onMenu} color={colors.muted} />}
     </View>

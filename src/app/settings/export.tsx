@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { useShare } from '../../lib/useShare';
 import { Text } from '../../components/Text';
 import { Btn, Header, Screen } from '../../components/ui';
 import { fmtDate } from '../../lib/format';
@@ -13,14 +13,18 @@ const csv = (rows: (string | number)[][]) => rows.map((r) => r.map((c) => `"${St
 export default function ExportData() {
   const { workouts, exercises, routines, measurements, profile, showToast, findExercise } = useStore();
   const [busy, setBusy] = useState(false);
+  const shareIt = useShare();
   /** Grava o arquivo no aparelho e abre a folha de compartilhar (salvar em Arquivos, e-mail, etc.). Pesos sempre em kg. */
   const share = async (name: string, text: string, mime: string) => {
     setBusy(true);
     try {
-      const uri = `${FileSystem.cacheDirectory}${name}`;
-      await FileSystem.writeAsStringAsync(uri, text);
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: mime, dialogTitle: name });
-      else showToast('Sharing is not available on this device.');
+      // web: não há pasta do app; o arquivo é montado na memória e baixado (ou compartilhado, se o navegador deixar)
+      if (Platform.OS === 'web') await shareIt.file({ text }, name, mime);
+      else {
+        const uri = `${FileSystem.cacheDirectory}${name}`;
+        await FileSystem.writeAsStringAsync(uri, text);
+        await shareIt.file({ uri }, name, mime);
+      }
     } catch { showToast('Could not create the file.'); }
     setBusy(false);
   };

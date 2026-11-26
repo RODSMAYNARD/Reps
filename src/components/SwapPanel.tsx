@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleProp, View, ViewStyle } from 'react-native';
 import { Text } from './Text';
 import { THUMBS } from '../data/thumbs';
-import { catKey } from '../lib/catalog';
+import { catKey, catName } from '../lib/catalog';
 import { useStore } from '../lib/store';
 import { substitutesFor } from '../lib/substitutes';
 import { colors, radius } from '../lib/theme';
@@ -11,8 +11,10 @@ const SIZE = 112;
 
 /** Painel "Swap" dentro do exercício: o exercício original e 3 ou 4 opções do mesmo músculo, com foto.
  * Tocar numa opção troca o exercício só neste treino; tocar no original volta. Tudo alinhado pelo topo. */
-export function SwapPanel({ currentId, originalId, exclude, onPick, onInfo }: {
+export function SwapPanel({ currentId, originalId, exclude, onPick, onInfo, hint = 'Tap another exercise to use it instead, only in this workout.', style }: {
   currentId: string; originalId: string; exclude: Set<string>; onPick: (exerciseId: string) => void; onInfo: () => void;
+  /** Texto de baixo quando nada foi trocado (a aba G troca só naquele dia do plano). */
+  hint?: string; style?: StyleProp<ViewStyle>;
 }) {
   const { findExercise } = useStore();
   const orig = findExercise(originalId);
@@ -20,11 +22,11 @@ export function SwapPanel({ currentId, originalId, exclude, onPick, onInfo }: {
   const subs = substitutesFor({ name: orig.name, muscle: orig.muscle, target: orig.target, equipment: orig.equipment, kind: orig.kind, catalogId: orig.catalogId }, exclude);
   const cards = [
     { id: originalId, name: orig.name, sub: 'Original', catalogId: orig.catalogId, uri: orig.assetUri, closest: false, why: '' },
-    ...subs.map((s) => ({ id: catKey(s.c), name: s.c.n, sub: s.c.e, catalogId: s.c.id, uri: null as string | null | undefined, closest: s.closest, why: s.why })),
+    ...subs.map((s) => ({ id: catKey(s.c), name: catName(s.c), sub: s.c.e, catalogId: s.c.id, uri: null as string | null | undefined, closest: s.closest, why: s.why })),
   ];
   const chosen = cards.find((c) => c.id === currentId && c.id !== originalId);
   return (
-    <View style={{ marginHorizontal: 16, marginTop: 12, paddingVertical: 12, backgroundColor: colors.surface, borderRadius: radius.lg }} testID="swap-panel">
+    <View style={[{ marginHorizontal: 16, marginTop: 12, paddingVertical: 12, backgroundColor: colors.surface, borderRadius: radius.lg }, style]} testID="swap-panel">
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 10 }}>
         <Text style={{ flex: 1, color: colors.text, fontSize: 16, fontWeight: '600' }}>Swap</Text>
         <Pressable onPress={onInfo} hitSlop={8} testID="swap-info" style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
@@ -49,7 +51,7 @@ export function SwapPanel({ currentId, originalId, exclude, onPick, onInfo }: {
         })}
       </ScrollView>
       <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 19, marginHorizontal: 12, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
-        {chosen ? `${chosen.name}. ${chosen.why}` : 'Tap another exercise to use it instead, only in this workout.'}
+        {chosen ? `${chosen.name}. ${chosen.why}` : hint}
       </Text>
     </View>
   );

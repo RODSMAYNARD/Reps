@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { Badge, ExerciseLines } from '../../components/TrainerParts';
-import { Btn, Dialog, Empty, Header, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
+import { TrainerIntro } from '../../components/TrainerIntro';
+import { Btn, Dialog, Header, IconButton, ListRow, Screen, Sheet } from '../../components/ui';
 import { dayKey, startOfWeek } from '../../lib/stats';
 import { useGate } from '../../lib/gate';
 import { useStore } from '../../lib/store';
@@ -23,7 +24,8 @@ export default function TrainerHome() {
     return (
       <Screen>
         <Header title="Trainer" />
-        <Empty icon="sparkles-outline" text="Get a personalized program built around your goal, schedule and equipment." action={<Btn title="Create my program" onPress={() => router.push('/trainer/setup')} testID="trainer-create" />} />
+        {/* Sem programa: tela de apresentação (título, chips, vantagens, dúvidas e rodapé fixo) */}
+        <TrainerIntro />
       </Screen>
     );
   const freq = trainer.settings.frequency;

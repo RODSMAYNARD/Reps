@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { track } from '../../lib/analytics';
-import * as Clipboard from 'expo-clipboard';
+import { useShare } from '../../lib/useShare';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -27,6 +27,7 @@ export function Delta({ now, prev, fmt = (v: number) => String(Math.round(v)) }:
 export default function MonthlyReport() {
   const params = useLocalSearchParams<{ month?: string }>();
   const st = useStore();
+  const share = useShare();
   const { workouts, profile } = st;
   const u = profile.units;
   const [cursor, setCursor] = useState(() => {
@@ -156,7 +157,7 @@ export default function MonthlyReport() {
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Congrats on a great month!</Text>
             <Text style={{ color: colors.muted }}>Celebrate your achievements and motivate others by sharing your journey!</Text>
             <Btn title="Share" icon="share-outline" onPress={() => router.push({ pathname: '/profile/report-share', params: { month: `${y}-${String(m + 1).padStart(2, '0')}` } })} testID="report-share" />
-            <Pressable onPress={() => { Clipboard.setStringAsync(text).then(() => st.showToast('Copied!')).catch(() => {}); }} style={{ alignItems: 'center', padding: 8 }}><Text style={{ color: colors.primary }}>Copy text</Text></Pressable>
+            <Pressable onPress={() => { void share.copy(text); }} style={{ alignItems: 'center', padding: 8 }}><Text style={{ color: colors.primary }}>Copy text</Text></Pressable>
           </View>
         )}
         <View style={{ height: 24 }} />

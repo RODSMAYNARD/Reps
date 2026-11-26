@@ -128,12 +128,42 @@ export function weeklySeries(workouts: Workout[], metric: 'duration' | 'volume' 
     const to = new Date(from);
     to.setDate(to.getDate() + 7);
     const inWeek = workouts.filter((w) => new Date(w.date) >= from && new Date(w.date) < to);
-    // reps: só exercícios com repetições de verdade (no `duration` antigo, `reps` são segundos)
+    // reps: só exercícios com repetições de verdade (no `duration` antigo, `reps` são segundos) e sem aquecimento, como o volume (Hevy)
     const value = inWeek.reduce(
-      (t, w) => t + (metric === 'duration' ? w.durationSec / 3600 : metric === 'volume' ? workoutVolume(w) : w.entries.reduce((a, e) => (hasReps(kindOf(e.exerciseId)) ? a + e.sets.reduce((b, s) => b + (s.reps ?? 0), 0) : a), 0)),
+      (t, w) => t + (metric === 'duration' ? w.durationSec / 3600 : metric === 'volume' ? workoutVolume(w) : w.entries.reduce((a, e) => (hasReps(kindOf(e.exerciseId)) ? a + e.sets.reduce((b, s) => b + (s.type === 'warmup' ? 0 : s.reps ?? 0), 0) : a), 0)),
       0,
     );
     return { label: from.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' }), value };
+  });
+}
+
+/** Série do gráfico do Perfil num período (2026-11-23): até ~4 meses em barras por semana; acima disso, por mês. */
+export function rangeSeries(workouts: Workout[], metric: 'duration' | 'volume' | 'reps', from: Date, to: Date) {
+  const days = (to.getTime() - from.getTime()) / 864e5;
+  const monthly = days > 124;
+  const buckets: { from: Date; to: Date; label: string }[] = [];
+  if (monthly) {
+    const d = new Date(from.getFullYear(), from.getMonth(), 1);
+    while (d <= to) {
+      const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      buckets.push({ from: new Date(d), to: next, label: d.toLocaleDateString(locale(), { month: 'short', year: '2-digit' }) });
+      d.setMonth(d.getMonth() + 1);
+    }
+  } else {
+    const d = startOfWeek(from);
+    while (d <= to) {
+      const next = new Date(d); next.setDate(next.getDate() + 7);
+      buckets.push({ from: new Date(d), to: next, label: d.toLocaleDateString(locale(), { day: '2-digit', month: 'short' }) });
+      d.setDate(d.getDate() + 7);
+    }
+  }
+  return buckets.map((b) => {
+    const list = workouts.filter((w) => { const t = new Date(w.date); return t >= b.from && t < b.to && t >= from && t <= to; });
+    const value = list.reduce(
+      (t, w) => t + (metric === 'duration' ? w.durationSec / 3600 : metric === 'volume' ? workoutVolume(w) : w.entries.reduce((a, e) => (hasReps(kindOf(e.exerciseId)) ? a + e.sets.reduce((c, s) => c + (s.type === 'warmup' ? 0 : s.reps ?? 0), 0) : a), 0)),
+      0,
+    );
+    return { label: b.label, value, from: b.from, monthly };
   });
 }
 

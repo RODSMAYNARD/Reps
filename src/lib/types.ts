@@ -47,6 +47,10 @@ export type Workout = {
   photoPath?: string | null;
   /** O que a tela mostra: URL assinada da foto, ou o arquivo local enquanto o treino espera na fila. */
   photoUri?: string | null;
+  /** Vídeo do treino (no lugar da foto): caminho no bucket privado `workout-videos` (`<uid>/w-<id>.<ext>`, em `meta.video`). */
+  videoPath?: string | null;
+  /** URL assinada do vídeo, ou o arquivo local enquanto espera na fila. */
+  videoUri?: string | null;
   /** Salvo sem internet, ainda na fila para subir (só no aparelho). */
   pending?: boolean;
   /** O servidor recusou o envio (não é falta de rede): tenta de novo na próxima abertura do app. */
@@ -77,7 +81,13 @@ export type WorkoutPrefs = {
   routineFolders: RoutineFolder[]; closedFolders: string[];
   /** Nome que o usuário deu à seção "My Routines" (vazio = nome padrão traduzido). */
   mineName?: string;
+  /** Perfil do Coach (Settings > Coach Reps): tom, objetivo, o que ele lembra e o consentimento para a IA. */
+  coach?: CoachProfile;
 };
+export type CoachTone = 'motivating' | 'technical' | 'direct';
+export type CoachGoal = 'muscle' | 'strength' | 'fatloss' | 'health';
+/** `aiOk`: undefined = ainda não perguntou; false = só respostas locais; true = pode mandar a pergunta e um resumo dos dados para a IA. */
+export type CoachProfile = { tone?: CoachTone; goal?: CoachGoal; notes?: string[]; aiOk?: boolean };
 export type RoutineFolder = { id: string; name: string; ids: string[] };
 export const DEFAULT_WARMUP: WarmupRow[] = [{ pct: 40, reps: 5 }, { pct: 60, reps: 5 }, { pct: 80, reps: 3 }];
 export const DEFAULT_WPREFS: WorkoutPrefs = {

@@ -6,9 +6,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useMemo, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { ActivityRings, Delta, fmtNum, HCard, HealthNotice, HTitle, InRangeChips, KpiGrid, KpiTile, LegendRow, MC, Ring, WeekRings, type IconName } from '../../components/HealthKit';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Delta, fmtNum, HCard, HealthNotice, HTitle, InRangeChips, KpiGrid, KpiTile, LegendRow, MC, Ring, WeekRings, type IconName } from '../../components/HealthKit';
 import { Text } from '../../components/Text';
+import { DateScroller, DayHeader, weekdayShort } from '../../components/WeekStrip';
 import { Btn, Header, IconButton, Screen, Sheet, TextLink } from '../../components/ui';
 import { toDisplayDist, toDisplayWeight } from '../../lib/format';
 import { dayKey, fmtSleep, PROVIDER_NAME, readiness, setGoals, setSample, sleepScore, sync, todayKey, useHealth, vsBaseline, type DayHealth, type Goals } from '../../lib/health';
@@ -116,30 +117,14 @@ export default function HealthHome() {
   const units = profile.units;
   const g = h.goals;
   const [sel, setSel] = useState(todayKey);
+  const { width: winW } = useWindowDimensions(); // faixa de dias = largura da tela menos o padding de 16 de cada lado
   const [info, setInfo] = useState(false);
   const [editing, setEditing] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   // Recalcula ao virar o dia com a tela aberta (a chave de hoje entra nas dependências)
   const tk = todayKey();
-  const week = useMemo(() => Array.from({ length: 7 }, (_, i) => { const d = new Date(`${tk}T12:00:00`); d.setDate(d.getDate() - (6 - i)); return d; }), [tk]);
   const byDate = useMemo(() => new Map(h.days.map((d) => [d.date, d])), [h.days]);
-
-  // Mini-anéis de cada dia (Mover, Exercício, Passos contra as metas), como a semana do Apple Fitness
-  const weekDays = useMemo(() => week.map((d) => {
-    const k = dayKey(d);
-    const x = byDate.get(k);
-    const frac = (v: number | undefined, goal: number) => (v != null ? v / Math.max(1, goal) : 0);
-    return {
-      key: k,
-      label: `${d.toLocaleDateString(locale(), { weekday: 'narrow' }).toUpperCase()} ${d.getDate()}`,
-      rings: [
-        { value: frac(x?.activeKcal, g.moveKcal), color: MC.move },
-        { value: frac(x?.exerciseMin, g.exerciseMin), color: MC.exercise },
-        { value: frac(x?.steps, g.steps), color: MC.steps },
-      ],
-    };
-  }), [week, byDate, g.moveKcal, g.exerciseMin, g.steps]);
 
   // Esta semana (7 dias até hoje) contra os 7 anteriores
   const weekRows = useMemo(() => {
@@ -298,7 +283,6 @@ export default function HealthHome() {
   });
 
   const box = { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, gap: 10 } as const;
-  const card = { ...box, flex: 1, minWidth: 0 } as const;
   const bands = [
     { range: '75–100', label: 'Ready to push', color: colors.success },
     { range: '50–74', label: 'Train normally', color: colors.warn },
@@ -315,53 +299,64 @@ export default function HealthHome() {
       >
         {h.isSample && <HealthNotice isSample onPress={toIntegrations} />}
 
-        {/* Últimos 7 dias em mini-anéis. Um WeekRings por dia para cada dia manter o seu testID (o do kit não recebe testID). */}
-        <View testID="health-days" style={{ flexDirection: 'row' }}>
-          {weekDays.map((d) => (
-            <View key={d.key} testID={`health-day-${d.key}`} style={{ flex: 1, alignItems: 'center' }}>
-              <WeekRings days={[d]} selected={d.key === sel ? 0 : undefined} onPress={() => setSel(d.key)} size={40} />
-            </View>
-          ))}
-        </View>
-
-        {/* Prontidão + Atividade */}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Pressable onPress={() => setInfo(true)} testID="health-readiness" style={card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="speedometer" size={16} color={r ? scoreColor(r.score) : colors.muted} />
-              <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>Readiness</Text>
-              <Ionicons name="information-circle-outline" size={16} color={colors.faint} />
-            </View>
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <Ring value={r ? r.score / 100 : 0} size={88} stroke={10} color={r ? scoreColor(r.score) : colors.faint}>
-                <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{r ? r.score : '–'}</Text>
-              </Ring>
-              {/* Até 2 linhas: na web o texto não encolhe sozinho ("Dados insuficientes" quase não cabe em 360 px) */}
-              <Text numberOfLines={2} style={{ alignSelf: 'stretch', textAlign: 'center', fontSize: 13, fontWeight: '700', color: r ? scoreColor(r.score) : colors.muted }}>{r ? r.label : 'Not enough data'}</Text>
-            </View>
-          </Pressable>
-
-          <Pressable onPress={() => router.push('/health/activity')} testID="health-activity" style={card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="flame" size={16} color={MC.move} />
-              <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>Activity</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.faint} />
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <ActivityRings size={88} rings={rings.map((x) => ({ value: x.v != null ? x.v / Math.max(1, x.goal) : 0, color: x.color }))} />
-            </View>
-            <View style={{ gap: 3 }}>
-              {rings.map((x) => (
-                <View key={x.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name={x.icon} size={12} color={x.color} />
-                  <Text numberOfLines={1} style={{ flex: 1, fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] }}>
-                    <Text style={{ color: colors.text, fontWeight: '700' }}>{x.v != null ? n0(x.v) : '–'}</Text>/{n0(x.goal)}{x.unit ? ` ${x.unit}` : ''}
-                  </Text>
+        {/* Dias da Saúde (AS1): mesma faixa que desliza da H2 (DateScroller); o anel enche com a % da meta de passos.
+            Dias sem dado ficam com o trilho vazio; futuros apagados. Toque escolhe o dia (sel). */}
+        <View testID="health-days" style={{ gap: 6 }}>
+          <DayHeader day={new Date(`${sel}T12:00:00`)} onToday={() => setSel(todayKey())} testID="health-day-header" />
+          {(
+            <DateScroller width={winW - 32} focus={new Date(`${sel}T12:00:00`)} renderDay={({ d, off, cw }) => {
+              const k = dayKey(d);
+              const x = byDate.get(k);
+              return (
+                <View testID={`health-day-${k}`} style={{ width: cw, alignItems: 'center', opacity: off > 0 ? 0.45 : 1 }}>
+                  <WeekRings size={34} selected={k === sel ? 0 : undefined} onPress={off > 0 ? undefined : () => setSel(k)}
+                    days={[{ label: weekdayShort(d), day: d.getDate(), rings: [{ value: x?.steps != null ? x.steps / Math.max(1, g.steps) : 0, color: MC.steps }] }]} />
                 </View>
-              ))}
-            </View>
-          </Pressable>
+              );
+            }} />
+          )}
         </View>
+
+        {/* Atividade na largura toda e Prontidão logo abaixo (pedido do Rodrigo, 2026-11-23) */}
+        <Pressable onPress={() => router.push('/health/activity')} testID="health-activity" style={box}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="flame" size={16} color={MC.move} />
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>Activity</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.faint} />
+          </View>
+          {/* AT2: um anel por meta, lado a lado, com o número e a meta embaixo de cada um */}
+          <View style={{ flexDirection: 'row' }}>
+            {rings.map((x) => (
+              <View key={x.id} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+                <Ring value={x.v != null ? x.v / Math.max(1, x.goal) : 0} size={68} stroke={7} color={x.color} track={colors.border}>
+                  <Ionicons name={x.icon} size={22} color={x.color} />
+                </Ring>
+                <View style={{ alignItems: 'center' }}>
+                  <Text numberOfLines={1} style={{ fontSize: 17, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{x.v != null ? n0(x.v) : '–'}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] }}>/{n0(x.goal)}{x.unit ? ` ${x.unit}` : ''}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '600', color: x.color }}>{x.id === 'move' ? 'Move' : x.id === 'exercise' ? 'Exercise' : 'Steps'}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </Pressable>
+
+        <Pressable onPress={() => setInfo(true)} testID="health-readiness" style={box}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="speedometer" size={16} color={r ? scoreColor(r.score) : colors.muted} />
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>Readiness</Text>
+            <Ionicons name="information-circle-outline" size={16} color={colors.faint} />
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <Ring value={r ? r.score / 100 : 0} size={84} stroke={10} color={r ? scoreColor(r.score) : colors.faint}>
+              <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text, fontVariant: ['tabular-nums'] }}>{r ? r.score : '–'}</Text>
+            </Ring>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text numberOfLines={2} style={{ fontSize: 18, fontWeight: '700', color: r ? scoreColor(r.score) : colors.muted }}>{r ? r.label : 'Not enough data'}</Text>
+              <Text style={{ fontSize: 13, color: colors.muted }}>0–100</Text>
+            </View>
+          </View>
+        </Pressable>
 
         {/* Resumo do dia em 1–2 frases + sugestão de treino (hoje) */}
         {(shown.length > 0 || !!tip) && (

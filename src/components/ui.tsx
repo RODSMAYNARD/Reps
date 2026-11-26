@@ -174,10 +174,11 @@ export function Pill({ label, active, onPress, color }: { label: string; active?
   );
 }
 
-export function PillRow({ items, value, onChange }: { items: { id: string; label: string }[]; value: string; onChange: (id: string) => void }) {
+export function PillRow({ items, value, onChange, after }: { items: { id: string; label: string }[]; value: string; onChange: (id: string) => void; after?: React.ReactNode }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 8, alignItems: 'center' }}>
       {items.map((i) => <Pill key={i.id} label={i.label} active={value === i.id} onPress={() => onChange(i.id)} />)}
+      {after}
     </ScrollView>
   );
 }

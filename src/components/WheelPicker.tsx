@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, type ScrollViewInstance, View } from 'react-native';
 import { Text } from './Text';
 import { fmtDayWheel } from '../lib/format';
+import { locale } from '../lib/i18n';
 import { colors } from '../lib/theme';
 
 export const WHEEL_ITEM_H = 40;
@@ -70,6 +71,24 @@ export function StartTimeWheels({ value, onChange }: { value: Date; onChange: (d
       <WheelPicker items={HOURS} index={value.getHours()} flex={0.6} onChange={(h) => set((d) => d.setHours(h))} />
       <Text style={{ fontSize: 17, color: colors.text }}>:</Text>
       <WheelPicker items={MINUTES} index={value.getMinutes()} flex={0.6} onChange={(m) => set((d) => d.setMinutes(m))} />
+    </View>
+  );
+}
+
+/** Data (dia, mês, ano) em três rodas, para o período personalizado do gráfico do Perfil. Anos de `minYear` até o atual. */
+export function DateWheels({ value, onChange, minYear }: { value: Date; onChange: (d: Date) => void; minYear: number }) {
+  const thisYear = new Date().getFullYear();
+  const years = useMemo(() => Array.from({ length: thisYear - minYear + 1 }, (_, i) => String(minYear + i)), [minYear, thisYear]);
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString(locale(), { month: 'short' })), []);
+  const dim = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
+  const daysList = useMemo(() => Array.from({ length: dim }, (_, i) => String(i + 1)), [dim]);
+  // dia além do fim do mês novo (31 → fevereiro) vira o último dia do mês
+  const set = (y: number, m: number, d: number) => onChange(new Date(y, m, Math.min(d, new Date(y, m + 1, 0).getDate())));
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 }} testID="date-wheels">
+      <WheelPicker items={daysList} index={value.getDate() - 1} flex={0.7} onChange={(i) => set(value.getFullYear(), value.getMonth(), i + 1)} />
+      <WheelPicker items={months} index={value.getMonth()} flex={1} onChange={(i) => set(value.getFullYear(), i, value.getDate())} />
+      <WheelPicker items={years} index={Math.max(0, value.getFullYear() - minYear)} flex={1} onChange={(i) => set(minYear + i, value.getMonth(), value.getDate())} />
     </View>
   );
 }

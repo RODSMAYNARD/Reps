@@ -1,14 +1,14 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView } from 'react-native';
-import { Dialog, Header, ListRow, Screen, Section } from '../../components/ui';
+import { Dialog, Header, ListRow, Screen, Section, Toggle } from '../../components/ui';
 import { FEATURES } from '../../lib/constants';
 import { tr } from '../../lib/i18n';
 import { manageSubscription, usePro } from '../../lib/purchases';
 import { useStore } from '../../lib/store';
 
 export default function Settings() {
-  const { signOut, deleteAccount, showToast, session } = useStore();
+  const { signOut, deleteAccount, showToast, session, sampleOn, setSampleOn } = useStore();
   const [ask, setAsk] = useState(false);
   const [delAsk, setDelAsk] = useState(false);
   const pro = usePro();
@@ -23,11 +23,12 @@ export default function Settings() {
         <ListRow icon="barbell-outline" label="Workout Settings" onPress={go('/settings/workout')} testID="open-workout-settings" />
         <ListRow icon="notifications-outline" label="Reminders" onPress={go('/settings/reminders')} testID="open-reminders" />
         <ListRow icon="watch-outline" label="Watches & Health" onPress={go('/settings/integrations')} testID="open-health" />
+        <ListRow icon="chatbubbles-outline" label="Coach Reps" onPress={go('/settings/coach-ai')} testID="open-coach-ai" />
         <ListRow icon="moon-outline" label="Theme" onPress={go('/settings/theme')} />
         <ListRow icon="language-outline" label="Language" onPress={go('/settings/language')} />
         <ListRow icon="share-outline" label="Export Data" onPress={go('/settings/export')} />
         <Section title="Guides" />
-        <ListRow icon="information-circle-outline" label="Getting Started" onPress={go('/settings/guide')} />
+        <ListRow icon="information-circle-outline" label="How to get started" onPress={go('/settings/guide')} testID="open-guide" />
         <ListRow icon="clipboard-outline" label="Routine Help" onPress={go('/routines/help')} />
         <Section title="Help" />
         <ListRow icon="help-circle-outline" label="FAQ" onPress={go('/settings/faq')} />
@@ -35,6 +36,9 @@ export default function Settings() {
         <ListRow icon="bulb-outline" label="Feature Request" onPress={go('/settings/feature-request')} />
         <ListRow icon="barbell-outline" label="About" onPress={go('/settings/about')} />
         {FEATURES.coach && <><Section title="Reps Coach" /><ListRow icon="people-outline" label="Learn about Reps Coach" onPress={go('/settings/coach')} last /></>}
+        {/* Dados de exemplo (2026-11-23): 90 dias de treinos variados só no aparelho, para testar telas e gráficos */}
+        <Section title="Developer" />
+        <Toggle label="Sample data (90 days)" subtitle="Varied workouts only on this device, never saved. Your real workouts stay as they are." value={sampleOn} onChange={setSampleOn} />
         <ListRow label="Log out" danger onPress={() => setAsk(true)} testID="logout" />
         <ListRow label="Delete Account" danger onPress={() => setDelAsk(true)} testID="delete-account" last />
       </ScrollView>

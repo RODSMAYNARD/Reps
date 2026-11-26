@@ -18,6 +18,7 @@ This policy explains what information Reps ("we", "us") collects when you use th
 | Training data: workouts, sets, weights, reps, times, distances, notes, routines, exercises you create, Trainer program settings (goal, level, equipment, injuries you choose to enter) | This is the core of the service: to save your history, show statistics and records, and build your plan. |
 | Body measurements and progress photos | To show your progress. Progress photos are stored in a private storage bucket that only your account can access. |
 | Messages you send us (feedback, feature requests, reports) | To answer you and improve the app. |
+| Coach: things you ask it to remember, tone and goal; free questions only if you allow AI answers (the question, the last messages and a short training summary, plus sleep, heart rate, HRV, steps and recovery score if a watch is connected) | To answer you. Questions go to Anthropic only with your consent; we keep only a daily count of AI questions for the daily limit. |
 
 Injury information you choose to enter is used only to avoid exercises in your plan. Do not enter information you do not want stored.
 
@@ -42,6 +43,7 @@ We use these providers to run the app. They process data on our behalf, under th
 | Sentry | Crash and error reporting | United States |
 | RevenueCat | Subscription management | United States |
 | Resend | Sending account emails | United States |
+| Anthropic | Coach AI answers (only if you allow them) | United States |
 | Apple / Google | App distribution, payments, push notifications | Global |
 
 We may also disclose information if required by law or to protect the rights and safety of users and Reps.

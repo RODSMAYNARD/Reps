@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   if (error || !data.user) return json({ error: 'not authenticated' }, 401);
   const uid = data.user.id;
   const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-  for (const bucket of ['progress-photos']) {
+  for (const bucket of ['progress-photos', 'workout-videos']) {
     const list = await admin.storage.from(bucket).list(uid, { limit: 1000 });
     const paths = (list.data ?? []).map((f) => `${uid}/${f.name}`);
     if (paths.length) await admin.storage.from(bucket).remove(paths);

@@ -8,10 +8,28 @@
       "port": 8081
     },
     {
+      "name": "reps-devclient",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--dev-client", "--lan", "--port", "8091"],
+      "port": 8091
+    },
+    {
       "name": "icon-gen",
       "runtimeExecutable": "node",
       "runtimeArgs": ["scripts/icons/server.mjs"],
       "port": 8099
+    },
+    {
+      "name": "design-choices",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8096", "--bind", "127.0.0.1", "--directory", "C:\\Users\\user\\AppData\\Local\\Temp\\claude\\46174a11338939aa\\2bd45c3e-97d3-46c7-a09b-0b63dc59fb47\\scratchpad\\design-choices"],
+      "port": 8096
+    },
+    {
+      "name": "stageshow-gallery",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8097", "--bind", "127.0.0.1", "--directory", "C:\\Users\\user\\.claude\\skills\\stageshow\\gallery"],
+      "port": 8097
     }
   ]
 }

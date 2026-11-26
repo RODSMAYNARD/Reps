@@ -1,4 +1,5 @@
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
+import { WorkoutMediaField, type WorkoutMedia } from '../../../components/WorkoutMediaField';
 import { Ionicons } from '@expo/vector-icons';
 import { track } from '../../../lib/analytics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -27,6 +28,9 @@ export default function EditWorkout() {
   const [vis, setVis] = useState<Workout['visibility']>(w?.visibility ?? 'everyone');
   const [date, setDate] = useState(w?.date ?? new Date().toISOString());
   const [minutes, setMinutes] = useState<number | null>(Math.round((w?.durationSec ?? 0) / 60));
+  /** Foto ou vídeo: começa com o que já está salvo; comparar com `media0` diz o que mudou. */
+  const media0: WorkoutMedia = w?.videoUri ? { uri: w.videoUri, kind: 'video' } : w?.photoUri ? { uri: w.photoUri, kind: 'photo' } : null;
+  const [media, setMedia] = useState<WorkoutMedia>(media0);
   const [entries, setEntries] = useState<SavedEntry[]>(() => (w?.entries ?? []).map((e) => ({ ...e, sets: e.sets.map((x) => ({ ...x })) })));
   const [visSheet, setVisSheet] = useState(false);
   const [dateSheet, setDateSheet] = useState(false);
@@ -41,9 +45,17 @@ export default function EditWorkout() {
   const addSet = (i: number) => { setDirty(true); setEntries((l) => l.map((e, k) => (k === i ? { ...e, sets: [...e.sets, { ...(e.sets.at(-1) ?? { type: 'normal' as const, kg: null, reps: null }), type: 'normal' as const }] } : e))); };
   const delSet = (i: number, j: number) => { setDirty(true); setEntries((l) => l.map((e, k) => (k === i ? { ...e, sets: e.sets.filter((_, n) => n !== j) } : e))); };
   const delEx = (i: number) => { setDirty(true); setEntries((l) => l.filter((_, k) => k !== i)); };
+  /** Só manda o que mudou: foto nova/removida e vídeo novo/removido (trocar um pelo outro remove o antigo). */
+  const mediaPatch = (): { photo?: string | null; video?: string | null } => {
+    if (media?.uri === media0?.uri && media?.kind === media0?.kind) return {};
+    return {
+      ...(media?.kind === 'photo' ? { photo: media.uri } : w?.photoUri ? { photo: null } : {}),
+      ...(media?.kind === 'video' ? { video: media.uri } : w?.videoUri ? { video: null } : {}),
+    };
+  };
   const save = async () => {
     setBusy(true);
-    const ok = await st.updateWorkout(w.id, { title: title.trim(), description: desc, date, visibility: vis, location: place.trim() || null, durationSec, entries });
+    const ok = await st.updateWorkout(w.id, { title: title.trim(), description: desc, date, visibility: vis, location: place.trim() || null, durationSec, entries, ...mediaPatch() });
     setBusy(false);
     if (ok) { track('workout_edited'); st.showToast('Workout updated'); router.back(); }
   };
@@ -60,6 +72,7 @@ export default function EditWorkout() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled" testID="edit-workout">
         <TextInput value={title} onChangeText={touch(setTitle)} placeholder="Workout title" placeholderTextColor={colors.faint} style={{ fontSize: 26, fontWeight: '700', color: colors.text, paddingVertical: 8 }} testID="edit-title" />
         <TextInput value={desc} onChangeText={touch(setDesc)} multiline placeholder="How did your workout go? Share some notes here..." placeholderTextColor={colors.faint} style={{ minHeight: 60, fontSize: 17, color: colors.text, textAlignVertical: 'top', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.surface }} />
+        <WorkoutMediaField value={media} onChange={(v) => { setDirty(true); setMedia(v); }} testID="edit-photo" />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 }}>
           <Text style={{ color: colors.muted, flex: 1 }}>Duration (min)</Text>
           <View style={{ width: 90, backgroundColor: colors.surface, borderRadius: radius.sm }}><NumInput value={minutes} onChange={touch(setMinutes)} testID="edit-minutes" /></View>

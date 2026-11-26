@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import { useRef, useState } from 'react';
-import { Image, Linking, NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, Share, useWindowDimensions, View } from 'react-native';
+import { Image, Linking, NativeScrollEvent, NativeSyntheticEvent, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { useShare } from '../../lib/useShare';
 import { Text } from '../../components/Text';
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -59,6 +58,7 @@ function ShareBtn({ label, onPress, bg = colors.surface, children }: { label: st
 export default function WorkoutDone() {
   const { id, photo } = useLocalSearchParams<{ id: string; photo?: string }>();
   const st = useStore();
+  const share = useShare();
   const { workouts, profile } = st;
   const { width } = useWindowDimensions();
   const [page, setPage] = useState(0);
@@ -188,11 +188,13 @@ export default function WorkoutDone() {
   const capture = async () => { const r = refs.current[page]; if (!r) return null; return captureRef(r as Parameters<typeof captureRef>[0], { format: 'png', quality: 1 }); };
   const shareImage = async (target: string) => {
     track('card_shared', { card, target, background: bg });
-    try { const uri = await capture(); if (uri && (await Sharing.isAvailableAsync())) await Sharing.shareAsync(uri, { mimeType: 'image/png' }); else st.showToast('Sharing is not available here.'); } catch { st.showToast('Could not share the image.'); }
+    try { const uri = await capture(); if (uri) await share.image(uri, 'reps-workout.png'); else st.showToast('Could not share the image.'); } catch { st.showToast('Could not share the image.'); }
   };
   const download = async () => {
     track('card_downloaded', { card, background: bg });
     try {
+      // web: a galeria não existe; baixa o PNG
+      if (Platform.OS === 'web') { const uri = await capture(); if (uri) await share.downloadImage(uri, 'reps-workout.png'); return; }
       const perm = await MediaLibrary.requestPermissionsAsync(true);
       if (!perm.granted) return st.showToast('Permission to save was denied.');
       const uri = await capture();
@@ -238,9 +240,9 @@ export default function WorkoutDone() {
             <Ionicons name="logo-instagram" size={30} color="#fff" />
           </ShareBtn>
           <ShareBtn label="More" onPress={() => shareImage('more')}><Ionicons name="share-outline" size={26} color={colors.text} /></ShareBtn>
-          <ShareBtn label="Copy Text" onPress={() => { track('card_shared', { card, target: 'copy_text' }); Clipboard.setStringAsync(text).then(() => st.showToast('Copied!')).catch(() => {}); }}><Ionicons name="copy-outline" size={24} color={colors.text} /></ShareBtn>
+          <ShareBtn label="Copy Text" onPress={() => { track('card_shared', { card, target: 'copy_text' }); void share.copy(text); }}><Ionicons name="copy-outline" size={24} color={colors.text} /></ShareBtn>
           <ShareBtn label="Download" onPress={download}><Ionicons name="download-outline" size={26} color={colors.text} /></ShareBtn>
-          <ShareBtn label="Send to AI" onPress={() => { track('card_shared', { card, target: 'ai' }); Share.share({ message: aiText }).catch(() => {}); }}><Ionicons name="sparkles-outline" size={24} color={colors.text} /></ShareBtn>
+          <ShareBtn label="Send to AI" onPress={() => { track('card_shared', { card, target: 'ai' }); void share.text(aiText); }}><Ionicons name="sparkles-outline" size={24} color={colors.text} /></ShareBtn>
           <ShareBtn label="Twitter" onPress={() => { track('card_shared', { card, target: 'x' }); Linking.openURL(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`).catch(() => {}); }} bg="#000"><Ionicons name="logo-x" size={26} color="#fff" /></ShareBtn>
         </ScrollView>
 

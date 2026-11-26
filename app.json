@@ -78,7 +78,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Reps uses your photo library so you can attach progress and workout photos.",
-          "cameraPermission": "Reps does not use the camera; photos are picked from your library. This permission is never requested.",
+          "cameraPermission": "Reps uses the camera so you can take a photo of your workout.",
           "microphonePermission": "Reps does not record audio. This permission is never requested."
         }
       ],
@@ -138,8 +138,11 @@
       ],
       [
         "@react-native-google-signin/google-signin",
-        { "iosUrlScheme": "com.googleusercontent.apps.344092833336-gkn0bpmf87jhmmfrhfbnl85asq32unpf" }
-      ]
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.344092833336-gkn0bpmf87jhmmfrhfbnl85asq32unpf"
+        }
+      ],
+      "expo-video"
     ],
     "scheme": "reps",
     "owner": "rodsappz4u",

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { track } from '../lib/analytics';
 import { useState } from 'react';
-import { Share } from 'react-native';
+import { onReps, useShare } from '../lib/useShare';
 import { fmtDuration, fmtVolume } from '../lib/format';
 import { workoutVolume } from '../lib/stats';
 import { useStore } from '../lib/store';
@@ -10,9 +10,10 @@ import { Dialog, ListRow, Sheet } from './ui';
 /** Menu ⋯ de um treino salvo: compartilhar, salvar como rotina, copiar, editar e apagar (com confirmação). */
 export function WorkoutMenu({ id, onClose, extra, onDeleted }: { id: string | null; onClose: () => void; extra?: React.ReactNode; onDeleted?: () => void }) {
   const st = useStore();
+  const shareIt = useShare();
   const [delId, setDelId] = useState<string | null>(null);
   const w = st.workouts.find((x) => x.id === id);
-  const share = () => { if (!w) return; track('workout_menu_action', { action: 'share' }); onClose(); Share.share({ message: `${w.title} — ${fmtDuration(w.durationSec)}, ${fmtVolume(workoutVolume(w), st.profile.units)} on Reps` }).catch(() => {}); };
+  const share = () => { if (!w) return; track('workout_menu_action', { action: 'share' }); onClose(); void shareIt.text(onReps(`${w.title} — ${fmtDuration(w.durationSec)}, ${fmtVolume(workoutVolume(w), st.profile.units)}`)); };
   const asRoutine = async () => {
     if (!w) return;
     track('workout_menu_action', { action: 'save_routine' });

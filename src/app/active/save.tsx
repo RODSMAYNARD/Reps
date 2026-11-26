@@ -1,9 +1,9 @@
 import { saveWorkout as saveHealthWorkout } from '../../lib/health';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import { WorkoutMediaField, type WorkoutMedia } from '../../components/WorkoutMediaField';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Text, TextInput } from '../../components/Text';
 import { Dialog, Header, HeaderAction, ListRow, Screen, Sheet, Stat } from '../../components/ui';
 import { StartTimeWheels } from '../../components/WheelPicker';
@@ -23,7 +23,8 @@ export default function SaveWorkout() {
   const [vis, setVis] = useState<Workout['visibility']>('everyone');
   const [visSheet, setVisSheet] = useState(false);
   const [whenSheet, setWhenSheet] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [media, setMedia] = useState<WorkoutMedia>(null);
+  const photo = media?.kind === 'photo' ? media.uri : null;
   const [discard, setDiscard] = useState(false);
   const [busy, setBusy] = useState(false);
   const [updAsk, setUpdAsk] = useState(false);
@@ -57,7 +58,7 @@ export default function SaveWorkout() {
 
   const save = async (updateRoutine = false) => {
     setBusy(true);
-    const w = await st.finishActive({ title: title.trim() || 'Workout', description: desc, visibility: vis, date: when.toISOString(), durationSec: dur, location: place.trim() || null, photo });
+    const w = await st.finishActive({ title: title.trim() || 'Workout', description: desc, visibility: vis, date: when.toISOString(), durationSec: dur, location: place.trim() || null, photo, video: media?.kind === 'video' ? media.uri : null });
     if (w) saveHealthWorkout(when.getTime(), when.getTime() + dur * 1000, w.title).catch(() => {}); // Apple Saúde / Health Connect (se conectado)
     if (w && updateRoutine && routine) {
       // chaves calculadas ANTES de salvar; exercício novo entra com o id do próprio treino (um `cat:<id>` serve: o saveRoutine acha o exercício criado ao salvar)
@@ -70,10 +71,6 @@ export default function SaveWorkout() {
     if (w) { st.showToast('Workout saved!'); router.replace({ pathname: '/active/done', params: photo ? { id: w.id, photo } : { id: w.id } }); }
   };
   const onSave = () => (changed ? setUpdAsk(true) : save());
-  const pickPhoto = async () => {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!r.canceled) setPhoto(r.assets[0].uri);
-  };
 
   const row = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 14, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.surface };
   return (
@@ -92,12 +89,7 @@ export default function SaveWorkout() {
           <Stat label="Sets" value={String(done.length)} />
         </View>
 
-        <Pressable onPress={pickPhoto} testID="save-photo" style={{ marginVertical: 18, height: 130, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.faint, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          {photo ? <Image source={{ uri: photo }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Ionicons name="image-outline" size={30} color={colors.text} /><Text style={{ fontSize: 19, color: colors.text }}>Add a photo / video</Text></View>
-          )}
-        </Pressable>
-        {!!photo && <Pressable onPress={() => setPhoto(null)} style={{ alignSelf: 'flex-end', marginTop: -8, marginBottom: 8 }}><Text style={{ color: colors.danger }}>Remove photo</Text></Pressable>}
+        <WorkoutMediaField value={media} onChange={setMedia} testID="save-photo" />
 
         <Pressable onPress={() => setWhenSheet(true)} style={row} testID="save-date">
           <Ionicons name="calendar-outline" size={28} color={colors.text} />

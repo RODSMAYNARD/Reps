@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CAT_BY_ID, CATALOG, catName, catToExercise } from './catalog';
 import { useLang } from './i18n';
+import { isSample, makeSampleWorkouts } from './sampleWorkouts';
 import { track } from './analytics';
 import { reportError } from './monitoring';
 import { setHasValue } from './exerciseOptions';
@@ -50,8 +51,24 @@ const uploadWorkoutPhoto = async (uid: string, workoutId: string, uri: string) =
   return path;
 };
 const PHOTO_TTL = 60 * 60 * 24 * 7;
+/** Vídeo do treino: bucket privado `workout-videos` (até 50 MB, mp4/mov/webm/3gp), `<uid>/w-<id>.<ext>`. Devolve o caminho. */
+export const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
+const VIDEO_TYPES: Record<string, string> = { 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/3gpp': '3gp', 'video/mp4': 'mp4' };
+const uploadWorkoutVideo = async (uid: string, workoutId: string, uri: string) => {
+  const res = await fetch(uri);
+  const head = (res.headers.get('content-type') ?? '').split(';')[0].trim();
+  const byExt = /\.mov$/i.test(uri) ? 'video/quicktime' : /\.webm$/i.test(uri) ? 'video/webm' : /\.3gp$/i.test(uri) ? 'video/3gpp' : 'video/mp4';
+  const type = VIDEO_TYPES[head] ? head : byExt;
+  const bytes = await res.arrayBuffer();
+  if (bytes.byteLength > VIDEO_MAX_BYTES) throw new Error('video-too-large');
+  const path = `${uid}/w-${workoutId}.${VIDEO_TYPES[type]}`;
+  const up = await supabase.storage.from('workout-videos').upload(path, bytes, { contentType: type, upsert: true });
+  if (up.error) throw up.error;
+  return path;
+};
+const isTooLarge = (x: unknown) => (x as { message?: string } | null)?.message === 'video-too-large';
 
-const saveWorkoutRpc = (w: { id: string; date: string; title: string; description: string; durationSec: number; visibility: Workout['visibility']; routineId: string | null; location: string | null; fromTrainer: boolean; photoPath?: string | null }, entries: SavedEntry[]) =>
+const saveWorkoutRpc = (w: { id: string; date: string; title: string; description: string; durationSec: number; visibility: Workout['visibility']; routineId: string | null; location: string | null; fromTrainer: boolean; photoPath?: string | null; videoPath?: string | null }, entries: SavedEntry[]) =>
   supabase.rpc('save_workout', {
     p_workout: {
       id: w.id, performed_at: w.date, title: w.title, description: w.description, duration_sec: Math.round(w.durationSec), visibility: w.visibility,
@@ -60,7 +77,7 @@ const saveWorkoutRpc = (w: { id: string; date: string; title: string; descriptio
         notes: Object.fromEntries(entries.filter((e) => e.notes).map((e) => [e.exerciseId, e.notes])),
         rest: Object.fromEntries(entries.filter((e) => e.restSec).map((e) => [e.exerciseId, e.restSec])),
         superset: Object.fromEntries(entries.filter((e) => e.superset != null).map((e) => [e.exerciseId, e.superset])),
-        routineId: w.routineId, location: w.location, trainer: w.fromTrainer || undefined, photo: w.photoPath || undefined,
+        routineId: w.routineId, location: w.location, trainer: w.fromTrainer || undefined, photo: w.photoPath || undefined, video: w.videoPath || undefined,
       },
     },
     p_entries: entries.map((e) => ({
@@ -169,14 +186,15 @@ type Store = {
   completeTypedSets: () => void;
   discardActive: () => void;
   /** `photo` = arquivo local da foto escolhida em `active/save` (sobe para o Storage junto com o treino). */
-  finishActive: (meta: { title: string; description: string; visibility: Workout['visibility']; date: string; durationSec: number; location?: string | null; photo?: string | null }) => Promise<Workout | null>;
+  finishActive: (meta: { title: string; description: string; visibility: Workout['visibility']; date: string; durationSec: number; location?: string | null; photo?: string | null; video?: string | null }) => Promise<Workout | null>;
   // descanso
   startRest: (sec: number) => void;
   adjustRest: (delta: number) => void;
   skipRest: () => void;
   // treinos
   deleteWorkout: (id: string) => Promise<void>;
-  updateWorkout: (id: string, patch: { title: string; description: string; date: string; visibility: Workout['visibility']; location: string | null; durationSec: number; entries: SavedEntry[] }) => Promise<boolean>;
+  /** `photo`: undefined = não mexe; null = remove; texto = arquivo local novo (sobe para o Storage). */
+  updateWorkout: (id: string, patch: { title: string; description: string; date: string; visibility: Workout['visibility']; location: string | null; durationSec: number; entries: SavedEntry[]; photo?: string | null; video?: string | null }) => Promise<boolean>;
   // rotinas
   saveRoutine: (r: Omit<Routine, 'id'> & { id?: string }) => Promise<Routine | null>;
   deleteRoutine: (id: string) => Promise<void>;
@@ -186,6 +204,9 @@ type Store = {
   // feedback
   sendFeedback: (kind: 'feature' | 'report' | 'contact', body: string, ref?: string) => Promise<boolean>;
   showToast: (t: string, ms?: number) => void;
+  /** Dados de exemplo: 90 dias de treinos gerados no aparelho, juntos dos reais só na tela (nunca gravados). */
+  sampleOn: boolean;
+  setSampleOn: (on: boolean) => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -208,6 +229,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [rest, setRest] = useState<RestTimer>(null);
   const lang = useLang();
   const userId = session?.user.id ?? null;
+  // Dados de exemplo (Settings > Sample data): preferência por usuário no aparelho; os treinos de exemplo só entram na lista exposta
+  // guarda junto o usuário: ao trocar de conta a opção volta a desligada até ler a do aparelho
+  const [sampleState, setSampleState] = useState<{ uid: string | null; on: boolean }>({ uid: null, on: false });
+  const sampleOn = !!userId && sampleState.uid === userId && sampleState.on;
+  useEffect(() => { if (!userId) return; AsyncStorage.getItem(`reps:sample:${userId}`).then((v) => setSampleState({ uid: userId, on: v === '1' }), () => {}); }, [userId]);
+  const setSampleOn = useCallback((on: boolean) => { setSampleState({ uid: userId, on }); if (userId) AsyncStorage.setItem(`reps:sample:${userId}`, on ? '1' : '0').catch(() => {}); }, [userId]);
+  const shownWorkouts = useMemo(() => (sampleOn ? [...workouts, ...makeSampleWorkouts()].sort((a, b) => +new Date(b.date) - +new Date(a.date)) : workouts), [sampleOn, workouts]);
   const activeRef = useRef<ActiveWorkout | null>(null);
   /** Usuário cujos dados estão (ou vão estar) na tela; muda junto com a sessão. */
   const uidRef = useRef<string | null>(null);
@@ -394,7 +422,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let wk: { data: any[] | null; error: { message: string } | null } = { data: [], error: null };
     for (let from = 0; ; from += 1000) {
       const page = await supabase.from('workouts')
-      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,photo:meta->>photo,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type,duration_sec,distance_m))')
+      .select('id,performed_at,title,description,duration_sec,visibility,routine_id,location,from_trainer,photo:meta->>photo,video:meta->>video,workout_exercises(exercise_id,position,notes,rest_sec,superset,weight_unit,workout_sets(position,reps,weight,set_type,duration_sec,distance_m))')
       .order('performed_at', { ascending: false }).range(from, from + 999);
       if (page.error) { wk = { data: null, error: page.error }; break; }
       rowsAll.push(...page.data);
@@ -416,10 +444,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const s = await supabase.storage.from('progress-photos').createSignedUrls(photoPaths, PHOTO_TTL).catch(() => null);
       (s?.data ?? []).forEach((x) => { if (x.path && x.signedUrl) signed.set(x.path, x.signedUrl); });
     }
+    const videoPaths: string[] = wk.data!.map((w: any) => w.video).filter((x: unknown): x is string => typeof x === 'string' && !!x);
+    if (videoPaths.length) {
+      const s = await supabase.storage.from('workout-videos').createSignedUrls(videoPaths, PHOTO_TTL).catch(() => null);
+      (s?.data ?? []).forEach((x) => { if (x.path && x.signedUrl) signed.set(x.path, x.signedUrl); });
+    }
     const serverWk = wk.data!.filter((w: any) => !deletes.includes(w.id) && !dl.deleted.has(w.id)).map((w: any) => ({
       id: w.id, date: w.performed_at, title: w.title, description: w.description, durationSec: w.duration_sec, visibility: w.visibility,
       routineId: w.routine_id, location: w.location, fromTrainer: w.from_trainer,
       photoPath: w.photo || null, photoUri: w.photo ? signed.get(w.photo) ?? null : null,
+      videoPath: w.video || null, videoUri: w.video ? signed.get(w.video) ?? null : null,
       entries: byPosition(w.workout_exercises).map((e: any) => ({
         exerciseId: e.exercise_id, notes: e.notes, restSec: e.rest_sec, superset: e.superset, unit: e.weight_unit ?? undefined,
         sets: byPosition(e.workout_sets).map((s: any): SetRow => withExtra({ type: s.set_type, kg: Number(s.weight), reps: s.reps }, s)),
@@ -676,7 +710,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             reportError(x, { where: 'outbox-photo' });
           }
         }
-        const err = r.error ?? await saveWorkoutRpc({ id: w.id, date: w.date, title: w.title, description: w.description, durationSec: w.durationSec, visibility: w.visibility, routineId: w.routineId ?? null, location: w.location ?? null, fromTrainer, photoPath }, entries)
+        let videoPath = w.videoPath ?? null;
+        if (!videoPath && w.videoUri && !r.error) {
+          try { videoPath = await uploadWorkoutVideo(userId, w.id, w.videoUri); } catch (x) {
+            if (isNetworkError(x as { message: string })) break;
+            reportError(x, { where: 'outbox-video' });
+          }
+        }
+        const err = r.error ?? await saveWorkoutRpc({ id: w.id, date: w.date, title: w.title, description: w.description, durationSec: w.durationSec, visibility: w.visibility, routineId: w.routineId ?? null, location: w.location ?? null, fromTrainer, photoPath, videoPath }, entries)
           .then((x) => x.error, (x) => x as { message: string });
         if (err && isNetworkError(err)) break;
         if (err) reportError(err, { where: 'outbox' });
@@ -791,7 +832,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       supabase.auth.refreshSession().then(({ data }) => {
         if (data.session && data.session.user.id === uidRef.current) { offlineAuthRef.current = false; setSession(data.session); }
       }, () => {}).finally(() => setReloadTick((n) => n + 1));
-    }, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, showToast, allExercises,
+    }, ready, session, error, toast, profile, exercises, workouts: shownWorkouts, sampleOn, setSampleOn, routines, measurements, active, rest, showToast, allExercises,
     ensureExercises: ensure,
     findExercise: (id) => lookup.get(id),
     wprefs,
@@ -1058,11 +1099,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           else { reportError(x, { where: 'workout-photo' }); showToast("Couldn't upload the photo. The workout was saved without it.", 4000); }
         }
       }
-      const err = r.error ?? photoNet ?? await saveWorkoutRpc({ id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, routineId: a.fromRoutineId ?? null, location: meta.location || null, fromTrainer: !!a.fromTrainer, photoPath }, entries)
+      let videoPath: string | null = null;
+      if (meta.video && !r.error && !photoNet && userId) {
+        try { videoPath = await uploadWorkoutVideo(userId, a.id, meta.video); } catch (x) {
+          if (isNetworkError(x as { message: string })) photoNet = x as { message: string };
+          else { if (!isTooLarge(x)) reportError(x, { where: 'workout-video' }); showToast(isTooLarge(x) ? 'The video is too large (max 50 MB). The workout was saved without it.' : "Couldn't upload the video. The workout was saved without it.", 4000); }
+        }
+      }
+      const err = r.error ?? photoNet ?? await saveWorkoutRpc({ id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, routineId: a.fromRoutineId ?? null, location: meta.location || null, fromTrainer: !!a.fromTrainer, photoPath, videoPath }, entries)
         .then((x) => x.error, (x) => x as { message: string });
       if (err && !isNetworkError(err)) { reportError(err, { where: 'save-workout' }); fail(err.message); return null; }
       const saved: Workout = { id: a.id, date: meta.date, title: meta.title || 'Workout', description: meta.description, durationSec: meta.durationSec, visibility: meta.visibility, entries, routineId: a.fromRoutineId ?? null, location: meta.location || null };
       if (meta.photo && (photoPath || err)) { saved.photoPath = photoPath; saved.photoUri = meta.photo; }
+      if (meta.video && (videoPath || err)) { saved.videoPath = videoPath; saved.videoUri = meta.video; }
       // sem internet: o treino fica no aparelho e sobe sozinho quando a conexão voltar
       if (a.fromTrainer) saved.fromTrainer = true;
       if (err) { saved.pending = true; await enqueue({ workout: saved, fromTrainer: !!a.fromTrainer }); showToast('Saved on this device. It will upload when you are back online.', 4000); }
@@ -1084,11 +1133,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     skipRest: () => setRest(null),
 
     updateWorkout: async (id, patch) => {
+      if (isSample(id)) { showToast('Sample workouts can’t be edited'); return false; }
       const old = wkRef.current.find((w) => w.id === id);
       if (!old) return false;
       if (old.pending) {
         // ainda na fila: só troca a versão que vai subir
         const next: Workout = { ...old, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries: patch.entries.map((e) => ({ ...e, sets: e.sets.filter(setHasValue) })).filter((e) => e.sets.length > 0) };
+        if (patch.photo !== undefined) { next.photoUri = patch.photo; next.photoPath = null; }
+        if (patch.video !== undefined) { next.videoUri = patch.video; next.videoPath = null; }
         if (!next.entries.length) { fail('A workout needs at least one set.'); return false; }
         await enqueue({ workout: next, fromTrainer: !!old.fromTrainer });
         setWorkouts((l) => l.map((w) => (w.id === id ? next : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
@@ -1099,12 +1151,33 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const realIds = await ensure([...new Set(entries.map((e) => e.exerciseId))]);
       const idMap = new Map([...new Set(entries.map((e) => e.exerciseId))].map((x, k) => [x, realIds[k]]));
       entries.forEach((e) => { e.exerciseId = idMap.get(e.exerciseId) ?? e.exerciseId; });
-      const u = await saveWorkoutRpc({ id, date: patch.date, title: patch.title || 'Workout', description: patch.description, durationSec: patch.durationSec, visibility: patch.visibility, routineId: old.routineId ?? null, location: patch.location || null, fromTrainer: !!old.fromTrainer, photoPath: old.photoPath ?? null }, entries);
+      // foto: nova sobe antes (mesmo caminho do treino, substitui a antiga); removida sai do Storage depois de gravar
+      let photoPath = old.photoPath ?? null;
+      if (typeof patch.photo === 'string' && patch.photo !== old.photoUri && userId) {
+        try { photoPath = await uploadWorkoutPhoto(userId, id, patch.photo); } catch (x) {
+          reportError(x, { where: 'edit-workout-photo' }); fail(isNetworkError(x as { message: string }) ? OFFLINE_MSG : "Couldn't upload the photo."); return false;
+        }
+      }
+      if (patch.photo === null) photoPath = null;
+      let videoPath = old.videoPath ?? null;
+      if (typeof patch.video === 'string' && patch.video !== old.videoUri && userId) {
+        try { videoPath = await uploadWorkoutVideo(userId, id, patch.video); } catch (x) {
+          if (!isTooLarge(x)) reportError(x, { where: 'edit-workout-video' });
+          fail(isTooLarge(x) ? 'The video is too large (max 50 MB).' : isNetworkError(x as { message: string }) ? OFFLINE_MSG : "Couldn't upload the video."); return false;
+        }
+      }
+      if (patch.video === null) videoPath = null;
+      const u = await saveWorkoutRpc({ id, date: patch.date, title: patch.title || 'Workout', description: patch.description, durationSec: patch.durationSec, visibility: patch.visibility, routineId: old.routineId ?? null, location: patch.location || null, fromTrainer: !!old.fromTrainer, photoPath, videoPath }, entries);
       if (u.error) { reportError(u.error, { where: 'update-workout' }); fail(u.error.message); return false; }
-      setWorkouts((l) => l.map((w) => (w.id === id ? { ...w, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries } : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
+      if (patch.photo === null && old.photoPath) supabase.storage.from('progress-photos').remove([old.photoPath]).then(() => {}, () => {});
+      // vídeo trocado para outra extensão (mov -> mp4) deixa o arquivo antigo: apaga
+      if (old.videoPath && old.videoPath !== videoPath && patch.video !== undefined) supabase.storage.from('workout-videos').remove([old.videoPath]).then(() => {}, () => {});
+      const photo = { ...(patch.photo === undefined ? {} : { photoPath, photoUri: patch.photo }), ...(patch.video === undefined ? {} : { videoPath, videoUri: patch.video }) };
+      setWorkouts((l) => l.map((w) => (w.id === id ? { ...w, title: patch.title || 'Workout', description: patch.description, date: patch.date, visibility: patch.visibility, location: patch.location || null, durationSec: patch.durationSec, entries, ...photo } : w)).sort((a, b) => +new Date(b.date) - +new Date(a.date)));
       return true;
     },
     deleteWorkout: async (id) => {
+      if (isSample(id)) { showToast('Sample workouts can’t be edited'); return; }
       if (wkRef.current.find((w) => w.id === id)?.pending && userId) {
         await withOutbox(async (list) => { const next = list.filter((x) => x.workout.id !== id); await writeOutbox(userId, next); setPendingCount(next.length); });
         duringLoad.current.deleted.add(id);
@@ -1112,9 +1185,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const photo = wkRef.current.find((w) => w.id === id)?.photoPath;
+      const video = wkRef.current.find((w) => w.id === id)?.videoPath;
       const { error: e } = await supabase.from('workouts').delete().eq('id', id);
       if (e) return fail(e.message);
       if (photo) supabase.storage.from('progress-photos').remove([photo]).then(() => {}, () => {});
+      if (video) supabase.storage.from('workout-videos').remove([video]).then(() => {}, () => {});
       duringLoad.current.deleted.add(id);
       setWorkouts((l) => l.filter((w) => w.id !== id));
     },
@@ -1185,7 +1260,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (e) { fail(e.message); return false; }
       return true;
     },
-  }), [loadFailed, offline, pendingCount, ensureRaw, enqueue, ready, session, error, toast, profile, exercises, workouts, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes, notesFor, withOutbox, lastUnitOf, pushState]);
+  }), [shownWorkouts, sampleOn, setSampleOn, loadFailed, offline, pendingCount, ensureRaw, enqueue, ready, session, error, toast, profile, exercises, routines, measurements, active, rest, userId, setActive, fail, showToast, allExercises, ensure, lookup, lastSetsOf, wprefs, trainer, persistTrainer, advanceTrainer, readPins, writePins, syncPins, startNotes, notesFor, withOutbox, lastUnitOf, pushState]);
 
   useEffect(() => { startRef.current = value.startWorkout; allExRef.current = allExercises; });
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { WorkoutVideo } from '../../../components/WorkoutVideo';
 import { useState } from 'react';
-import { Image, ScrollView, Share, View } from 'react-native';
+import { Image, ScrollView, View } from 'react-native';
+import { onReps, useShare } from '../../../lib/useShare';
 import { Text } from '../../../components/Text';
 import { WorkoutHeartRateCard } from '../../../components/HealthCards';
 import { ExerciseLabel } from '../../../components/ExerciseLabel';
@@ -15,6 +17,7 @@ import { colors } from '../../../lib/theme';
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { workouts, exercises, profile, findExercise } = useStore();
+  const share = useShare();
   const w = workouts.find((x) => x.id === id);
   const [menu, setMenu] = useState(false);
   const [more, setMore] = useState(false);
@@ -24,7 +27,7 @@ export default function WorkoutDetail() {
   return (
     <Screen>
       <Header title="Workout detail" right={<>
-        <IconButton name="share-outline" onPress={() => Share.share({ message: `${w.title} — ${fmtDuration(w.durationSec)}, ${fmtVolume(workoutVolume(w), u)} on Reps` })} />
+        <IconButton name="share-outline" onPress={() => share.text(onReps(`${w.title} — ${fmtDuration(w.durationSec)}, ${fmtVolume(workoutVolume(w), u)}`))} testID="workout-share" />
         <IconButton name="ellipsis-horizontal" onPress={() => setMenu(true)} testID="detail-menu" />
       </>} />
       <ScrollView>
@@ -35,6 +38,7 @@ export default function WorkoutDetail() {
           </View>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{w.title}</Text>
           {!!w.description && <Text style={{ color: colors.text }}>{w.description}</Text>}
+          {!!w.videoUri && <WorkoutVideo uri={w.videoUri} style={{ width: '100%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' }} />}
           {!!w.photoUri && <Image source={{ uri: w.photoUri }} style={{ width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: colors.surface }} resizeMode="cover" />}
           <View style={{ flexDirection: 'row', gap: 28 }}><Stat label="Time" value={fmtDuration(w.durationSec)} /><Stat label="Volume" value={fmtVolume(workoutVolume(w), u)} /><Stat label="Sets" value={String(workoutSets(w))} /></View>
           <View style={{ flexDirection: 'row', gap: 22, paddingTop: 4 }}>
