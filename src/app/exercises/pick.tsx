@@ -24,7 +24,7 @@ export default function PickExercise() {
   const done = () => { resolvePick(sel); router.back(); };
   return (
     <Screen>
-      <Header left="cancel" title="Add exercise" right={<HeaderAction label="Create" onPress={() => router.push('/exercises/create')} />} />
+      <Header left="cancel" title={single ? 'Replace exercise' : 'Add exercise'} right={<HeaderAction label="Create" onPress={() => router.push('/exercises/create')} />} />
       <SearchBar value={q} onChangeText={setQ} placeholder="Search exercises" />
       <ExerciseFilterBar list={allExercises} q={dq} muscles={muscles} equipment={equip} onChange={(m, e) => { setMuscles(m); setEquip(e); }} />
       <Text style={{ color: colors.muted, paddingHorizontal: 16, paddingBottom: 6, fontSize: 12 }}>{list.length} exercises</Text>
@@ -48,7 +48,7 @@ export default function PickExercise() {
           </Pressable>
         )}
       />
-      <View style={{ padding: 16 }}><Btn title={sel.length ? `Add ${sel.length} exercise(s)` : 'Select exercises'} disabled={!sel.length} testID="pick-confirm" onPress={done} /></View>
+      <View style={{ padding: 16 }}><Btn title={single ? (sel.length ? 'Replace' : 'Select an exercise') : sel.length ? `Add ${sel.length} exercise(s)` : 'Select exercises'} disabled={!sel.length} testID="pick-confirm" onPress={done} /></View>
     </Screen>
   );
 }

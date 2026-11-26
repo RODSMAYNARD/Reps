@@ -11,8 +11,10 @@ const SIZE = 112;
 
 /** Painel "Swap" dentro do exercício: o exercício original e 3 ou 4 opções do mesmo músculo, com foto.
  * Tocar numa opção troca o exercício só neste treino; tocar no original volta. Tudo alinhado pelo topo. */
-export function SwapPanel({ currentId, originalId, exclude, onPick, onInfo, hint = 'Tap another exercise to use it instead, only in this workout.', style }: {
+export function SwapPanel({ currentId, originalId, exclude, onPick, onInfo, onMore, hint = 'Tap another exercise to use it instead, only in this workout.', style }: {
   currentId: string; originalId: string; exclude: Set<string>; onPick: (exerciseId: string) => void; onInfo: () => void;
+  /** Último cartão "Choose any exercise" (abre a biblioteca para trocar pelo que quiser). */
+  onMore?: () => void;
   /** Texto de baixo quando nada foi trocado (a aba G troca só naquele dia do plano). */
   hint?: string; style?: StyleProp<ViewStyle>;
 }) {
@@ -49,6 +51,15 @@ export function SwapPanel({ currentId, originalId, exclude, onPick, onInfo, hint
             </Pressable>
           );
         })}
+        {!!onMore && (
+          <Pressable onPress={onMore} testID="swap-more" accessibilityRole="button" style={{ width: SIZE, alignSelf: 'flex-start' }}>
+            <View style={{ width: SIZE, height: SIZE, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+              <Ionicons name="search" size={30} color={colors.primary} />
+            </View>
+            <Text numberOfLines={3} style={{ color: colors.primary, fontSize: 13, lineHeight: 16, marginTop: 6, fontWeight: '600' }}>Choose any exercise</Text>
+            <Text style={{ color: colors.muted, fontSize: 11, marginTop: 1 }}>Library</Text>
+          </Pressable>
+        )}
       </ScrollView>
       <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 19, marginHorizontal: 12, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
         {chosen ? `${chosen.name}. ${chosen.why}` : hint}

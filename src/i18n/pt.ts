@@ -1563,4 +1563,13 @@ export const PT: Record<string, string> = {
   'Developer': 'Desenvolvedor',
   'Tap another exercise to use it instead, only on this day of the plan.': 'Toque em outro exercício para usar no lugar deste, só neste dia do plano.',
   'Pick another exercise that trains the same muscle. It replaces this one only on this day of the plan; tap the original to undo. For a completely different workout, use Regenerate.': 'Escolha outro exercício que trabalha o mesmo músculo. Ele entra no lugar deste só neste dia do plano; toque no original para desfazer. Para um treino totalmente diferente, use Gerar de novo.',
+  'AI Workouts': 'Treinos IA',
+  'Follow a plan day by day for 30 days. Finish a day to unlock the next one.': 'Siga um plano dia a dia por 30 dias. Termine um dia para liberar o próximo.',
+  'Workouts generated for you from your equipment. Open one to swap or add exercises, or tap Regenerate for a new version.': 'Treinos gerados para você a partir do seu equipamento. Abra um para trocar ou adicionar exercícios, ou toque em Gerar de novo para uma versão nova.',
+  'Replace exercise': 'Substituir exercício',
+  'Select an exercise': 'Selecione um exercício',
+  'Which exercise do you want to swap?': 'Qual exercício você quer trocar?',
+  'Choose any exercise': 'Escolher qualquer exercício',
+  'Library': 'Biblioteca',
+  'No exercises match your equipment. Change the equipment or add exercises.': 'Nenhum exercício combina com seu equipamento. Mude o equipamento ou adicione exercícios.',
 };

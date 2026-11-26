@@ -1,20 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { BackHandler, Image, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { BackHandler, Image, Modal, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { ActiveBar } from '../../components/ActiveBar';
 import { ExerciseThumb } from '../../components/ExerciseThumb';
 import { GymIcon } from '../../components/GymIcon';
 import { SwapPanel } from '../../components/SwapPanel';
 import { Text, TextInput } from '../../components/Text';
-import { Btn, Dialog, Screen } from '../../components/ui';
+import { Btn, Dialog, Screen, Sheet } from '../../components/ui';
 import { fmtWeight, fromDisplayWeight, toDisplayWeight } from '../../lib/format';
 import {
   type FocusId, GPLANS, type GPlan, GState, type PresetGroup, PRESETS, dayEntries, dayExercises, dayKeyOf, focusLabel, planOf, planSub,
   presetCount, presetEntries, presetExercises, presetKey, presetOf, presetSetsOf, setG, useG, workoutTitle,
 } from '../../lib/gplan';
-import { tr } from '../../lib/i18n';
+import { getLang, tr } from '../../lib/i18n';
 import { equipImage, muscleImage } from '../../lib/iconImages';
 import { setPickHandler } from '../../lib/picker';
 import { useStore } from '../../lib/store';
@@ -56,7 +56,7 @@ export default function GTab() {
           <View style={{ flexDirection: 'row', marginHorizontal: PAD, marginTop: 10, marginBottom: 4, padding: 4, gap: 4, backgroundColor: colors.surface, borderRadius: radius.md }}>
             {(['plan', 'train'] as Tab[]).map((t) => (
               <Pressable key={t} onPress={() => setTab(t)} style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: radius.sm, backgroundColor: tab === t ? colors.primary : 'transparent' }} testID={`g-tab-${t}`}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: tab === t ? '#fff' : colors.muted }}>{t === 'plan' ? 'Plans' : 'Workouts'}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: tab === t ? '#fff' : colors.muted }}>{t === 'plan' ? '30-Day Plans' : 'AI Workouts'}</Text>
               </Pressable>
             ))}
           </View>
@@ -88,6 +88,7 @@ function PlanList({ g, onOpen }: { g: GState; onOpen: (planId: string, day: numb
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 6, paddingBottom: 28 }} testID="g-plans">
+      <Intro icon="calendar-outline" text="Follow a plan day by day for 30 days. Finish a day to unlock the next one." />
       {GPLANS.map((p, pi) => {
         const open = p.id === openId;
         const done = Math.min(30, g.done[p.id] ?? 0);
@@ -147,11 +148,22 @@ function PlanList({ g, onOpen }: { g: GState; onOpen: (planId: string, day: numb
   );
 }
 
+/** Linha de explicação no topo de cada lista. */
+function Intro({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: colors.primarySoft, borderRadius: radius.md, padding: 12, marginTop: 6, marginBottom: 4 }}>
+      <Ionicons name={icon} size={18} color={colors.primary} style={{ marginTop: 1 }} />
+      <Text style={{ flex: 1, color: colors.text, fontSize: 14, lineHeight: 20 }}>{text}</Text>
+    </View>
+  );
+}
+
 /** Treinos (opção TR3): treinos prontos em grupos, no estilo dos Ajustes. */
 function PresetList({ onOpen }: { onOpen: (id: string) => void }) {
   const groups: [PresetGroup, string][] = [['muscle', 'By muscle'], ['region', 'By region'], ['strength', 'Strength 5×5']];
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 6, paddingBottom: 28 }} testID="g-presets">
+      <Intro icon="sparkles" text="Workouts generated for you from your equipment. Open one to swap or add exercises, or tap Regenerate for a new version." />
       {groups.map(([grp, label], gi) => (
         <View key={grp}>
           <Text style={{ fontSize: 13, fontWeight: '600', color: colors.muted, marginTop: gi ? 20 : 6, marginBottom: 8 }}>{label}</Text>
@@ -199,6 +211,14 @@ function Detail({ g, view, onBack }: { g: GState; view: View_; onBack: () => voi
   // Swap (como no treino ativo): troca um exercício só aqui; Gerar de novo refaz o treino todo.
   const [swapAt, setSwapAt] = useState<number | null>(null);
   const [swapHelp, setSwapHelp] = useState(false);
+  const [swapAsk, setSwapAsk] = useState(false);
+  const scroll = useRef<ScrollViewInstance>(null);
+  const listY = useRef(0);
+  const rowY = useRef<number[]>([]);
+  const openSwap = (i: number) => {
+    setSwapAsk(false); setEditing(false); setSwapAt(i);
+    setTimeout(() => scroll.current?.scrollTo({ y: Math.max(0, listY.current + (rowY.current[i] ?? 0) - 12), animated: true }), 80);
+  };
   const swapMap = g.swapped?.[key] ?? {};
   const swapExclude = (i: number) => new Set(list.flatMap((x, k) => (k === i || !x.catalogId ? [] : [x.catalogId])));
   const swap = (i: number, picked: string) => {
@@ -217,6 +237,8 @@ function Detail({ g, view, onBack }: { g: GState; view: View_; onBack: () => voi
   useEffect(() => { back.current = onBack; });
   useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { back.current(); return true; }); return () => sub.remove(); }, []);
 
+  /** Último cartão do Swap: escolher qualquer exercício da biblioteca no lugar deste. */
+  const swapAny = (i: number) => { setPickHandler((ids) => { if (ids[0]) swap(i, ids[0]); }); router.push('/exercises/pick?single=1'); };
   const setList = (ids: string[]) => setG((s) => ({ custom: { ...s.custom, [key]: ids } }));
   const add = () => { setPickHandler((ids) => setList([...list.map((e) => e.id), ...ids])); router.push('/exercises/pick'); };
   const regenerated = () => {
@@ -237,7 +259,7 @@ function Detail({ g, view, onBack }: { g: GState; view: View_; onBack: () => voi
     <View style={{ paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 14 }}>
       <Pressable onPress={onBack} hitSlop={8} testID="g-back" style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 10 }}>
         <Ionicons name="chevron-back" size={22} color={colors.primary} />
-        <Text style={{ color: colors.primary, fontSize: 16 }} numberOfLines={1}>{plan ? plan.title : 'Workouts'}</Text>
+        <Text style={{ color: colors.primary, fontSize: 16 }} numberOfLines={1}>{plan ? plan.title : 'AI Workouts'}</Text>
       </Pressable>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1, gap: 8 }}>
@@ -267,7 +289,7 @@ function Detail({ g, view, onBack }: { g: GState; view: View_; onBack: () => voi
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 16 }} testID="g-training">
+      <ScrollView ref={scroll} contentContainerStyle={{ paddingBottom: 16 }} testID="g-training">
         {head}
         <View style={{ flexDirection: 'row', gap: GAP, paddingHorizontal: PAD }}>
           <Pressable style={{ flex: 1, backgroundColor: colors.surface, borderRadius: radius.md, padding: 12, gap: 6 }} onPress={() => router.push('/g/equipment')} testID="g-equipment">
@@ -287,12 +309,12 @@ function Detail({ g, view, onBack }: { g: GState; view: View_; onBack: () => voi
         </View>
 
         <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text, paddingHorizontal: PAD, paddingTop: 20, paddingBottom: 10 }}>{`${list.length} ${tr('exercises')}`}</Text>
-        <View style={{ paddingHorizontal: PAD, gap: GAP }}>
+        <View style={{ paddingHorizontal: PAD, gap: GAP }} onLayout={(ev) => { listY.current = ev.nativeEvent.layout.y; }}>
           {list.map((e, i) => {
             const was = swapMap[e.id] ? st.findExercise(swapMap[e.id])?.name : undefined;
             const open = swapAt === i && !editing;
             return (
-              <View key={`${e.id}-${i}`} style={{ borderRadius: radius.md, backgroundColor: colors.surface }}>
+              <View key={`${e.id}-${i}`} onLayout={(ev) => { rowY.current[i] = ev.nativeEvent.layout.y; }} style={{ borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: open ? colors.primary : 'transparent' }}>
                 <Pressable onPress={() => !editing && router.push(`/exercises/${e.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 }} testID={`g-ex-${i}`}>
                   <ExerciseThumb catalogId={e.catalogId} size={48} />
                   <View style={{ flex: 1 }}>
@@ -302,41 +324,50 @@ function Detail({ g, view, onBack }: { g: GState; view: View_; onBack: () => voi
                   </View>
                   {editing ? (
                     <Pressable hitSlop={10} onPress={() => setList(list.filter((_, j) => j !== i).map((x) => x.id))} testID={`g-ex-del-${i}`}><Ionicons name="trash-outline" size={20} color={colors.danger} /></Pressable>
-                  ) : (
-                    <Pressable onPress={() => setSwapAt(open ? null : i)} hitSlop={6} accessibilityRole="button" accessibilityState={{ expanded: open }} testID={`g-swap-${i}`}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, height: 34, paddingHorizontal: 11, borderRadius: radius.pill, backgroundColor: open ? colors.primarySoft : colors.bg }}>
-                      <Ionicons name="swap-horizontal" size={16} color={open ? colors.primary : colors.text} />
-                      <Text style={{ color: open ? colors.primary : colors.text, fontSize: 14, fontWeight: '600' }}>Swap</Text>
-                    </Pressable>
-                  )}
+                  ) : open ? (
+                    <Pressable onPress={() => setSwapAt(null)} hitSlop={10} accessibilityLabel={tr('Close')} testID={`g-swap-close-${i}`}><Ionicons name="close" size={20} color={colors.muted} /></Pressable>
+                  ) : <Ionicons name="chevron-forward" size={18} color={colors.faint} />}
                 </Pressable>
                 {open && (
-                  <SwapPanel currentId={e.id} originalId={swapMap[e.id] ?? e.id} exclude={swapExclude(i)} onPick={(id) => swap(i, id)} onInfo={() => setSwapHelp(true)}
+                  <SwapPanel currentId={e.id} originalId={swapMap[e.id] ?? e.id} exclude={swapExclude(i)} onPick={(id) => swap(i, id)} onInfo={() => setSwapHelp(true)} onMore={() => swapAny(i)}
                     hint={plan ? 'Tap another exercise to use it instead, only on this day of the plan.' : 'Tap another exercise to use it instead in this workout.'}
                     style={{ marginHorizontal: 0, marginTop: 0, backgroundColor: 'transparent', paddingTop: 0 }} />
                 )}
               </View>
             );
           })}
-          {editing && (
+          {(
             <Pressable onPress={add} testID="g-add" style={{ borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <Ionicons name="add-circle" size={24} color={colors.primary} />
               <Text style={{ color: colors.primary, fontWeight: '600' }}>Add exercise</Text>
             </Pressable>
           )}
         </View>
-        {!list.length && <Text style={{ color: colors.muted, fontSize: 15, padding: PAD }}>No exercises match your equipment. Change the equipment or add exercises with Edit.</Text>}
+        {!list.length && <Text style={{ color: colors.muted, fontSize: 15, padding: PAD }}>No exercises match your equipment. Change the equipment or add exercises.</Text>}
       </ScrollView>
 
       <View style={{ paddingHorizontal: PAD, paddingTop: 10, paddingBottom: 10, gap: GAP, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }}>
         <Btn title="Start Workout" icon="play" onPress={() => (st.active ? setReplace(true) : go())} disabled={!list.length} testID="g-start" />
         <View style={{ flexDirection: 'row', gap: GAP }}>
-          <Btn title="Regenerate" icon="refresh" variant="secondary" onPress={() => setBusy(true)} style={{ flex: 1 }} textStyle={{ fontSize: 15 }} testID="g-regen" />
-          <Btn title={editing ? 'Done' : 'Edit'} icon={editing ? 'checkmark' : 'pencil'} variant="secondary" onPress={() => setEditing(!editing)} style={{ flex: 1 }} textStyle={{ fontSize: 15 }} testID="g-edit" />
+          <Btn title={getLang() === 'pt' ? 'Gerar outro' : 'Regenerate'} icon="refresh" variant="secondary" onPress={() => setBusy(true)} style={{ flex: 1, paddingHorizontal: 6 }} textStyle={{ fontSize: 14 }} testID="g-regen" />
+          <Btn title={editing ? 'Done' : 'Edit'} icon={editing ? 'checkmark' : 'pencil'} variant="secondary" onPress={() => { setSwapAt(null); setEditing(!editing); }} style={{ flex: 1, paddingHorizontal: 6 }} textStyle={{ fontSize: 14 }} testID="g-edit" />
+          <Btn title="Swap" icon="swap-horizontal" variant="secondary" selected={swapAt != null} onPress={() => setSwapAsk(true)} disabled={!list.length} style={{ flex: 1, paddingHorizontal: 6 }} textStyle={{ fontSize: 14 }} testID="g-swap" />
         </View>
       </View>
 
       {busy && <Generating onDone={regenerated} />}
+      <Sheet visible={swapAsk} onClose={() => setSwapAsk(false)} title="Which exercise do you want to swap?">
+        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: 8 }} testID="g-swap-ask">
+          {list.map((e, i) => (
+            <Pressable key={`${e.id}-${i}`} onPress={() => openSwap(i)} testID={`g-swap-pick-${i}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: i < list.length - 1 ? StyleSheet.hairlineWidth : 0, borderBottomColor: colors.border }}>
+              <ExerciseThumb catalogId={e.catalogId} size={44} />
+              <Text style={{ flex: 1, color: colors.text, fontSize: 16 }} numberOfLines={2}>{e.name}</Text>
+              <Ionicons name="swap-horizontal" size={18} color={colors.primary} />
+            </Pressable>
+          ))}
+        </ScrollView>
+      </Sheet>
       <Dialog visible={swapHelp} title="Swap" message="Pick another exercise that trains the same muscle. It replaces this one only here; tap the original to undo. For a completely different workout, use Regenerate." onClose={() => setSwapHelp(false)}
         actions={[{ label: 'Got it!', primary: true, onPress: () => setSwapHelp(false) }]} />
       <Dialog visible={replace} title="Replace current workout?" message="You already have a workout in progress. Starting this one discards it." onClose={() => setReplace(false)}
