@@ -1,3 +1,5 @@
+-- PENDENTE (2026-11-27): ainda NÃO aplicada no banco, e a função send-email publicada (v4) ainda usa user_state.welcome_sent_at.
+-- Aplicar esta migração e só depois publicar supabase/functions/send-email (que já usa welcome_emails).
 -- Trava do e-mail de boas-vindas fora do alcance do cliente (send-email usa o service role).
 -- Antes: user_state.welcome_sent_at, que o próprio usuário podia zerar (policy FOR ALL + UPDATE/DELETE) e reenviar o e-mail em loop.
 create table if not exists public.welcome_emails (

@@ -40,9 +40,6 @@ yarn-error.*
 /ios
 /android
 
-dist/
-.expo/
-
 # material de referência local (vídeos/prints de outros apps, 438 MB) e estado de ferramentas
 Rods-Benchmark/
 **/.claude/artifacts.json

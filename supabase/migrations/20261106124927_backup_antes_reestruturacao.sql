@@ -1,0 +1,10 @@
+create schema if not exists backup_20261106;
+revoke all on schema backup_20261106 from public, anon, authenticated;
+create table backup_20261106.profiles     as table public.profiles;
+create table backup_20261106.exercises    as table public.exercises;
+create table backup_20261106.workouts     as table public.workouts;
+create table backup_20261106.workout_sets as table public.workout_sets;
+create table backup_20261106.routines     as table public.routines;
+create table backup_20261106.measurements as table public.measurements;
+create table backup_20261106.feedback     as table public.feedback;
+revoke all on all tables in schema backup_20261106 from public, anon, authenticated;

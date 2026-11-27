@@ -179,6 +179,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 
 ## Pendências
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
+- E-mail de boas-vindas: a migração `supabase/migrations/20261127000000_welcome_emails_guard.sql` (correção de segurança da auditoria) NÃO está aplicada e a `send-email` publicada (v4) ainda é a antiga. Aplicar a migração e depois publicar a função do repositório (pedir ao Rodrigo; o modo automático barrou a migração em 2026-11-27)
 - Mídia dos exercícios: exige licença própria da Gym visual (https://gymvisual.com/) ou outra fonte livre
 - Conferir amostras das traduções (feitas por IA) e corrigir termos
 - Aba G / Training (ficou sem teste na sessão de 2026-11-16 que criou a aba; a tela mudou depois, conferir na versão atual): (1) Start até salvar o treino, incluindo o aviso "Replace current workout?" com treino em andamento, e ver se o dia vira concluído e libera o próximo; (2) tela `g/equipment` (marcar/desmarcar, Default, NEXT refaz o treino do dia); (3) Edit (remover e Add exercise) e o 1RM mudando a carga do supino com barra; (4) tocar num plano na H2 abre a aba já nele; (5) tudo isso em aparelho (só foi visto no navegador, na moldura)
@@ -208,6 +209,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Abas: Home, Workout, Trainer (`(tabs)/plano`), Exercises (`(tabs)/exercicios`), Profile. `Screen`/`Header` detectam `(tabs)` (`useInTabs`).
 
 ## Banco (auditoria 2026-11-06, migração `integridade_indices_updated_at_distancia`)
+- `supabase/migrations/` tem TODAS as migrações aplicadas, com o mesmo nome e versão do banco (`<versão>_<nome>.sql`, tiradas de `supabase_migrations.schema_migrations` em 2026-11-27). Migração nova = aplicar e salvar o arquivo com a versão que o banco der.
 - CHECKs: `exercises.kind` (5 tipos), `workout_sets.set_type` (normal/warmup/failure/drop) e `reps >= 0`, `workouts.visibility` (everyone/followers/private) e `duration_sec >= 0`, `profiles.theme` (light/dark/system) e `sex` (male/female/null). **Novo valor no app = atualizar o CHECK junto** (migração).
 - Índices em `workout_sets.user_id` e `feedback.user_id`; `updated_at` com gatilho `set_updated_at` em workouts, routines, exercises, profiles; `username` único sem diferenciar maiúsculas (`profiles_username_uniq`, vazio não conta).
 - `workout_sets` ganhou `distance_m` e `duration_sec` (usados pelos tipos de tempo/distância desde 2026-11-09; o app arredonda os segundos antes do `save_workout`, que faz `::int`).
