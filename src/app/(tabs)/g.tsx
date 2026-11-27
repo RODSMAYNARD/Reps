@@ -326,7 +326,9 @@ function Detail({ g, view, onBack }: { g: GState; view: View_; onBack: () => voi
                     <Pressable hitSlop={10} onPress={() => setList(list.filter((_, j) => j !== i).map((x) => x.id))} testID={`g-ex-del-${i}`}><Ionicons name="trash-outline" size={20} color={colors.danger} /></Pressable>
                   ) : open ? (
                     <Pressable onPress={() => setSwapAt(null)} hitSlop={10} accessibilityLabel={tr('Close')} testID={`g-swap-close-${i}`}><Ionicons name="close" size={20} color={colors.muted} /></Pressable>
-                  ) : <Ionicons name="chevron-forward" size={18} color={colors.faint} />}
+                  ) : (
+                    <Pressable onPress={() => openSwap(i)} hitSlop={10} accessibilityLabel={tr('Swap')} testID={`g-ex-swap-${i}`}><Ionicons name="swap-horizontal" size={20} color={colors.primary} /></Pressable>
+                  )}
                 </Pressable>
                 {open && (
                   <SwapPanel currentId={e.id} originalId={swapMap[e.id] ?? e.id} exclude={swapExclude(i)} onPick={(id) => swap(i, id)} onInfo={() => setSwapHelp(true)} onMore={() => swapAny(i)}
