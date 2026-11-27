@@ -51,6 +51,37 @@ const uploadWorkoutPhoto = async (uid: string, workoutId: string, uri: string) =
   return path;
 };
 const PHOTO_TTL = 60 * 60 * 24 * 7;
+/** Imagem de exercício criado pela pessoa: `progress-photos/<uid>/ex-<id do exercício>.jpg` (sem coluna nova; a exclusão de
+ * conta já limpa a pasta). O aparelho guarda uma cópia em `reps:exassets` (abre na hora, sem rede) e em `reps:exassets-up`
+ * os ids que já subiram: imagem só do aparelho e fora dessa lista sobe na próxima carga; na lista e sem arquivo = apagada em outro aparelho. */
+const exImagePath = (uid: string, id: string) => `${uid}/ex-${id}.jpg`;
+const readJson = async <T,>(key: string, empty: T): Promise<T> => { try { return JSON.parse((await AsyncStorage.getItem(key)) ?? '') as T; } catch { return empty; } };
+const uriBytes = async (uri: string) => {
+  if (!uri.startsWith('data:')) return (await fetch(uri)).arrayBuffer();
+  const bin = atob(uri.slice(uri.indexOf(',') + 1));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out.buffer;
+};
+const markExUploaded = async (id: string, on: boolean) => {
+  const ids = new Set(await readJson<string[]>('reps:exassets-up', []));
+  if (on) ids.add(id); else ids.delete(id);
+  await AsyncStorage.setItem('reps:exassets-up', JSON.stringify([...ids])).catch(() => {});
+};
+/** Sobe (texto = imagem nova) ou apaga (null) a imagem do exercício no Storage. URL assinada = já está salva, não mexe. */
+const putExerciseImage = async (uid: string, id: string, uri: string | null) => {
+  const path = exImagePath(uid, id);
+  if (!uri) {
+    const r = await supabase.storage.from('progress-photos').remove([path]);
+    if (r.error) throw r.error;
+    await markExUploaded(id, false);
+    return;
+  }
+  if (/^https?:/i.test(uri)) return;
+  const up = await supabase.storage.from('progress-photos').upload(path, await uriBytes(uri), { contentType: 'image/jpeg', upsert: true });
+  if (up.error) throw up.error;
+  await markExUploaded(id, true);
+};
 /** Vídeo do treino: bucket privado `workout-videos` (até 50 MB, mp4/mov/webm/3gp), `<uid>/w-<id>.<ext>`. Devolve o caminho. */
 export const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 const VIDEO_TYPES: Record<string, string> = { 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/3gpp': '3gp', 'video/mp4': 'mp4' };
@@ -396,6 +427,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const serverEx: Exercise[] = ex.data.map((r: any) => { const c = r.catalog_id ? CAT_BY_ID.get(r.catalog_id) : undefined; return { id: r.id, name: c?.n ?? r.name, muscle: c?.m ?? r.muscle, equipment: c?.e ?? r.equipment, kind: (c?.k ?? r.kind) as Exercise['kind'], catalogId: r.catalog_id, target: r.target ?? null, secondary: r.secondary_muscles ?? [], assetUri: assets[r.id] ?? null }; });
     // exercício criado enquanto esta busca estava no ar (salvar treino/rotina) fica na lista
     setExercises((prev) => { const ids = new Set(serverEx.map((x) => x.id)); return [...serverEx, ...prev.filter((x) => dl.exercises.has(x.id) && !ids.has(x.id))]; });
+    // imagens dos exercícios criados: busca as que só existem na nuvem e sobe as que só existem no aparelho (sem segurar a carga)
+    const own = serverEx.filter((x) => !x.catalogId);
+    if (own.length) (async () => {
+      const ls = await supabase.storage.from('progress-photos').list(uid, { search: 'ex-', limit: 1000 });
+      if (ls.error) return;
+      const remote = new Set((ls.data ?? []).map((f) => f.name));
+      const up = new Set(await readJson<string[]>('reps:exassets-up', []));
+      const has = (id: string) => remote.has(`ex-${id}.jpg`);
+      own.filter((x) => assets[x.id] && !has(x.id) && !up.has(x.id)).forEach((x) => { putExerciseImage(uid, x.id, assets[x.id]).catch(() => {}); });
+      const gone = own.filter((x) => assets[x.id] && !has(x.id) && up.has(x.id)).map((x) => x.id);
+      own.filter((x) => has(x.id)).forEach((x) => up.add(x.id));
+      gone.forEach((id) => { up.delete(id); delete assets[id]; });
+      await AsyncStorage.multiSet([['reps:exassets-up', JSON.stringify([...up])], ['reps:exassets', JSON.stringify(assets)]]).catch(() => {});
+      const fetchIds = own.filter((x) => has(x.id) && !assets[x.id]).map((x) => x.id);
+      const signed = new Map<string, string>();
+      if (fetchIds.length) {
+        const r = await supabase.storage.from('progress-photos').createSignedUrls(fetchIds.map((id) => exImagePath(uid, id)), PHOTO_TTL);
+        (r.data ?? []).forEach((x, i) => { if (x.signedUrl) signed.set(fetchIds[i], x.signedUrl); });
+      }
+      if (gone.length || signed.size) setExercises((l) => l.map((x) => (signed.has(x.id) ? { ...x, assetUri: signed.get(x.id)! } : gone.includes(x.id) ? { ...x, assetUri: null } : x)));
+    })().catch(() => {});
 
     const fallbackName = email.split('@')[0].replace(/[^a-z0-9_]/gi, '').slice(0, 20) || 'athlete';
     const pr = await supabase.from('profiles').select('*').maybeSingle();
@@ -878,7 +930,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       track('account_deleted');
       await cancelReminders();
       if (uid) await AsyncStorage.multiRemove(['reps:active:', 'reps:trainer:', 'reps:wprefs:', 'reps:pinned:', 'reps:pinned-dirty:', 'reps:pinned-migrated:', 'reps:dirty:', 'reps:deletes:', 'reps:report-dismissed:', 'reps:cache:', 'reps:outbox:'].map((k) => k + uid)).catch(() => {});
-      await AsyncStorage.removeItem('reps:exassets').catch(() => {});
+      await AsyncStorage.multiRemove(['reps:exassets', 'reps:exassets-up']).catch(() => {});
       await supabase.auth.signOut().catch(() => {});
       return null;
     },
@@ -916,6 +968,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const map = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}');
         map[row.id] = x.assetUri;
         AsyncStorage.setItem('reps:exassets', JSON.stringify(map)).catch(() => {});
+        if (userId) putExerciseImage(userId, row.id, x.assetUri).catch(() => {}); // sem rede: sobe na próxima carga
       }
       duringLoad.current.exercises.add(row.id);
       setExercises((l) => [...l, row]);
@@ -925,8 +978,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('exercises').update({ name: x.name.trim(), muscle: x.muscle, equipment: x.equipment, kind: x.kind, target: x.target ?? null, secondary_muscles: x.secondary ?? [] }).eq('id', id);
       if (e) { fail(e.message); return false; }
       const map = JSON.parse((await AsyncStorage.getItem('reps:exassets').catch(() => null)) ?? '{}');
-      if (x.assetUri) map[id] = x.assetUri; else delete map[id];
+      const before = exercises.find((r) => r.id === id)?.assetUri ?? null;
+      // URL assinada (imagem que veio da nuvem e não mudou) não vai para a cópia do aparelho
+      if (x.assetUri && !/^https?:/i.test(x.assetUri)) map[id] = x.assetUri; else if (!x.assetUri) delete map[id];
       AsyncStorage.setItem('reps:exassets', JSON.stringify(map)).catch(() => {});
+      if (userId && (x.assetUri ?? null) !== before) putExerciseImage(userId, id, x.assetUri ?? null).catch(() => {});
       setExercises((l) => l.map((r) => (r.id === id ? { ...r, name: x.name.trim(), muscle: x.muscle, equipment: x.equipment, kind: x.kind, target: x.target ?? null, secondary: x.secondary ?? [], assetUri: x.assetUri ?? null } : r)));
       return true;
     },
@@ -934,6 +990,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { error: e } = await supabase.from('exercises').delete().eq('id', id);
       if (e) return fail(e.message);
       setExercises((l) => l.filter((x) => x.id !== id));
+      if (userId) putExerciseImage(userId, id, null).catch(() => {});
+      readJson<Record<string, string>>('reps:exassets', {}).then((m) => { delete m[id]; AsyncStorage.setItem('reps:exassets', JSON.stringify(m)).catch(() => {}); });
       // o banco apaga em cascata o histórico dele: tira também dos treinos, das rotinas e do treino em andamento
       setWorkouts((l) => l.map((w) => (w.entries.some((x) => x.exerciseId === id) ? { ...w, entries: w.entries.filter((x) => x.exerciseId !== id) } : w)));
       setRoutines((l) => l.map((r) => (r.exercises.some((x) => x.exerciseId === id) ? { ...r, exercises: r.exercises.filter((x) => x.exerciseId !== id) } : r)));

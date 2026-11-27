@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Pressable, ScrollView, View } from 'react-native';
 import { Text, TextInput } from '../../components/Text';
 import { NumInput } from '../../components/NumInput';
+import { PhotoSourceSheet } from '../../components/PhotoSourceSheet';
 import { Dialog, Header, HeaderAction, ListRow, Screen, Section, Sheet } from '../../components/ui';
 import { MEASURE_FIELDS } from '../../lib/constants';
 import { fromDisplayBody, fromDisplayWeight, toDisplayBody, toDisplayWeight } from '../../lib/format';
@@ -39,7 +39,8 @@ export default function LogMeasures() {
   const syncWeight = async (kg: number) => { if (!existing && iso >= (measurements.find((m) => m.values.weight != null)?.date ?? '')) await saveProfileWeight(kg); };
   const { saveProfile } = useStore();
   const saveProfileWeight = (kg: number) => saveProfile({ weightKg: kg });
-  const pick = async () => { const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 }); if (!r.canceled) setPhoto(r.assets[0].uri); };
+  const [photoSheet, setPhotoSheet] = useState(false);
+  const pick = () => setPhotoSheet(true);
 
   return (
     <Screen>
@@ -74,6 +75,7 @@ export default function LogMeasures() {
         {[0, 1, 2, 3, 7, 14, 30].map((d) => <ListRow key={d} label={d === 0 ? 'Today' : d === 1 ? 'Yesterday' : `${d} days ago`} last right={daysAgo === d ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : undefined} onPress={() => { setDaysAgo(d); setSheet(false); }} />)}
       </Sheet>
       <Dialog visible={del} title="Delete entry?" message="This can't be undone." onClose={() => setDel(false)} actions={[{ label: 'Cancel' }, { label: 'Delete', danger: true, onPress: async () => { setDel(false); if (await deleteMeasurement(existing!.id)) router.back(); } }]} />
+      <PhotoSourceSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title="Progress photo" testID="progress-photo-src" onPicked={(a) => setPhoto(a.uri)} />
     </Screen>
   );
 }

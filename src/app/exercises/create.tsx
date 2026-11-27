@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
+import { PhotoSourceSheet } from '../../components/PhotoSourceSheet';
 import { Text, TextInput } from '../../components/Text';
 import { Header, HeaderAction, Screen } from '../../components/ui';
 import { EQUIPMENT_OPTIONS, MUSCLE_OPTIONS, kindLabel } from '../../lib/exerciseOptions';
@@ -28,6 +28,7 @@ export default function CreateExercise() {
   const { addExercise, updateExercise, findExercise, showToast } = useStore();
   const d = useDraft();
   const [saving, setSaving] = useState(false);
+  const [photoSheet, setPhotoSheet] = useState(false);
   const editing = id ? findExercise(id) : undefined;
   useEffect(() => {
     resetDraft();
@@ -35,11 +36,7 @@ export default function CreateExercise() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const pickAsset = async () => {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.4, base64: true });
-    const a = r.assets?.[0];
-    if (!r.canceled && a?.base64) patchDraft({ assetUri: `data:image/jpeg;base64,${a.base64}` });
-  };
+  const pickAsset = () => setPhotoSheet(true);
 
   const save = async () => {
     // exercício antigo com grupo fora da lista (ex.: "Back" sem target): se o músculo não foi trocado, mantém o valor salvo
@@ -73,6 +70,10 @@ export default function CreateExercise() {
         <Row label="Other Muscles" value={d.secondary.length ? d.secondary.join(', ') : undefined} optional onPress={() => router.push({ pathname: '/exercises/muscle', params: { multi: '1' } })} testID="ex-secondary" />
         <Row label="Exercise Type" value={d.kind ? kindLabel(d.kind) : undefined} onPress={() => router.push('/exercises/type')} testID="ex-type" />
       </ScrollView>
+      <PhotoSourceSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={d.assetUri ? 'Change Asset' : 'Add Asset'} testID="ex-asset-src"
+        options={{ allowsEditing: true, aspect: [1, 1], quality: 0.4, base64: true }}
+        onPicked={(a) => { if (a.base64) patchDraft({ assetUri: `data:image/jpeg;base64,${a.base64}` }); else patchDraft({ assetUri: a.uri }); }}
+        onRemove={d.assetUri ? () => patchDraft({ assetUri: null }) : undefined} />
     </Screen>
   );
 }

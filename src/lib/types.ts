@@ -18,7 +18,7 @@ export type Profile = {
   onboarded: boolean;
 };
 
-/** `target`: músculo específico (mesmos nomes do catálogo: Lats, Traps...); `secondary`: outros músculos trabalhados; `assetUri`: imagem (só no aparelho). */
+/** `target`: músculo específico (mesmos nomes do catálogo: Lats, Traps...); `secondary`: outros músculos trabalhados; `assetUri`: imagem (cópia no aparelho + nuvem `progress-photos/<uid>/ex-<id>.jpg`). */
 export type Exercise = { id: string; name: string; muscle: string; equipment: string; kind: ExerciseKind; catalogId?: string | null; target?: string | null; secondary?: string[]; assetUri?: string | null };
 
 export type SetRow = { type: SetType; kg: number | null; reps: number | null; seconds?: number | null; /** distância em metros */ distM?: number | null };

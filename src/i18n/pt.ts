@@ -1472,6 +1472,8 @@ export const PT: Record<string, string> = {
   'Change photo': 'Trocar foto',
   'Take a photo or choose from your library': 'Tire uma foto ou escolha da galeria',
   'Take photo': 'Tirar foto',
+  'Allow Reps to use the camera in your phone settings to take a photo.': 'Permita que o Reps use a câmera nos ajustes do celular para tirar uma foto.',
+  'Allow Reps to access your photos in your phone settings to choose a photo.': 'Permita que o Reps acesse suas fotos nos ajustes do celular para escolher uma foto.',
   'Choose from library': 'Escolher da galeria',
   'Camera access is off': 'Acesso à câmera desligado',
   'Photo access is off': 'Acesso às fotos desligado',
