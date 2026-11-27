@@ -81,10 +81,9 @@ function PlanThumb({ p }: { p: GPlan }) {
 /** Planos (opção TR1): lista em sanfona; o plano aberto mostra os 30 dias em 3 colunas. */
 function PlanList({ g, onOpen }: { g: GState; onOpen: (planId: string, day: number) => void }) {
   const st = useStore();
-  // aberto = plano escolhido (g.planId, que a H2 também muda), a não ser que a pessoa o tenha fechado
-  const [closedFor, setClosedFor] = useState<string | null>(null);
-  const openId = g.planId !== closedFor ? g.planId : null;
-  const toggle = (id: string) => { if (id === openId) setClosedFor(id); else { setClosedFor(null); setG({ planId: id }); } };
+  // a tela sempre começa com todos os planos recolhidos (pedido do Rodrigo); tocar abre um e o marca como escolhido
+  const [openId, setOpenId] = useState<string | null>(null);
+  const toggle = (id: string) => { if (id === openId) setOpenId(null); else { setOpenId(id); setG({ planId: id }); } };
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: 6, paddingBottom: 28 }} testID="g-plans">
