@@ -22,7 +22,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="h2" options={{ title: 'H2', tabBarIcon: ({ focused, color }: { focused: boolean; color: any }) => <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} style={{ transform: [{ rotate: '180deg' }] }} /> }} />
       {/* G: planos de 30 dias + treino do dia gerado, em teste */}
       {/* G = "Training" (2026-11-23); em pt "Treinamento", porque "Training" no dicionário já é "Treino" (= aba Workout) */}
-      <Tabs.Screen name="g" options={{ title: getLang() === 'pt' ? 'Treinamento' : 'Training', tabBarIcon: ({ focused, color }: { focused: boolean; color: any }) => <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={24} color={color} /> }} />
+      <Tabs.Screen name="g" options={{ title: getLang() === 'pt' ? 'Planos' : 'Plans', tabBarIcon: ({ focused, color }: { focused: boolean; color: any }) => <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={24} color={color} /> }} />
       <Tabs.Screen name="treino" options={tab('Workout', 'barbell', 'barbell-outline')} />
       {/* Coach: só a conversa com o Coach Reps */}
       <Tabs.Screen name="coach" options={tab('Coach', 'chatbubble-ellipses', 'chatbubble-ellipses-outline')} />

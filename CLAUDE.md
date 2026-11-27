@@ -71,7 +71,7 @@
 - Barra de abas (2026-11-23): Exercícios saiu (href: null); a biblioteca abre por Perfil > Painel > Exercícios. Cartões do Painel do Perfil = mesmo tamanho de Nova rotina/Explorar (`half`).
 
 ## Abas e telas iniciais (2026-11-23)
-- Barra: H2, Training (= aba G; em pt "Treinamento", porque "Training" no dicionário já é "Treino"), Workout, Coach, Programs (= Trainer, `(tabs)/plano`), Profile. Social e Exercícios fora da barra (`href: null`).
+- Barra: H2, Plans (= aba G; em pt "Planos", desde 2026-11-27; antes "Training"/"Treinamento"; dentro: "30-Day Plans" e "AI Workouts"), Workout, Coach, Programs (= Trainer, `(tabs)/plano`), Profile. Social e Exercícios fora da barra (`href: null`).
 - Aba Workout sem o cartão do Trainer no topo; H2 sem a seção "My Workouts" (rotinas ficam na aba Workout).
 
 ## Treino ativo
