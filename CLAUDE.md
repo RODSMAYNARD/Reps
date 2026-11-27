@@ -181,6 +181,7 @@ Login Apple/Google/Facebook, verificação de telefone por SMS, Strava/Saúde, r
 - Storage: apagar a pasta `probe/` (1 arquivo de teste) do bucket `exercise-media` pelo painel do Supabase
 - Mídia dos exercícios: exige licença própria da Gym visual (https://gymvisual.com/) ou outra fonte livre
 - Conferir amostras das traduções (feitas por IA) e corrigir termos
+- Aba G / Training (ficou sem teste na sessão de 2026-11-16 que criou a aba; a tela mudou depois, conferir na versão atual): (1) Start até salvar o treino, incluindo o aviso "Replace current workout?" com treino em andamento, e ver se o dia vira concluído e libera o próximo; (2) tela `g/equipment` (marcar/desmarcar, Default, NEXT refaz o treino do dia); (3) Edit (remover e Add exercise) e o 1RM mudando a carga do supino com barra; (4) tocar num plano na H2 abre a aba já nele; (5) tudo isso em aparelho (só foi visto no navegador, na moldura)
 - Apple/Google sign-in: código e contas prontos (2026-11-22), falta build novo + teste em aparelho + publicar o consentimento do Google
 - Política de privacidade: `PRIVACY_URL` = https://rodsappz4u-reps--web.expo.app/privacy (2026-11-22, a tela `/privacy` da versão web; usar essa URL na App Store Connect e no Play). Texto com login Apple/Google e dados de saúde (só no aparelho) publicado em 2026-11-22 (deploy web `n7s2r16cg2`, alias `web`). Mudou `privacy.tsx` = republicar a web
 
