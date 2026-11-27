@@ -188,8 +188,13 @@
   // Frame: remembered between visits.
   const deviceMenu = makeMenu('device', 'deviceMenu', d => useDevice(d));
   const useDevice = d => { document.body.dataset.device = d; deviceMenu.mark(d); store.set('p1-frame', d); requestAnimationFrame(fit); };
-  const saved = store.get('p1-frame');
+  // Aberto pelo app (localhost direto): ?device=iphone força o iPhone e ?path abre a mesma tela dentro da moldura.
+  const boot = new URLSearchParams(location.search);
+  const saved = boot.get('device') || store.get('p1-frame');
   useDevice(['iphone', 'android', 'none', 'full'].includes(saved) ? saved : 'iphone'); fit();
+  const startPath = boot.get('path');
+  if (startPath && startPath.startsWith('/') && !startPath.startsWith('//')) frame.src = startPath;
+  if (boot.has('device') || boot.has('path')) { boot.delete('device'); boot.delete('path'); const rest = boot.toString(); history.replaceState(null, '', '/iphone.html' + (rest ? '?' + rest : '')); }
 
   // Language: the app keeps it in localStorage 'reps:lang' (same origin as this page); change it and reload the app. ?lang=pt|en forces it, ?solo hides the toolbar.
   const q = new URLSearchParams(location.search);

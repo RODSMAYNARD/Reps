@@ -1,3 +1,4 @@
+import '../lib/devFrame';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
